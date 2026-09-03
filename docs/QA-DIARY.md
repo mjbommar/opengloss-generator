@@ -717,3 +717,23 @@ Same 40 entries / 98 senses, seed 7, forced. $3.48.
 
 The retag did what its pilot predicted: domain defects down by 43% relative, other
 criteria within noise. Next: reconcile (relations), then filler rewrite (examples).
+
+## Iteration 8 — after relation-reconcile (2026-09-03 19:54)
+
+Same 40 entries / 98 senses, seed 7, forced. $3.35.
+
+| | it. 6 (tier-2 final) | it. 7 (retag) | it. 8 (reconcile) |
+|---|---|---|---|
+| mean score | 68.6 | 68.5 | **69.5** |
+| entries 80+ | 2 | 4 | 4 |
+| relations_valid defect | 83.7% | 85.7% | **67.3%** |
+| domain_fits | 28.6% | 16.3% | 18.4% |
+| examples_natural | 41.8% | 34.7% | 35.7% |
+| examples_fit_sense | 35.7% | 34.7% | 32.7% |
+| distinct_from_other_senses | 9.2% | 9.2% | 6.1% |
+
+Relations was the criterion nothing had moved through ~$45 of validity judging; taking
+the demoted edges out of the list the judge reads and capping per type dropped it 18
+points. It is still the top defect: with 5–6 typed edges per sense, one wrong edge
+still fails the sense. Next lever is a per-edge accept list from the judge's own
+`invalid_relations` output feeding a targeted demotion — recorded as an open item.
