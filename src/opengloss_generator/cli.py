@@ -69,6 +69,7 @@ from opengloss_generator.workflows.qa_pairs import QACallRecord, plan_qa_pairs, 
 from opengloss_generator.workflows.queries import DEFAULT_PER_SENSE as QUERIES_DEFAULT_PER_SENSE
 from opengloss_generator.workflows.queries import SenseReport, plan_queries, run_queries
 from opengloss_generator.workflows.relation_hygiene import run_relation_hygiene
+from opengloss_generator.workflows.relation_reconcile import run_relation_reconcile
 from opengloss_generator.workflows.resolve import resolve_entry, resolve_store
 from opengloss_generator.workflows.retrofit import RetrofitPass, run_retrofit
 from opengloss_generator.workflows.sense_hygiene import run_sense_hygiene
@@ -1295,6 +1296,62 @@ def relation_hygiene(
             )
             if outcome.stopped_reason is not None:
                 session.stop_reason = outcome.stopped_reason
+            return session.summary(**outcome.as_dict()).as_dict()
+
+    _echo_summary(_run(_main()))
+
+
+@app.command("relation-reconcile")
+def relation_reconcile(
+    only: Annotated[
+        str | None,
+        typer.Option("--only", help="Comma list of steps (asymmetric, tombstone, cap)."),
+    ] = None,
+    from_list: Annotated[
+        Path | None,
+        typer.Option(
+            "--from-list",
+            help="Restrict the sweep to the headwords in this list (default: whole store).",
+        ),
+    ] = None,
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+    concurrency: _ConcurrencyOpt = None,
+    dry_run: _DryRunOpt = False,
+) -> None:
+    """Reconcile the relation lists relation-hygiene's demotions left behind (D-65).
+
+    Free, no model calls. ``asymmetric`` applies the stricter of two disagreeing
+    directional verdicts on a symmetric pair; ``tombstone`` takes every demoted
+    ``see_also`` out of the sense's relation list and writes it to provenance instead,
+    which is what shortens the list the QA judge is shown; ``cap`` trims each sense's
+    per-type runs. Idempotent; ``--dry-run`` computes every edit and writes nothing. Run
+    after ``relation-hygiene``, and re-run ``graph-hygiene`` afterwards to confirm
+    reciprocity.
+    """
+    cfg = _build_config(config_path, store, None, concurrency, dry_run)
+    steps = {s.strip() for s in only.split(",") if s.strip()} if only else None
+    # The marker keys on the near side only, so an entry whose far side moved after a
+    # sweep is skipped by digest; naming the remainder is cheaper than a whole-store
+    # re-sweep, the same reason relation-hygiene has this option.
+    lexeme_ids = (
+        [slugify(word) for word in _read_word_list(from_list)] if from_list is not None else None
+    )
+
+    async def _main() -> dict[str, object]:
+        async with RunSession(cfg, install_signal_handler=True) as session:
+            outcome = await run_relation_reconcile(
+                session.store,
+                workers=cfg.concurrency.workers,
+                stop_event=session.stop_event,
+                only=steps,
+                lexeme_ids=lexeme_ids,
+                dry_run=cfg.dry_run,
+            )
+            if outcome.stopped_reason is not None:
+                session.stop_reason = outcome.stopped_reason
+            elif cfg.dry_run:
+                session.stop_reason = "dry_run"
             return session.summary(**outcome.as_dict()).as_dict()
 
     _echo_summary(_run(_main()))

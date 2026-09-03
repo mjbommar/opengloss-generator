@@ -3467,3 +3467,164 @@ would be needed even to attempt measuring them. The `ModelPolicy._all_model_ids`
 not fixed — orthogonal to writer diversity). `data/core-store` and the main checkout's
 `runs/` were never touched; this round's own worktree (`opengloss-wt-writers2`) is
 separate from D-63's (`opengloss-wt-writers`).
+
+## D-65 (2026-09-03) — `relation-reconcile`: the demotions the judge still reads, the pairs that disagree, and a cap
+
+**Context.** D-50 gave relation edits to `relation_hygiene`, and gave it one rule: *nothing
+is ever deleted*. A relation that fails a check is demoted to `see_also` with the reason on
+`Relation.note`. That was right for the judgement, and it left two defects in the one thing
+downstream readers actually consume, `Sense.relations`.
+
+First, **the QA judge still reads every demoted edge.** `workflows/qa.py` renders each
+relation on a sense as `type->term` — every one, `see_also` included — and asks whether the
+sense's relations are valid. A `see_also` carrying `demoted: nano invalid` is precisely the
+edge an earlier pass agreed was wrong, and it is still in the list the judge is shown. The
+validity pass demoted ≈430K edges across the core store and `relations_valid` stayed false
+on 84% of judged senses, because from inside the prompt nothing had changed. Nothing had:
+the demotion is a note, and the note is not rendered.
+
+Second, **the two halves of a symmetric pair disagree.** `validity`'s verdicts are
+directional — one call judges `A --synonym--> B`, another judges `B --synonym--> A` — and
+they regularly differ. Measured over the whole store (41,886 entries), synonym reciprocity
+fell 98.4% → 93.7% and antonym 99.7% → 96.9% after the validity passes: ≈4,400 synonym
+edges asserted on one side with the reverse demoted on the other. D-50's own far-side phase
+repairs the demotions *it* makes; it cannot repair a disagreement between two verdicts it
+made deliberately. And the store's third measured fact is that nothing anywhere bounds a
+relation list: mean 13.4 relations per sense, median 10, p90 22, with see_also 49% (almost
+all of it demotion residue), synonym 17%, hypernym 11%, antonym 11%, hyponym 9%.
+
+**Decision.** A new `workflows/relation_reconcile.py`, three steps selectable through
+`only=`, all **free** — no model call anywhere in the module — and all idempotent.
+
+1. `asymmetric` — where a live sense of `A` holds a live typed edge of a symmetric type
+   (`synonym`, `antonym`, `confusable_with`) resolved to a sense of `B`, and `B` holds the
+   reverse **already demoted** (a `see_also` toward `A` carrying a demotion note) with no
+   live edge of that type back toward `A` anywhere in its live senses, the stricter of the
+   two directional verdicts wins: the near side is demoted too, note
+   `reconcile:asymmetric:<far sense id>`. Counted per type.
+2. `tombstone` — removes from `Sense.relations` every `see_also` carrying a demotion note,
+   i.e. every edge that was *not authored* as a `see_also`. This is what actually shortens
+   the list the judge reads. An authored `see_also` (no demotion note) stays.
+3. `cap` — per sense, per type, keeps at most `RelationCaps`' allowance (synonym 8, antonym
+   4, hypernym 3, hyponym 8, instance_of 4, meronym/holonym 4, everything else 4, a frozen
+   dataclass the caller can replace) and tombstones the overflow. Keep order: resolved
+   targets before unresolved, then edges `validity` accepted (present, typed, not demoted)
+   before never-judged ones, then original order.
+
+**Nothing is deleted in the sense D-1 forbids.** Both removing steps write what they took
+out to a provenance record, one per (sense, step): a header line naming the sense, then one
+line per edge — `reconcile:tombstone: <type> -> <term> [<note>]`, `reconcile:cap:<type> ->
+<term> [<note>]`. The type recorded is the type the edge carried **when it was removed**,
+because that is what `identity.edge_id` is built from and therefore what a reader needs to
+rebuild the D-1 edge id. The pre-demotion type is *not* recorded, because it is not
+recoverable: `relation_hygiene`'s demotion notes name the reason, not the type they came
+from (only `retyped: nano <old>→<new>` names one), and this pass does not invent history.
+`Lexeme.contrasts` are keyed by edge id and deliberately not cross-checked against live
+edges (D-62), so a contrast whose edge is tombstoned survives — which is the behaviour that
+schema note was written for.
+
+**Demotion notes are enumerated from the code, not guessed.** `DEMOTION_NOTE_PREFIXES`
+imports `relation_hygiene`'s public constants — `FAR_SIDE_NOTE_PREFIX`,
+`HEADWORD_INFLECTION_NOTE`, `HEADWORD_PHRASE_NOTE`, `META_LABEL_NOTE`, `NANO_INVALID_NOTE`,
+`NANO_RETYPE_NOTE`, `SIBLING_INFLECTION_NOTE` — plus this pass's own
+`ASYMMETRIC_NOTE_PREFIX` and the generic `"demoted: "`, which is not a guess either:
+`graph_hygiene._asserted_pairs` tests exactly that prefix to recognise "a hygiene pass
+judged this pair", and it is what covers `graph_hygiene`'s and `content_hygiene`'s own
+demotions without importing from three modules. `NANO_RETYPE_NOTE` is in the list because
+`validity`'s retype path can name `see_also` as the better type.
+
+**Pairing is entry-level, and that is the correction that made the pass work.** The first
+implementation matched a near-side edge against a demoted reverse *on the sense the near
+side resolved to*, mirroring `relation_hygiene._is_far_side_of`. Measured on the sample it
+made reciprocity **worse** (synonym 93.5% → 91.0%, antonym 97.9% → 92.1%): it matched only
+14 of the 61 one-sided pairs, because D-52's sense merging leaves plenty of targets resolved
+to senses that have since been retired, so the surviving reverse lives on a different sense
+id. `audit._audit_reciprocity` and `graph_hygiene._asserted_pairs` are both entry-level for
+that exact reason — "whether the other side made the matching claim anywhere in its own
+senses, not whether one particular sense did" — and so is this pass. D-50's sense-level test
+stays right where it is: it governs a *demotion*, a judgement about one sense pair; a cap is
+a judgement about how long a list may be.
+
+**Reciprocity is protected in both directions.** `graph_hygiene` step 4 is blocked from
+re-creating a demoted pair by the `"demoted:"` note on the surviving `see_also` — which
+`tombstone` deletes. That is safe only because `asymmetric` runs first, so after a full
+sweep neither side of such a pair asserts anything symmetric and step 4 has nothing to infer
+from; selecting `tombstone` without `asymmetric` logs a warning, and `RelationReconcileStep.ALL`
+fixes the order whatever order `--only` lists. And once a whole entry has been capped, every
+symmetric, resolved pair it no longer asserts **anywhere** queues a far-side removal, run as
+a second pooled phase after the main sweep has fully drained (D-31 — no two entry locks at
+once). That phase **takes no `stop_event` parameter at all**, for D-50's second amendment's
+reason and by its mechanism: `run_pool`'s workers return before pulling their first item
+once the event is set, so a phase given the event would silently do nothing and leave the
+store asserting one half of a pair the sweep has just taken apart.
+
+**One sweep, one lock hold, unlike `relation_hygiene`.** All three steps run inside one
+handler under one hold of the entry's lock: they are free, and they are ordered (`tombstone`
+must see what `asymmetric` demoted, `cap` must count what `tombstone` removed), so three
+pooled sweeps would mean three read-modify-write cycles per entry to reach one state.
+`asymmetric`'s far-side *input* is collected up front by `_collect_demoted_pairs`, a
+read-only lock-free projection of the **whole** store — `graph_hygiene._load_view`'s and
+`audit_store`'s discipline — never restricted by `lexeme_ids`, because the far side of an
+edge on a named list is very often not on it. The index holds only pairs whose far target is
+itself an entry, which is what keeps it small (1,061 pairs over the 300-entry sample).
+
+**The marker.** D-47's shape without an attempt counter: `relation_reconcile:<digest>` on a
+zero-cost provenance record, the digest over the selected step names together with the
+entry's live edge ids **as the sweep leaves them**. The steps are in the digest because a
+marker written by `--only tombstone` must not stop a later full sweep from capping the same
+entry. Written only on entries the sweep changed, so a store does not grow a record per
+entry per sweep, and *refreshed but never created* by the far-side phase — an entry that
+phase reaches may never have been swept itself, and a marker there would make a later sweep
+skip an entry no step has run over. All three steps are idempotent by construction anyway
+(a demoted edge is a `see_also`, a tombstoned edge is gone, a capped type is at its cap), so
+the marker is a skip, not the mechanism. It keys on the near side only, so an entry whose
+*far* side moves later is skipped by digest; `--from-list` names the remainder, the same
+answer `relation-hygiene` has.
+
+**A latent bug found on the way, recorded not fixed.** `_latest_marker` here orders
+provenance records by the integer in their `p<n>` key, not by table order, because
+`LexemeStore.write` serialises with `orjson.OPT_SORT_KEYS`: an entry with a hundred records
+reads back `p1, p10, p100, p101, p11, …`, so "the last matching record is the most recent"
+is false past 99 records. It was found because one sample entry (`foreground`, 106 records)
+was re-examined on every rerun. `relation_hygiene._latest_marker` and `content_hygiene`'s
+equivalent make exactly that assumption and are wrong on the same entries — their markers
+are their own passes' business and another editor holds those files, so this is recorded
+here rather than patched across three modules. A test covers the fix in this one.
+
+**Measured, on a frozen 300-entry sample** (`scripts/build_sample_reconcile.py`, seed 65,
+copied read-only from `data/core-store` into the worktree's `data/sample-reconcile/`). The
+sample is a **breadth-first neighbourhood of the resolved graph**, not an independent draw:
+every number this pass is measured by is a fact about a *pair* of entries, and 300 entries
+drawn independently out of 41,886 share almost no edges. The consequence is a denser sample
+than the store average — 1,043 live senses, 23,378 relations, mean 22.4 per sense (store-wide
+13.4), max 1,772 on one sense — so its cap counts are an upper bound, not a store estimate.
+Every `see_also` in the sample (12,332 of them, 53% of all edges) carried a demotion note;
+not one was authored.
+
+| | before | after |
+|---|---|---|
+| relations, total | 23,378 | 7,394 (−68%) |
+| relations per sense, mean / median / p90 / max | 22.4 / 12 / 39 / 1772 | 7.1 / 6 / 13 / 24 |
+| synonym reciprocity (`opengloss audit`) | 589/630 = **93.49%** | 480/480 = **100.0%** |
+| antonym reciprocity | 546/558 = **97.85%** | 190/190 = **100.0%** |
+
+One sweep, 300 entries, ~3 s, $0: `asymmetric` demoted **53** (synonym 41, antonym 12);
+`tombstone` removed **12,385** `see_also` (the 12,332 already there plus the 53 just
+demoted); `cap` removed **3,599** (antonym 2,280, synonym 848, instance_of 214, hyponym 142,
+hypernym 112, entails 3) across **209** senses, of which **230** were far-side removals.
+A second sweep: 0 changed, 299/300 skipped by marker (the 300th was never changed, so it was
+never marked). `graph-hygiene` afterwards: **0 entries changed, 0 reciprocals added** — the
+reconcile leaves it nothing to repair, and it undoes nothing the reconcile did.
+
+**Consequence.** New: `src/opengloss_generator/workflows/relation_reconcile.py`,
+`tests/test_relation_reconcile.py` (+36, offline), `scripts/build_sample_reconcile.py`.
+Modified: `cli.py` (`opengloss relation-reconcile --store S [--from-list L] [--only ...]
+[--dry-run] --concurrency C`, a real dry run that computes every edit and writes nothing,
+`graph-hygiene`'s convention rather than the model passes' "stop before starting"), one
+README row. Nothing else in the package changes, and nothing here touches
+`data/core-store`. Run order: `relation-hygiene`, then this, then `graph-hygiene` to
+confirm. **Left undone:** the QA judge is not re-run here — the claim that shortening the
+list moves `relations_valid` is a prediction this pass makes cheap to test, not one it
+tests; wiring a `RetrofitPass` member is left to whoever next touches `retrofit.py`; and the
+`_latest_marker` ordering bug in `relation_hygiene` / `content_hygiene` is recorded above
+and not fixed.
