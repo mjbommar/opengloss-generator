@@ -100,12 +100,33 @@ def entry_with(sense: Sense, **kwargs: object) -> Lexeme:
 def test_every_stored_sample_entry_still_validates():
     paths = sample_paths()
     assert len(paths) >= 300, f"expected the 300-entry sample store, found {len(paths)} files"
+    # The sample store is also where the paid retrieval stages pilot, so some entries
+    # legitimately carry the new collections by now. Backward compatibility is that
+    # every file — with or without them — still validates, and that a file written
+    # before the additions reads back with the collections empty.
+    untouched = 0
     for path in paths:
-        entry = Lexeme.model_validate(orjson.loads(path.read_bytes()))
+        raw = orjson.loads(path.read_bytes())
+        entry = Lexeme.model_validate(raw)
+        if _has_retrieval_fields(raw):
+            continue
+        untouched += 1
         assert entry.contrasts == []
         for _pos, sense, _sid in entry.iter_senses():
             assert sense.queries == []
             assert sense.qa == []
+    assert untouched > 0, "no pre-addition entry left in the sample store to check"
+
+
+def _has_retrieval_fields(raw: dict) -> bool:
+    """Return whether a stored payload carries any of the D-62 collections."""
+    if raw.get("contrasts"):
+        return True
+    return any(
+        sense.get("queries") or sense.get("qa")
+        for pos_entry in raw.get("pos_entries", [])
+        for sense in pos_entry.get("senses", [])
+    )
 
 
 @pytest.mark.skipif(not SAMPLE_STORE.is_dir(), reason="data/sample-300 is not present")
@@ -113,11 +134,18 @@ def test_stored_entries_serialise_back_to_what_they_were():
     # The additive fields must not change the wire shape of an entry that has none of
     # them: a store rewritten by this schema is byte-comparable, key for key, with what
     # the production chain wrote.
-    for path in sample_paths()[:25]:
+    checked = 0
+    for path in sample_paths():
         raw = json.loads(path.read_text(encoding="utf-8"))
+        if _has_retrieval_fields(raw):
+            continue
         dumped = Lexeme.model_validate(raw).model_dump(mode="json", exclude_defaults=True)
         assert "contrasts" not in dumped
         assert set(dumped) <= set(raw)
+        checked += 1
+        if checked == 25:
+            break
+    assert checked > 0, "no pre-addition entry left in the sample store to check"
 
 
 def test_the_new_collections_default_empty_on_an_untouched_entry():
