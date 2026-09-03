@@ -66,6 +66,7 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Resolve | `resolve` | Fill in `sense_id` / `confidence` on relation targets whose lexeme already exists in the store; targets absent from the store stay unresolved at zero cost. |
 | Retrofit | `retrofit` | Run `classify_kind`, `tag_domain`, and/or `spans` over an existing store; idempotent, `--only` selects one pass. |
 | Migrate | `migrate` | Upgrade a v1.3 or v2.0 payload to schema v3 via `migrate.from_v13` / `migrate.from_v2`; never renumbers a sense. |
+| Queries (doc2query) | `queries` | One call per live sense writes N synthetic search queries across the eight `QueryStyle` registers, with the entry's other senses in the prompt so the queries discriminate between them and at least half of them asked to describe the meaning without naming the headword. Duplicates and over-long queries are dropped for free; the achieved headword-free share is reported. Idempotent per sense (D-55). |
 
 ## Cost defaults
 

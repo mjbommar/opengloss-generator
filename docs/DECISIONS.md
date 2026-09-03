@@ -2366,3 +2366,133 @@ for a no-op change.
 No model was called and no money was spent: this branch adds storage, not a stage.
 Nothing here touches `data/core-store` or `runs/`; `data/sample-300` was read only.
 Tests: **+31** (`tests/test_retrieval_schema.py`).
+
+## D-55 (2026-09-03) — The `queries` stage: doc2query per sense, on luna rather than nano, because luna is both cheaper and better
+
+**Context.** `docs/RETRIEVAL-DATA-PLAN.md` F2. Every text this project writes is an
+*answer* — a definition, an example, an encyclopedia passage — and a retrieval encoder
+needs the other half of the pair, the query a person actually typed. Doc2query is the
+standard way to manufacture that half, and the store already has the two things that make
+the manufactured queries worth more than a generic doc2query run over a text corpus: the
+entry knows its own ambiguity (so a query can be *required* to discriminate one sense from
+its siblings), and it knows the headword (so "did this query avoid naming it?" is a free
+measurement rather than a hope). Both matter for the same reason: a query set that all
+contains its own headword is solved by BM25 and teaches an encoder to match a string.
+
+**Decision.** A new stage, `StageName.QUERIES`, in `workflows/queries.py`, `plan_queries` /
+`run_queries`, CLI `opengloss queries --from-list/--all [--limit --offset --per-sense
+--budget --concurrency --dry-run]`. The five choices worth recording:
+
+1. **One call per *sense*, not per entry.** `examples.py` calls once per entry because an
+   example sentence must fit its own sense and no other, so writing sense 2's sentences
+   while looking at sense 1 is the whole trick. A query is a short, self-contained string;
+   asking one answer for twelve of them across six senses is how a model comes back with
+   four thrown-away queries per sense. The siblings' glosses are still in every prompt —
+   they are what the queries must not fit — as context rather than as more work.
+
+2. **Eight styles, and the count is in the prompt, not the instructions.**
+   `QueryStyle`'s eight registers (keyword, question, conversational, constraint, role,
+   example_based, step_by_step, directive) are the coverage plan, asked for at least once
+   each; twelve queries against eight styles leaves four slack slots the model spends
+   where the sense actually has more than one way in. The ~1.9K-token instruction block is
+   byte-stable and carries the styles, the discrimination rule and the worked example, so
+   it caches (measured 88% cache hit rate on the default model's pilot). `per_sense` is
+   the one part of the ask that varies per run, so it lives in the volatile prompt.
+
+3. **Everything checkable is checked for free, and containing the headword is *counted*,
+   never refused.** A query is markdown-stripped and collapsed; empty, over 200 characters
+   (the storage schema's own ceiling, enforced here so an over-long query is dropped rather
+   than failing the entry's write), duplicated against the sense's existing queries or
+   against one accepted earlier in the same answer, or returned past the count asked for,
+   is dropped and counted by reason. Whether it names the headword is *measured*: refusing
+   individual lexical queries would only teach the model to smuggle the headword in as a
+   paraphrase, and a keyword query for a rare technical sense reasonably names the word.
+   What matters is the share, and `headword_free_share`,
+   `senses_below_headword_free_target`, `senses_with_full_style_coverage` and
+   `stored_by_style` are in the run summary for exactly that reason.
+
+4. **A D-47 marker per sense, keyed on the canonical gloss.**
+   `queries:<sense_id>:<digest of gloss + per_sense>;attempts=<n>`, on the answering call's
+   own provenance record. A rerun over an unchanged sense costs $0; a rewritten gloss or a
+   different `--per-sense` earns exactly one more call, and D-47's bound of two stops
+   there. Queries are **appended**, never inserted, because `identity.query_id` is
+   positional (D-62). A budget stop mid-entry is caught, the senses already answered are
+   written, and only then does the stop propagate: throwing away an answer that has already
+   been billed is the one thing a budget guard must not cause.
+
+5. **The stage ships on `gpt-5.6-luna`, not the `gpt-5.4-nano` the plan's table proposed.**
+   The plan said to pilot both and default to the cheaper one that passes. Luna is the
+   cheaper one *and* the better one, which was not the expected result and is why it is
+   recorded in detail below.
+
+**Measured — the two pilots.** Both over real entries of `data/sample-300` at 12 queries
+per sense, `--budget 0.50`, concurrency 8, on two disjoint 60-headword lists. Every number
+is from that run's `runs/<run_id>.ledger.jsonl`, one record per call; nothing is projected
+to the full store.
+
+| | nano (`20260903T093021Z-0dab2ef3`) | luna (`20260903T093238Z-8d98ab11`) |
+|---|---|---|
+| senses / calls | 213 | 218 |
+| cost | **$0.086984** | **$0.053394** |
+| cost per sense | **$0.000408** | **$0.000245** |
+| output tokens per call (mean / median / max) | **544 / 476 / 1,212** | **330 / 319 / 602** |
+| input tokens per call (mean, of which cached) | 2,250 (1,742) | 2,268 (1,999) |
+| queries stored | 2,556 | 2,616 |
+| rejected | 4 (all `surplus`) | 4 (all `surplus`) |
+| headword-free share | **0.585** | **0.782** |
+| senses missing the ≥ ½ headword-free bar | 57 / 213 (26.8%) | 5 / 218 (2.3%) |
+| senses covering all eight styles | 213 / 213 | 216 / 218 |
+| wall clock | 131 s | 494 s |
+
+The two lists are different senses, so a second, strictly head-to-head pass ran both models
+over the *same* 43 senses (12 entries copied to a private store, 516 queries each), which
+is where the quality numbers are cleanest: headword-free **0.616 nano / 0.816 luna**; senses
+missing the bar **8 / 0**; mean query length **81 / 66 characters**; queries whose text
+begins with the model's own style label leaking into it ("`keyword: atmospheric conditions
+abbreviation atm`") **42 of 516 (8.1%) nano / 0 luna**; queries of the explicitly banned
+"what does X mean" shape **7 nano / 0 luna**.
+
+**Verdict on reading 20 queries from each.** Both models cover all eight styles and both
+discriminate senses better than expected — nano's `advert` verb-1 set ("*I'm writing a
+report and I keep wanting a verb for 'to just mention something briefly'*") is genuinely
+about the passing-reference sense and not the promotion sense. The differences are in
+*naturalness* and *hygiene*. Luna writes what a person types: "I need cash for a taxi but
+the branch is closed", "I don't mean mentioning it in passing—I mean actively getting the
+product known". Nano writes longer, more explanatory queries that drift towards being their
+own answer, produces the occasional ungrammatical one ("What's the best way to adverts your
+new service"), files an example *sentence* under `example_based` instead of a request for
+one ("experiments were conducted at one atmosphere to ensure comparability"), and leaks its
+style label into the text on one sense in twelve. So luna passes and nano is marginal — and
+luna costs 40% less, because the per-token prices are within 4% of each other (luna is
+actually the cheaper of the two on output) and nano spends 65% more output tokens per call,
+most of them invisible reasoning tokens that are billed as output. The one thing nano wins
+is latency, by 3.8×, which is throughput rather than money and is what `--concurrency` is
+for.
+
+**Consequence.** `config.py`'s `QUERIES` policy becomes `gpt-5.6-luna`, `low` effort,
+`max_tokens=4096`, `expected_output_tokens=400` — the measured mean of 330 rounded up, per
+D-41, against a largest observed answer of 602; the placeholder 500 the schema branch
+registered is gone. `cli.py` gains the command, a measured dry-run estimate (2,270 input /
+2,000 cached / 330 output per call) and one ledger record per sense, so a later run can
+re-derive `expected_output_tokens` from measurement rather than from this document. The
+output contract and the instructions are **module-private** in `workflows/queries.py`
+rather than in `contracts.py` / `prompts.py`, following `sense_hygiene` and
+`relation_hygiene`: eight sibling retrieval-data features are being built concurrently
+against those shared files. `PROMPT_VERSION` is **not** bumped — no text in `prompts.py`
+changed, and bumping it would re-bill idempotence markers on a chain that is running now.
+Tests: **+23** (`tests/test_queries.py`), with `tests/conftest.py` gaining an append-only
+block whose payload is a function of the count the prompt asks for, so one scripted answer
+can carry an acceptable query, an exact repeat of it, one over the character ceiling, one
+that is whitespace only and two past the count. `data/core-store` was never touched.
+
+**Two things left open.** First, `data/sample-300` is now shared by nine concurrent agent
+worktrees and is being written by several of them at once; roughly three quarters of this
+pilot's stored entries were clobbered by a sibling between the write and the read, which is
+why the head-to-head quality pass ran against a private copy. The ledger numbers above are
+unaffected — they come from the provider, not from disk — but
+`tests/test_retrieval_schema.py`'s two "the sample store carries none of the new fields"
+tests now fail for everyone, on `retrieval/schema` HEAD as well as here, and that premise
+needs retiring by whoever owns that file. Second, nano was piloted at `low` reasoning
+effort; `"none"` (D-38's lever) would cut most of its 544 output tokens and might make it
+competitive on cost again, but it would not fix the style-label leakage or the naturalness
+gap, which are the reasons it lost, so it was not worth a third paid run.
