@@ -1183,3 +1183,13 @@ flag + rewrite (cap $6.5) → re-judge → audit.
 **Domain retag, whole store (18:06 → 19:37):** hygiene clear 110,870 domains ($0,
 4m); luna `tag_domain` 41,881 calls, **$3.90** (extrapolation was $4.34; cap $6.5),
 110,869 senses retagged, cache hit rate 0.94, completed. Forced re-judge running.
+
+**Relation-reconcile, whole store (19:42 → 19:51, 9m, $0):** `asymmetric` demoted
+18,448 one-sided edges (synonym 14,071, antonym 4,366, confusable 11); `tombstone`
+moved **751,249** demoted `see_also` edges out of relation lists into provenance notes;
+`cap` removed 145,716 over-cap edges across 12,862 senses (antonym 97,064, synonym
+35,959, hypernym 7,953, hyponym 2,816, instance_of 1,556) plus 64,742 far-side
+removals to keep pairs symmetric. Relations per sense on a 3,000-entry sample:
+mean **13.4 → 5.5**, median 10 → 5, p90 22 → 10; what remains is 32% synonym, 24%
+hypernym, 20% hyponym, 12% antonym, no demoted see_also. Graph-hygiene running, then
+the re-judge.
