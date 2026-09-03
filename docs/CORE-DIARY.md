@@ -1152,3 +1152,19 @@ $0.000039/sense (27% cheaper than nano). D-46's version bump only clears `.gener
 tags (15% of senses), so a new `--force-retag-domains` flag clears every live sense.
 Whole-store retag launched: luna, cap $6.5 (1.5× the $4.34 extrapolation), followed by
 the forced 40-entry re-judge.
+
+**18:10 — relation-reconcile pass (D-65, merged):** three free steps — `asymmetric`
+(apply the stricter directional verdict), `tombstone` (move demoted `see_also` edges
+out of the relation list into a provenance note, so the judge stops reading them),
+`cap` (per-type caps: synonym 8, antonym 4, hypernym 3, hyponym 8, others 4, with a
+far-side phase so a cap never creates asymmetry). On its 300-entry sample: synonym
+reciprocity 93.5% → **100%**, antonym 97.9% → **100%**, mean relations per sense
+22.4 → **7.1**, and graph-hygiene afterwards changed nothing. Runs on the store after
+the retag re-judge, then its own re-judge.
+
+**Latent bug fixed on main (bbf96d3):** every "latest marker" lookup iterated
+`provenance.values()` in table order, but the store writes sorted JSON keys, so past 99
+records `p100` precedes `p2` and the wrong record was taken as latest. Effect: entries
+with 100+ provenance records were re-judged on every sweep (part of why validity pass
+2 spent $8 re-judging). New `Lexeme.provenance_in_order()`; eight lookups switched;
+regression test.
