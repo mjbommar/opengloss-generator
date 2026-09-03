@@ -1202,3 +1202,8 @@ renditions and examples). Caps = 1.5× the luna-only pilot extrapolations: queri
 headwords (core + tier 2). Then a final audit and the four free exports
 (`export-pairs`, `export-triples`, `export-qrels`, `export-pretrain`) into
 `data/exports/` for the encoder.
+
+**Filler flag, whole store (19:54, $0):** 1,228,673 example renditions scanned;
+**80,055 flagged** (6.5%, matching the calibration) across 30,772 entries; 15 over-
+threshold 4-grams ("the museum displayed a" ×1,221, "reappraise…" ×465 …), no
+over-threshold openers at the chosen threshold. Rewrite pass started 19:57 (cap $6.5).
