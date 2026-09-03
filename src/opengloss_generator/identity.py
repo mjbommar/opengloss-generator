@@ -15,6 +15,8 @@ __all__ = [
     "encyclopedia_owner_id",
     "explanation_owner_id",
     "pos_entry_id",
+    "qa_id",
+    "query_id",
     "rendition_id",
     "sense_id",
     "shard_for",
@@ -85,6 +87,40 @@ def rendition_id(owner_id: str, reading_level: str, register: str) -> str:
         A rendition identifier, e.g. ``abseil:verb:0#grade_5/plain``.
     """
     return f"{owner_id}#{reading_level}/{register}"
+
+
+def query_id(owning_sense_id: str, index: int) -> str:
+    """Return the identifier for one synthetic retrieval query on a sense.
+
+    Positional within the sense's ``queries`` list and **zero-based**, matching
+    :func:`sense_id`'s treatment of a sense's position within its part-of-speech entry
+    (the provenance table's ``p1``, ``p2``, … are one-based, but those are dictionary
+    keys handed out on insertion, not list positions). Reordering the list therefore
+    renames its members: append, never insert.
+
+    Args:
+        owning_sense_id: The sense the query belongs to.
+        index: Zero-based position within :attr:`~opengloss_generator.schema.Sense.queries`.
+
+    Returns:
+        A query identifier, e.g. ``abseil:verb:0#q3``.
+    """
+    return f"{owning_sense_id}#q{index}"
+
+
+def qa_id(owning_sense_id: str, index: int) -> str:
+    """Return the identifier for one question/answer pair on a sense.
+
+    Zero-based and positional, exactly as :func:`query_id`.
+
+    Args:
+        owning_sense_id: The sense the pair belongs to.
+        index: Zero-based position within :attr:`~opengloss_generator.schema.Sense.qa`.
+
+    Returns:
+        A QA-pair identifier, e.g. ``abseil:verb:0#qa3``.
+    """
+    return f"{owning_sense_id}#qa{index}"
 
 
 def variant_id(owning_sense_id: str, reading_level: str, register: str) -> str:

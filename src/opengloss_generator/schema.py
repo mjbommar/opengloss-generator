@@ -34,6 +34,8 @@ from opengloss_generator.identity import (
     encyclopedia_owner_id,
     explanation_owner_id,
     pos_entry_id,
+    qa_id,
+    query_id,
     rendition_id,
     sense_id,
     slugify,
@@ -55,6 +57,9 @@ __all__ = [
     "UPOS_MAP",
     "WN_RELATION_MAP",
     "Assessment",
+    "Contrast",
+    "ContrastVerdict",
+    "Difficulty",
     "Edge",
     "EntityType",
     "EntryStatus",
@@ -70,6 +75,10 @@ __all__ = [
     "ProperNounInfo",
     "Provenance",
     "QAFlag",
+    "QAPair",
+    "Query",
+    "QueryStyle",
+    "QuestionType",
     "ReadingLevel",
     "Register",
     "Relation",
@@ -80,6 +89,7 @@ __all__ = [
     "Sense",
     "StageName",
     "canonical_rendition",
+    "normalise_query_text",
     "project_concept_id",
     "upos_for",
 ]
@@ -502,6 +512,12 @@ class StageName(StrEnum):
     SPANS = "spans"
     FRONTIER = "frontier"
     QA = "qa"
+    # The three retrieval-data stages (D-62). ``QA_PAIRS`` is deliberately not ``QA``:
+    # that member is the judge, which scores stored content, while this one writes
+    # question/answer pairs grounded in it.
+    QUERIES = "queries"
+    CONTRASTS = "contrasts"
+    QA_PAIRS = "qa_pairs"
 
 
 class EntryStatus(StrEnum):
@@ -555,6 +571,68 @@ class QAFlag(StrEnum):
     # A grade_1 or grade_5 rendition too many of whose words are not on the familiar-word
     # list, whatever its Flesch-Kincaid grade says (D-51).
     OG_HARD_VOCABULARY = "og.hard_vocabulary"
+    # A register or reading-level rendition that barely differs from the canonical one it
+    # was asked to rewrite — near-copies add tokens without adding information (D-62).
+    OG_NEAR_COPY = "og.near_copy"
+    # A rendition carrying corpus-level filler: n-grams or sentence openers that recur
+    # across the store far above their natural rate (D-62).
+    OG_FILLER = "og.filler"
+
+
+class QueryStyle(StrEnum):
+    """The register a synthetic retrieval query is written in (:class:`Query`, D-62).
+
+    Eight styles, so a sense's query set spans the ways a real user reaches for a
+    meaning — a bare keyword, a full question, a chatty aside, a constraint, a stated
+    role, a request for an example, a how-to, an imperative — rather than eight
+    paraphrases of the gloss. Retrieval training wants the variance.
+    """
+
+    KEYWORD = "keyword"
+    QUESTION = "question"
+    CONVERSATIONAL = "conversational"
+    CONSTRAINT = "constraint"
+    ROLE = "role"
+    EXAMPLE_BASED = "example_based"
+    STEP_BY_STEP = "step_by_step"
+    DIRECTIVE = "directive"
+
+
+class QuestionType(StrEnum):
+    """What a :class:`QAPair` asks for (D-62).
+
+    One pair per type is what the ``qa_pairs`` stage produces per sense, so the type is
+    the generation target as well as a label: the seven values are the coverage plan.
+    """
+
+    FACTUAL = "factual"
+    DEFINITION = "definition"
+    REASONING = "reasoning"
+    COMPARISON = "comparison"
+    PROCEDURAL = "procedural"
+    CAUSAL = "causal"
+    HYPOTHETICAL = "hypothetical"
+
+
+class Difficulty(StrEnum):
+    """How hard a :class:`QAPair` is to answer from the stored text (D-62)."""
+
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+
+
+class ContrastVerdict(StrEnum):
+    """What a :class:`Contrast` concluded about the edge it was written for (D-62).
+
+    Recorded, never acted on: relation hygiene owns relation edits (D-50), so a
+    ``related_differently`` or ``unrelated`` verdict is evidence for a later pass rather
+    than a licence for this one to delete an edge.
+    """
+
+    RELATED_AS_TYPED = "related_as_typed"
+    RELATED_DIFFERENTLY = "related_differently"
+    UNRELATED = "unrelated"
 
 
 class _Base(BaseModel):
@@ -897,6 +975,140 @@ def project_concept_id(member_sense_ids: Iterable[str]) -> str:
     return f"og:c-{digest[:16]}"
 
 
+def _first_duplicate(keys: Iterable[str]) -> str | None:
+    """Return the first key that repeats in ``keys``, or ``None`` if all are distinct.
+
+    Args:
+        keys: The uniqueness keys, in document order.
+
+    Returns:
+        The repeated key, so the error message can name it.
+    """
+    seen: set[str] = set()
+    for key in keys:
+        if key in seen:
+            return key
+        seen.add(key)
+    return None
+
+
+#: Characters stripped from the end of a query or question before comparing two of them
+#: (:func:`normalise_query_text`). Sentence-terminal marks plus the separators a model
+#: sometimes leaves dangling; an internal ``?`` or ``.`` is untouched.
+_TERMINAL_PUNCTUATION = ".,;:!?…"
+
+_WHITESPACE_RUN = re.compile(r"\s+")
+
+
+def normalise_query_text(value: str) -> str:
+    """Return the form two queries (or two QA questions) are compared as equal on.
+
+    Case-folded, runs of whitespace collapsed to one space, and terminal punctuation
+    stripped, in that order: ``"How to Abseil?"`` and ``"how  to abseil"`` are the same
+    query asked twice, and storing both would train a retriever on a duplicate rather
+    than on a second way of asking (D-62). Nothing else is touched — word order,
+    stop-words and spelling all still distinguish two queries, because they distinguish
+    two things a user typed.
+
+    Args:
+        value: The raw query text or question.
+
+    Returns:
+        The normalised key. May be empty, if ``value`` held nothing else.
+    """
+    collapsed = _WHITESPACE_RUN.sub(" ", value).strip().casefold()
+    return collapsed.rstrip(_TERMINAL_PUNCTUATION).strip()
+
+
+class Query(_Base):
+    """A synthetic query that should retrieve the sense it hangs off (D-62).
+
+    Written by the ``queries`` stage, one set per sense, for training and evaluating a
+    retriever: the query is the input side of a pair whose positive side is the sense's
+    own gloss, examples and encyclopedia text. Ids are positional within the sense —
+    :func:`~opengloss_generator.identity.query_id`, e.g. ``abseil:verb:0#q3`` — so
+    reordering the list renames its members; append rather than insert.
+    """
+
+    text: Annotated[str, Field(min_length=1, max_length=200)]
+    style: QueryStyle
+    provenance_id: str | None = None
+
+    @property
+    def key(self) -> str:
+        """Return the normalised text this query is unique on within its sense."""
+        return normalise_query_text(self.text)
+
+
+class QAPair(_Base):
+    """A question and an answer grounded in one sense's stored text (D-62).
+
+    ``grounded_in`` names the renditions the answer was written from (rendition ids, see
+    :meth:`Lexeme.rendition_ids`), which is what makes the pair checkable: an answer that
+    shares no content with what it cites is not grounded, whatever it claims. It defaults
+    to empty rather than being required, so a pair may be stored before its citations are
+    resolved; the ``qa_pairs`` stage's own post-check is what refuses an ungrounded pair.
+    """
+
+    question: Annotated[str, Field(min_length=1, max_length=500)]
+    answer: Annotated[str, Field(min_length=1, max_length=2000)]
+    question_type: QuestionType
+    difficulty: Difficulty
+    grounded_in: list[str] = Field(default_factory=list)
+    provenance_id: str | None = None
+
+    @property
+    def key(self) -> str:
+        """Return the normalised question this pair is unique on within its sense."""
+        return normalise_query_text(self.question)
+
+
+class Contrast(_Base):
+    """A paragraph saying how the two ends of one relation edge differ (D-62).
+
+    Keyed by ``edge_id`` — the derived id from :meth:`Lexeme.edges`, e.g.
+    ``abseil:verb:0-synonym->rappel`` — and held on the *entry*, not the sense, because
+    the ``contrasts`` stage deduplicates across an edge and its reciprocal and one entry
+    is where both ends can be seen at once. The edge id is not cross-checked against the
+    entry's current edges: retiring a sense would then invalidate stored, still-true
+    prose, and a contrast whose edge has gone is evidence about a removed relation rather
+    than a validation error.
+
+    ``text`` is a rendition set so the paragraph can be levelled like any other prose;
+    the canonical ``(neutral, plain)`` rendition is required, the rest optional.
+    """
+
+    edge_id: Annotated[str, Field(min_length=1)]
+    target_sense_id: str | None = None
+    text: Renditions[str]
+    verdict: ContrastVerdict
+    provenance_id: str | None = None
+
+    @model_validator(mode="after")
+    def _canonical_text_required(self) -> Self:
+        """Require a non-empty canonical ``(neutral, plain)`` paragraph."""
+        canonical = self.text.canonical()
+        if canonical is None:
+            raise ValueError(f"contrast {self.edge_id} has no canonical (neutral, plain) text")
+        if not canonical.content.strip():
+            raise ValueError(f"contrast {self.edge_id} has empty canonical text")
+        return self
+
+    def canonical_text(self) -> str:
+        """Return the canonical paragraph text.
+
+        Returns:
+            The ``(neutral, plain)`` text, which validation guarantees is present.
+
+        Raises:
+            ValueError: If the canonical rendition is missing, which validation prevents.
+        """
+        canonical = self.text.canonical()
+        if canonical is None:
+            raise ValueError(f"contrast {self.edge_id} has no canonical text")
+        return canonical.content
+
+
 class Sense(_Base):
     """A single meaning of a lexeme under one part of speech."""
 
@@ -910,6 +1122,8 @@ class Sense(_Base):
     concept_id: str | None = None
     assessment: Assessment | None = None
     retired: bool = False
+    queries: list[Query] = Field(default_factory=list)
+    qa: list[QAPair] = Field(default_factory=list)
 
     @field_validator("concept_id")
     @classmethod
@@ -946,6 +1160,33 @@ class Sense(_Base):
             raise ValueError(f"sense {self.index} has no canonical (neutral, plain) gloss")
         if not canonical.content.strip():
             raise ValueError(f"sense {self.index} has an empty canonical gloss")
+        return self
+
+    @model_validator(mode="after")
+    def _queries_are_distinct(self) -> Self:
+        """Reject two queries with the same normalised text (D-62).
+
+        A duplicate query is not a second way of asking; it is the same training pair
+        twice, and positional ids give the two of them different names, so the store
+        would not even show them as duplicates.
+        """
+        keys = [query.key for query in self.queries]
+        duplicate = _first_duplicate(keys)
+        if duplicate is not None:
+            raise ValueError(f"sense {self.index} has duplicate query text {duplicate!r}")
+        return self
+
+    @model_validator(mode="after")
+    def _questions_are_distinct(self) -> Self:
+        """Reject two QA pairs asking the same normalised question (D-62).
+
+        Keyed on the question alone, not on ``(question, answer)``: two answers to one
+        question are a disagreement to resolve, not two rows to store.
+        """
+        keys = [pair.key for pair in self.qa]
+        duplicate = _first_duplicate(keys)
+        if duplicate is not None:
+            raise ValueError(f"sense {self.index} has duplicate question {duplicate!r}")
         return self
 
     @classmethod
@@ -990,6 +1231,32 @@ class Sense(_Base):
     def relation_targets(self) -> set[str]:
         """Return the distinct surface forms this sense points at."""
         return {relation.target.term for relation in self.relations}
+
+    def query_ids(self, owner_sense_id: str) -> list[str]:
+        """Return the derived id of every query on this sense, in list order.
+
+        The sense id is a parameter rather than a stored field for the same reason
+        :meth:`Lexeme.rendition_ids` lives on the entry: a sense knows its index, not the
+        lexeme and part of speech that complete its id.
+
+        Args:
+            owner_sense_id: This sense's id, e.g. from :meth:`Lexeme.iter_senses`.
+
+        Returns:
+            Positional query ids, e.g. ``["abseil:verb:0#q0", ...]``.
+        """
+        return [query_id(owner_sense_id, index) for index in range(len(self.queries))]
+
+    def qa_ids(self, owner_sense_id: str) -> list[str]:
+        """Return the derived id of every QA pair on this sense, in list order.
+
+        Args:
+            owner_sense_id: This sense's id, e.g. from :meth:`Lexeme.iter_senses`.
+
+        Returns:
+            Positional QA-pair ids, e.g. ``["abseil:verb:0#qa0", ...]``.
+        """
+        return [qa_id(owner_sense_id, index) for index in range(len(self.qa))]
 
 
 class Morphology(_Base):
@@ -1136,6 +1403,7 @@ class Lexeme(_Base):
     etymology: Etymology | None = None
     encyclopedia: Renditions[str] = Field(default_factory=lambda: Renditions[str](root=[]))
     lexical_explanation: Renditions[str] = Field(default_factory=lambda: Renditions[str](root=[]))
+    contrasts: list[Contrast] = Field(default_factory=list)
     is_stopword: bool = False
     frequency: float | None = None
     zipf: float | None = None
@@ -1178,6 +1446,19 @@ class Lexeme(_Base):
         """Force ``is_stopword`` for function words; the kind implies it."""
         if self.kind is LexemeKind.FUNCTION_WORD:
             self.is_stopword = True
+        return self
+
+    @model_validator(mode="after")
+    def _one_contrast_per_edge(self) -> Self:
+        """Reject two contrasts keyed on the same edge id (D-62).
+
+        The edge id *is* the contrast's identity, so a second one for an edge is either a
+        stale paragraph left behind by a rerun or two answers to the same question.
+        Rewriting a contrast replaces the entry in the list; it never appends.
+        """
+        duplicate = _first_duplicate(contrast.edge_id for contrast in self.contrasts)
+        if duplicate is not None:
+            raise ValueError(f"duplicate contrast for edge {duplicate!r}")
         return self
 
     @classmethod
@@ -1283,6 +1564,18 @@ class Lexeme(_Base):
     def relation_targets(self) -> set[str]:
         """Return the distinct surface forms this entry points at."""
         return {edge.target for edge in self.edges()}
+
+    def contrast_for(self, edge: str) -> Contrast | None:
+        """Return the contrast written for one edge, if there is one.
+
+        Args:
+            edge: The derived edge id, e.g. ``abseil:verb:0-synonym->rappel``.
+
+        Returns:
+            The matching :class:`Contrast`, or ``None``. Validation guarantees at most
+            one can match.
+        """
+        return next((c for c in self.contrasts if c.edge_id == edge), None)
 
     def sense_count(self) -> int:
         """Return the number of non-retired senses."""

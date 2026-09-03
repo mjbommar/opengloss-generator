@@ -202,6 +202,23 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
         StageName.FRONTIER: ModelPolicy(
             model=nano, reasoning_effort="none", max_tokens=2048, expected_output_tokens=200
         ),
+        # The three retrieval-data stages (D-62). Registered here because
+        # `_every_stage_has_a_policy` requires one per `StageName` member and the members
+        # land with the schema, ahead of the stages themselves; the models follow the
+        # plan's table (nano for the short, structural query list; luna for the two prose
+        # stages) and every `expected_output_tokens` below is an **estimate**, not a
+        # measurement. D-41 wants the reservation set from measured output, so F2, F5 and
+        # F6 each replace their own number from their pilot run and own the policy from
+        # then on.
+        StageName.QUERIES: ModelPolicy(
+            model=nano, reasoning_effort="low", max_tokens=4096, expected_output_tokens=500
+        ),
+        StageName.CONTRASTS: ModelPolicy(
+            model=luna, reasoning_effort="low", max_tokens=4096, expected_output_tokens=400
+        ),
+        StageName.QA_PAIRS: ModelPolicy(
+            model=luna, reasoning_effort="low", max_tokens=8192, expected_output_tokens=900
+        ),
         StageName.QA: ModelPolicy(
             model="claude-opus-5",
             service_tier=ServiceTier.DEFAULT,

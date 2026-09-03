@@ -742,9 +742,9 @@ with, or requiring cultural knowledge it never supplies.
   * `off_topic` — content that is not about this headword.
   * `other` — a real defect none of the above names; say what it was in `notes`.
   * `og.headword_initial`, `og.artifact_relation`, `og.readability_miss`, \
-`og.duplicate_gloss`, `og.headword_absent`, `og.hard_vocabulary` — project-specific \
-conditions this pipeline detects deterministically. Do not use them; they are listed \
-only so you recognise them where they are already present.
+`og.duplicate_gloss`, `og.headword_absent`, `og.hard_vocabulary`, `og.near_copy`, \
+`og.filler` — project-specific conditions this pipeline detects deterministically. Do \
+not use them; they are listed only so you recognise them where they are already present.
 
 `notes` — at most one or two sentences, and only when something needed saying that no \
 field above could carry. An empty string is the normal answer.

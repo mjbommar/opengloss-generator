@@ -245,3 +245,83 @@ them so the contract does not silently disagree with the shipped code.
 | D-34 | `ReadingLevel.crosswalk` / `READING_LEVEL_CROSSWALK` document the CCSS/Lexile/CEFR/MARC crosswalk; `readability.grade_band` now reads its bands from `schema.FK_BANDS`, the same table the crosswalk sits beside, so the two cannot drift apart. Band numbers are unchanged. |
 | D-35 | `RelationType.namespace` (`"wn"`/`"og"`) plus `WN_RELATION_MAP`/`SKOS_RELATION_MAP`, and `EntityType`'s `ONTONOTES_MAP`/`SCHEMA_ORG_MAP`, are export-only crosswalks per the § 8 reconciliation in `docs/STANDARDS-PLAN.md` — no enum rename, no retrofit for either. |
 | D-36 | `QAFlag(StrEnum)` (MQM Core plus four `og.`-prefixed project flags) replaces `Assessment.qa_flags`'s free-text `list[str]`; `enrich.py` writes `OG_READABILITY_MISS` on a rendition that still misses its band after retry, `audit.py` only counts it. `taxonomy.py` gains `LCC_MAP`/`IPTC_MAP` (export crosswalk, `history` has no IPTC top-level analogue). |
+
+## 9. Retrieval-data additions (2026-09-03)
+
+Three collections added for `docs/RETRIEVAL-DATA-PLAN.md`'s features (D-62). All three
+default empty, so every entry already in the store validates unchanged and `migrate.py`
+needs no change: an entry that has never seen the retrieval stages serialises exactly as
+it did before, key for key.
+
+```python
+class Query(_Base):              # written by the `queries` stage (F2)
+    text: str                    # 1-200 chars
+    style: QueryStyle            # keyword | question | conversational | constraint |
+                                 # role | example_based | step_by_step | directive
+    provenance_id: str | None = None
+
+class QAPair(_Base):             # written by the `qa_pairs` stage (F6)
+    question: str                # 1-500 chars
+    answer: str                  # 1-2000 chars, grounded in the sense's stored text
+    question_type: QuestionType  # factual | definition | reasoning | comparison |
+                                 # procedural | causal | hypothetical
+    difficulty: Difficulty       # easy | medium | hard
+    grounded_in: list[str] = []  # rendition ids the answer is supported by
+    provenance_id: str | None = None
+
+class Contrast(_Base):           # written by the `contrasts` stage (F5)
+    edge_id: str                 # e.g. abseil:verb:0-synonym->rappel
+    target_sense_id: str | None = None
+    text: Renditions[str]        # canonical (neutral, plain) REQUIRED, more optional
+    verdict: ContrastVerdict     # related_as_typed | related_differently | unrelated
+    provenance_id: str | None = None
+
+Sense.queries:    list[Query]    = []
+Sense.qa:         list[QAPair]   = []
+Lexeme.contrasts: list[Contrast] = []
+```
+
+**Where each lives.** Queries and QA pairs are *about one sense*, so they hang off the
+sense. A contrast is about an *edge*, and the `contrasts` stage deduplicates an edge
+against its reciprocal, so it hangs off the entry, where both ends of an edge are visible
+at once — the same reason `edges()` is an entry-level projection.
+
+**Ids.** Positional, derived, never stored (D-1):
+`identity.query_id(sense_id, i)` → `abseil:verb:0#q3`, `identity.qa_id(sense_id, i)` →
+`abseil:verb:0#qa3`, both **zero-based**, matching `sense_id`'s treatment of a sense's
+position (the provenance table's `p1`, `p2`, … are one-based because they are dictionary
+keys handed out on insertion, not list positions). Reordering a list therefore renames its
+members: append, never insert. Helpers `Sense.query_ids(sense_id)` and
+`Sense.qa_ids(sense_id)` take the owner id as a parameter for the same reason
+`Lexeme.rendition_ids()` lives on the entry — a sense knows its index, not the lexeme and
+part of speech that complete its id. Contrasts have no positional id: `edge_id` *is* the
+id, and `Lexeme.contrast_for(edge_id)` looks one up.
+
+**Uniqueness**, enforced by validators, so a duplicate is refused where it would be
+stored rather than deduplicated downstream:
+
+| Rule | Keyed on | Raised by |
+|---|---|---|
+| No two queries on one sense with equal normalised text | `normalise_query_text(text)` | `Sense._queries_are_distinct` |
+| No two QA pairs on one sense asking the same question | `normalise_query_text(question)` | `Sense._questions_are_distinct` |
+| One contrast per edge | `edge_id`, verbatim | `Lexeme._one_contrast_per_edge` |
+
+`normalise_query_text` case-folds, collapses whitespace runs to one space, and strips
+terminal `.,;:!?…` — so `"How to Abseil?"` and `"how  to abseil"` are one query asked
+twice — and touches nothing else: word order, stop-words and spelling still distinguish
+two queries, because they distinguish two things a user typed. A QA pair is keyed on its
+question alone, not on `(question, answer)`: two answers to one question are a
+disagreement to resolve, not two rows to store.
+
+**What is deliberately not validated.** A `Contrast.edge_id` is not checked against the
+entry's current `edges()`. Retiring a sense would then invalidate a stored, still-true
+paragraph, and a contrast whose edge has gone is evidence about a removed relation rather
+than a validation error. Likewise `grounded_in` is not checked against
+`Lexeme.rendition_ids()`: the grounding check belongs to the stage that writes the pair
+(F6 drops an ungrounded pair and counts it), not to the schema, which would otherwise
+refuse to load an entry whose renditions were later re-levelled.
+
+**Enums and stages.** `QueryStyle`, `QuestionType`, `Difficulty` and `ContrastVerdict`
+are closed vocabularies, so an unrecognised value fails validation instead of arriving as
+free text. `StageName` gains `QUERIES`, `CONTRASTS` and `QA_PAIRS` — the last is not
+`QA`, which is the judge — and `QAFlag` gains `OG_NEAR_COPY` (F7) and `OG_FILLER` (F8).

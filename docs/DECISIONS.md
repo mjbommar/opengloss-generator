@@ -2288,3 +2288,81 @@ per-call means above. Nothing here touches `data/core-store`. Tests: **+18**
 generation payload is a function of the *listed senses and targets* so one scripted answer can
 carry an acceptable sentence, an exact repeat of it, one over the word cap, one that never names
 the headword and one shaped like a definition at once.
+
+## D-62 (2026-09-03) — Retrieval-data schema: queries, QA pairs and contrasts, keyed so a duplicate cannot be stored
+
+**Context.** `docs/RETRIEVAL-DATA-PLAN.md` adds nine features aimed at
+`../opengloss-embedding`, and four of them (F2 `queries`, F5 `contrasts`, F6 `qa_pairs`,
+F9 `export-pretrain`) need somewhere to put what they write. Those four are built
+concurrently, in separate worktrees, by separate agents; if each added its own fields the
+shared file would be a merge conflict and the three id schemes would disagree. So the
+schema lands first, on its own branch, with nothing but the storage and its rules — no
+stage, no prompt, no CLI command. The one hard constraint is that a production chain is
+running against `data/core-store` right now: whatever lands must leave every entry
+already on disk valid, byte for byte, without a migration.
+
+**Decision.** Three models — `Query` and `QAPair` on `Sense`, `Contrast` on `Lexeme` —
+plus the four closed vocabularies they read from (`QueryStyle`, `QuestionType`,
+`Difficulty`, `ContrastVerdict`), exactly as the plan sketches them. `docs/SCHEMA-V3.md`
+§ 9 is the field-level reference; the four choices worth recording are these.
+
+1. **Everything defaults empty, so there is no migration.** `Sense.queries`, `Sense.qa`
+   and `Lexeme.contrasts` are `default_factory=list`, and nothing else about an entry
+   changes. The proof is a test, not an argument: `tests/test_retrieval_schema.py` loads
+   all 300 real entries in `data/sample-300` (copied out of the production store) and
+   validates every one — **300/300 pass, none carries any of the new fields** — and a
+   second test dumps 25 of them with `exclude_defaults=True` and asserts the result has no
+   key the file on disk did not already have. `migrate.py` is untouched.
+
+2. **Ids are positional and zero-based; the collection's *identity* is what it is keyed
+   on.** `identity.query_id`/`qa_id` derive `<sense_id>#q3` / `<sense_id>#qa3` — zero-based
+   like `sense_id`'s own index, not one-based like the provenance table's `p1`, `p2`,
+   which are dictionary keys handed out on insertion rather than list positions. The
+   consequence is stated in both docstrings: reordering renames, so append, never insert.
+   Contrasts get no positional id at all — `edge_id` is the identity, which is what makes
+   "one contrast per edge" expressible as a uniqueness rule instead of a convention.
+
+3. **Uniqueness is validated where the row would be stored.** A duplicate query is not a
+   second way of asking; it is one training pair twice, and a positional id would give the
+   two copies different names, so nothing downstream would see them as duplicates. Queries
+   and questions are keyed on `normalise_query_text` (case-fold, collapse whitespace
+   runs, strip terminal `.,;:!?…` — and nothing else, because word order and spelling
+   distinguish two things a user actually typed); contrasts on `edge_id` verbatim. A QA
+   pair is keyed on its question alone: two answers to one question are a disagreement to
+   resolve, not two rows.
+
+4. **Two things are deliberately *not* validated.** `Contrast.edge_id` is not checked
+   against the entry's live `edges()` — retiring a sense would then invalidate a stored,
+   still-true paragraph, and a contrast for a since-removed relation is evidence about
+   that removal, not a corrupt record. `QAPair.grounded_in` is not checked against
+   `Lexeme.rendition_ids()`, and defaults empty: grounding is F6's post-check on the
+   answer text, and a schema-level check would refuse to *load* an entry whose renditions
+   were re-levelled after its QA pairs were written.
+
+**Consequence.** `schema.py` gains the four enums, the three models, the public
+`normalise_query_text`, the fields, three validators and three helpers
+(`Sense.query_ids`, `Sense.qa_ids`, `Lexeme.contrast_for`); `identity.py` gains
+`query_id` and `qa_id`, because every id in this project is derived there and none is
+formatted at a call site. `StageName` gains `QUERIES`, `CONTRASTS` and `QA_PAIRS` — the
+last deliberately not `QA`, which is the judge scoring stored content, not a stage writing
+question/answer pairs — and `QAFlag` gains `OG_NEAR_COPY` (F7) and `OG_FILLER` (F8), so
+those two agents need no further edit to a shared file.
+
+Two consequential edits outside `schema.py` follow from adding enum members and are
+recorded here rather than left as a surprise. `AppConfig._every_stage_has_a_policy`
+requires a policy per `StageName`, so `config.py` registers all three now: nano for
+`queries`, luna for `contrasts` and `qa_pairs`, per the plan's table, with
+`expected_output_tokens` that are **estimates, not measurements** (500 / 400 / 900) —
+D-41 wants the budget reservation set from measured output, so F2, F5 and F6 each replace
+their own number from their pilot run and own the policy from then on. And
+`tests/test_qa.py::test_every_flag_value_is_documented_in_the_instructions` requires every
+`QAFlag` value to appear in `QA_INSTRUCTIONS`, so the two new flags join the list of
+project-specific flags the judge is told to recognise but never use. `PROMPT_VERSION` is
+**not** bumped for that: the added text names two flags in a "do not use these" list, it
+cannot change a verdict, and a bump would invalidate every stored provenance's prompt
+version and re-bill idempotence markers on a chain that is running right now — a real cost
+for a no-op change.
+
+No model was called and no money was spent: this branch adds storage, not a stage.
+Nothing here touches `data/core-store` or `runs/`; `data/sample-300` was read only.
+Tests: **+31** (`tests/test_retrieval_schema.py`).
