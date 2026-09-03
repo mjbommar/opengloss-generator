@@ -213,8 +213,17 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
         StageName.QUERIES: ModelPolicy(
             model=nano, reasoning_effort="low", max_tokens=4096, expected_output_tokens=500
         ),
+        # `expected_output_tokens` here is now **measured**, replacing D-62's placeholder
+        # (D-57's pilot, 2026-09-03: 37 calls over `data/sample-300`, mean 202 output
+        # tokens, median 159, max 430, and ~156 output tokens per contrast paragraph). Like
+        # EXAMPLES above, the output scales with the entry rather than sitting around a
+        # mean: one call covers up to `MAX_EDGES_PER_CALL` (8) pairs, so a dense entry
+        # measures near 1,250. The pilot store is a 300-entry slice of a 206K-entry graph
+        # and therefore under-represents pair density badly — most relation targets in it
+        # are simply not present — so the reservation is set above the pilot's mean, at
+        # roughly a three-pair call, rather than at a number a full store would blow past.
         StageName.CONTRASTS: ModelPolicy(
-            model=luna, reasoning_effort="low", max_tokens=4096, expected_output_tokens=400
+            model=luna, reasoning_effort="low", max_tokens=4096, expected_output_tokens=500
         ),
         StageName.QA_PAIRS: ModelPolicy(
             model=luna, reasoning_effort="low", max_tokens=8192, expected_output_tokens=900
