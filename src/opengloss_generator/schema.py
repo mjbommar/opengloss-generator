@@ -555,6 +555,12 @@ class QAFlag(StrEnum):
     # A grade_1 or grade_5 rendition too many of whose words are not on the familiar-word
     # list, whatever its Flesch-Kincaid grade says (D-51).
     OG_HARD_VOCABULARY = "og.hard_vocabulary"
+    # A register rendition of a gloss whose content-word set is at least 90% the same as
+    # the canonical gloss's (:func:`~opengloss_generator.hygiene.is_near_copy`) -- a
+    # register change in name only, not in wording (D-59). The value has no ``og.`` dot
+    # prefix, unlike its siblings above: it is shared with another branch adding the same
+    # member concurrently and must match byte-for-byte for the merge to be trivial.
+    OG_NEAR_COPY = "og_near_copy"
 
 
 class _Base(BaseModel):

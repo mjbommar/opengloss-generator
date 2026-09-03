@@ -13,7 +13,8 @@ from pathlib import Path
 import pytest
 
 from opengloss_generator import prompts, spans
-from opengloss_generator.hygiene import is_headword_initial
+from opengloss_generator.contracts import DraftRendition
+from opengloss_generator.hygiene import is_headword_initial, is_near_copy
 from opengloss_generator.readability import flesch_kincaid_grade, grade_band
 from opengloss_generator.runner import RunSession
 from opengloss_generator.schema import (
@@ -45,6 +46,7 @@ from tests.conftest import (
     HARD_VOCAB_RENDITION,
     INITIAL_HEADWORD,
     MARKDOWN_HEADWORD,
+    NEAR_COPY_HEADWORD,
     make_entry,
 )
 
@@ -889,3 +891,170 @@ def test_a_retry_with_more_hard_words_never_displaces_one_with_fewer():
     )
     # Where the level has no band the comparison is the grade one it has always been.
     assert enrich_module._is_better(hard, easy, check_initial=False, check_vocabulary=False)
+
+
+# --------------------------------------------------------------------------------------
+# D-59: a register rendition that copies its canonical gloss is a miss too
+# --------------------------------------------------------------------------------------
+
+
+async def test_a_near_copy_register_rendition_is_regenerated_once(session):
+    # The scripted model echoes the canonical gloss almost verbatim for every non-plain
+    # register of this headword, and writes a genuinely different rewrite only when the
+    # prompt carries the near-copy feedback.
+    entry = make_entry(NEAR_COPY_HEADWORD)
+    result = await enrich_entry(entry, _glosses(styles=[Register.FORMAL]), session.stages)
+
+    assert result.renditions_added == 1
+    assert result.calls == 2  # one call, one retry, and never a loop
+    assert session.meter.summary().calls == 2  # both were priced
+
+    sense = entry.pos_entries[0].senses[0]
+    formal = sense.gloss.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    assert not is_near_copy(formal.content, sense.canonical_gloss())
+    # The retry fixed it, so the flag must not carry forward onto the kept rendition.
+    assert QAFlag.OG_NEAR_COPY not in formal.assessment.qa_flags
+
+
+def test_the_plain_register_is_never_checked_for_near_copy():
+    # plain is the canonical's own register, not a rewrite meant to diverge from it, so
+    # even an identical text is never flagged.
+    canonical = "To descend a rock face using a rope."
+    produced = enrich_module._measure(
+        [
+            DraftRendition(
+                reading_level=ReadingLevel.NEUTRAL, style=Register.PLAIN, content=canonical
+            )
+        ],
+        {(ReadingLevel.NEUTRAL, Register.PLAIN)},
+        headword="abseil",
+        check_near_copy=True,
+        source=canonical,
+    )
+    assert not produced[(ReadingLevel.NEUTRAL, Register.PLAIN)].near_copy
+
+
+async def test_an_example_rendition_is_not_checked_for_near_copy(session):
+    # Only the gloss field's register axis is checked; an example is never compared
+    # against the canonical gloss.
+    entry = make_entry(NEAR_COPY_HEADWORD)
+    spec = EnrichmentSpec(
+        renditions=[RenditionRequest(field=RenditionField.EXAMPLES, styles=[Register.FORMAL])]
+    )
+    result = await enrich_entry(entry, spec, session.stages)
+
+    assert result.calls == 1
+    rewritten = entry.pos_entries[0].senses[0].examples.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    assert rewritten.assessment.qa_flags == []
+
+
+async def test_a_proper_noun_is_not_exempt_from_the_near_copy_check(session):
+    # Unlike the headword-initial check (D-30), there is no proper-noun exemption here: a
+    # proper noun's formal and slang registers still have to read differently.
+    entry = make_entry(NEAR_COPY_HEADWORD)
+    entry.kind = LexemeKind.PROPER_NOUN
+    entry.proper_noun = ProperNounInfo(entity_type=EntityType.PLACE)
+    result = await enrich_entry(entry, _glosses(styles=[Register.FORMAL]), session.stages)
+
+    assert result.calls == 2
+
+
+async def test_the_near_copy_check_can_be_switched_off(config, scripted_model):
+    config.readability.near_copy_retry = False
+    async with RunSession(config, model_override=scripted_model, run_id="test-run") as off:
+        entry = make_entry(NEAR_COPY_HEADWORD)
+        result = await enrich_entry(entry, _glosses(styles=[Register.FORMAL]), off.stages)
+
+    assert result.calls == 1
+    sense = entry.pos_entries[0].senses[0]
+    formal = sense.gloss.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    assert is_near_copy(formal.content, sense.canonical_gloss())
+    # The check is off, so the copy is neither retried nor flagged.
+    assert QAFlag.OG_NEAR_COPY not in formal.assessment.qa_flags
+
+
+def test_apply_renditions_flags_a_rendition_that_still_copies_the_canonical():
+    entry = make_entry()
+    sense = entry.pos_entries[0].senses[0]
+    work = enrich_module._Work(
+        field=RenditionField.GLOSS,
+        label="sense",
+        source=sense.canonical_gloss(),
+        renditions=sense.gloss,
+        targets=[(ReadingLevel.NEUTRAL, Register.FORMAL)],
+        existing=[],
+        forms=[],
+    )
+    measured = enrich_module._Measured(
+        text="A way down a cliff on a rope.", grade=1.0, near_copy=True
+    )
+    rendered = enrich_module._Rendered(
+        produced={(ReadingLevel.NEUTRAL, Register.FORMAL): measured},
+        first=Provenance(stage=StageName.RENDITIONS, model="m", prompt_version="v1"),
+        cost_usd=0.0,
+        calls=1,
+    )
+    added = enrich_module._apply_renditions(entry, work, rendered)
+
+    assert added == 1
+    new_rendition = sense.gloss.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    assert new_rendition.assessment.qa_flags == [QAFlag.OG_NEAR_COPY]
+
+
+def test_apply_renditions_does_not_flag_a_rendition_that_diverges_enough():
+    entry = make_entry()
+    sense = entry.pos_entries[0].senses[0]
+    work = enrich_module._Work(
+        field=RenditionField.GLOSS,
+        label="sense",
+        source=sense.canonical_gloss(),
+        renditions=sense.gloss,
+        targets=[(ReadingLevel.NEUTRAL, Register.FORMAL)],
+        existing=[],
+        forms=[],
+    )
+    measured = enrich_module._Measured(
+        text="A formal register definition, wholly reworded.", grade=1.0, near_copy=False
+    )
+    rendered = enrich_module._Rendered(
+        produced={(ReadingLevel.NEUTRAL, Register.FORMAL): measured},
+        first=Provenance(stage=StageName.RENDITIONS, model="m", prompt_version="v1"),
+        cost_usd=0.0,
+        calls=1,
+    )
+    enrich_module._apply_renditions(entry, work, rendered)
+
+    new_rendition = sense.gloss.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    assert new_rendition.assessment.qa_flags == []
+
+
+def test_the_retry_note_carries_the_near_copy_section_too():
+    near_copy_only = enrich_module._build_feedback(
+        "ban", [], headword_initial=False, headword_absent=False, near_copy=True
+    )
+    assert "stayed too close to the source" in near_copy_only
+    assert "began with the headword" not in near_copy_only
+    assert "for no other target" in near_copy_only
+
+    none_of_them = enrich_module._build_feedback(
+        "ban", [], headword_initial=False, headword_absent=False, near_copy=False
+    )
+    assert none_of_them == ""
+
+
+def test_a_retry_that_still_copies_never_displaces_one_that_does_not():
+    diverse = enrich_module._Measured(text="A wholly different way of saying it.", grade=9.0)
+    copy = enrich_module._Measured(text="A way down a cliff.", grade=1.0, near_copy=True)
+
+    # Not copying the canonical outranks reading easier ...
+    assert not enrich_module._is_better(copy, diverse, check_initial=False, check_near_copy=True)
+    assert enrich_module._is_better(diverse, copy, check_initial=False, check_near_copy=True)
+    # ... but only where the check applies at all.
+    assert enrich_module._is_better(copy, diverse, check_initial=False, check_near_copy=False)
+    # Where both candidates still copy, the defect is unfixed either way: no tiebreak of
+    # its own, so the comparison falls through to grade like any other tie.
+    also_copy = enrich_module._Measured(
+        text="A way down a cliff, roughly.", grade=0.5, near_copy=True
+    )
+    assert enrich_module._is_better(also_copy, copy, check_initial=False, check_near_copy=True)
+    assert not enrich_module._is_better(copy, also_copy, check_initial=False, check_near_copy=True)

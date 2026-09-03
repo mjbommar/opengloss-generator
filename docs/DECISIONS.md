@@ -2288,3 +2288,102 @@ per-call means above. Nothing here touches `data/core-store`. Tests: **+18**
 generation payload is a function of the *listed senses and targets* so one scripted answer can
 carry an acceptable sentence, an exact repeat of it, one over the word cap, one that never names
 the headword and one shaped like a definition at once.
+
+## D-59 (2026-09-03) — Register renditions: a lexical-diversity target, and a free near-copy check, generation-time and on disk
+
+**Context.** `RENDITIONS_INSTRUCTIONS`' REGISTERS block already asks for informal,
+technical, formal, slang, in-house and marketing rewrites of the same one-sentence
+gloss and says "the rewrites must differ from each other in the ways their targets
+demand" and "a rewrite that could be mistaken for the source with two words changed has
+failed" — but, as with D-39's headword-initial rule and D-45's headword-in-example rule,
+stating a constraint on wording is not the same as measuring whether a returned
+rendition actually met it. Before doing anything else, `scripts/near_copy_rate.py` (new,
+zero model calls) measured every non-`plain`-register gloss rendition already on disk
+against its sense's canonical gloss, over `data/sample-300`: **4,164 register
+renditions across 1,041 senses with a canonical gloss, near-copy rate (Jaccard ≥ 0.9)
+0.34% (14/4,164)**, mean lexical diversity 0.72 (median 0.75, stdev 0.19), and only
+**21.8%** of renditions landing inside a 0.30–0.60 target band — the histogram's mass
+sits at 0.6–1.0, i.e. the existing model already over-shoots diversity far more often
+than it copies. So the near-copy defect the plan named is real but rare (roughly 1 in
+300 register renditions), and the bigger gap between the prompt's stated intent and its
+output is on the *other* side, which this feature does not have a lever for: it adds a
+number the prompt was missing and a free backstop for the tail that still copies,
+without inventing a second check for "too different" that the plan never asked for.
+
+**Decision.**
+
+1. **The metric (`hygiene.py`, next to `is_headword_initial`).**
+   `content_words(text) -> set[str]` lowercases and tokenises on `[A-Za-z]+`, dropping a
+   small, module-private, closed stopword list (`_STOPWORDS` — articles, pronouns,
+   conjunctions, common prepositions, the closed forms of "be"/"have"/"do"; deliberately
+   conservative, since a stopword slipping through only makes two texts look *less*
+   diverse than they are, the safe direction for a near-copy check to err in).
+   `lexical_diversity(a, b) -> float` is `1 - Jaccard` over the two texts' content-word
+   sets, `0.0` by convention when both sets are empty rather than raising on a zero
+   division. `is_near_copy(a, b, *, threshold=NEAR_COPY_JACCARD_THRESHOLD)` is the
+   yes/no verdict at the plan's own threshold, `NEAR_COPY_JACCARD_THRESHOLD = 0.9`.
+   Not reused from `migrate.py`'s existing `FUNCTION_WORDS`: that list exists to decide
+   whether a *headword* is a function word, an unrelated concern, and coupling a
+   hygiene check every generation call runs through to a one-time schema-migration
+   module would be the wrong dependency direction.
+2. **The prompt (`prompts.py`).** `RENDITIONS_INSTRUCTIONS`' REGISTERS section gains one
+   paragraph, after the worked register examples and before "WHAT THE FIELD MEANS FOR
+   YOUR OUTPUT": a register rewrite of the gloss must land at 0.30–0.60 lexical
+   diversity against the canonical gloss (defined the same way the check measures it —
+   "1 minus the overlap of the two sentences' content words" — so the number in the
+   prompt and the number in the check are the same number), a floor-and-ceiling framing
+   ("below 0.30 you have copied the source ... above 0.60 you have likely drifted from
+   its meaning") and an explicit ban on a verbatim or two-word-swapped copy, with a
+   worked bad example. `QA_INSTRUCTIONS`' closed-flag list also grows the new flag name
+   (every existing `QAFlag` member has to be listed there, and a standing test enforces
+   it). `PROMPT_VERSION` moves `"7"` -> `"8"`.
+3. **Generation time (`workflows/enrich.py`), exactly D-39/D-45/D-51's shared-retry
+   shape applied to a fifth check.** A `gloss`-field rendition at any register but
+   `plain` is measured with `is_near_copy` against `work.source` (the sense's canonical
+   gloss, already markdown-stripped by `_sense_work`); a hit is a miss sharing the one
+   retry with the other four checks, `_build_feedback` growing a fifth optional section
+   from the new `prompts.build_near_copy_feedback(headword)`, and `_is_better`'s
+   ordering gains a fourth tier — placed after headword-absent and before the
+   unfamiliar-word share, since (unlike headword-initial/absent) there is no
+   general-purpose tiebreak available when both candidates still copy, so it falls
+   through to the next check exactly as headword-absent's own tie does. `plain` is never
+   checked — it is the canonical's own register, not a rewrite meant to diverge from it
+   — and, unlike D-39's headword-initial rule, **there is no proper-noun exemption**
+   (D-59 mirrors D-45 here, not D-39): a proper noun's formal and slang registers still
+   have to read differently from each other. `ReadabilityConfig.near_copy_retry: bool =
+   True`, independent of `enabled`, gates the check exactly as its four siblings' own
+   flags do. What is still a near-copy after the retry carries the new
+   `QAFlag.OG_NEAR_COPY`, added with the literal value `"og_near_copy"` rather than the
+   `"og."`-dot-prefixed convention every sibling flag uses, to match byte-for-byte a
+   member of the same name landing concurrently on another branch, so the merge needs no
+   reconciliation.
+4. **What is already on disk (`workflows/retrofit.py`'s `rendition_hygiene` pass), flag
+   only.** A free step rides alongside the pass's existing headword-initial rewrite:
+   every stored non-`plain` gloss rendition is measured against its sense's canonical
+   gloss with `is_near_copy` and `OG_NEAR_COPY` is set or cleared to match, on every
+   sweep, with no attempt marker — there is no cost to bound. Unlike the headword-initial
+   step this one spends nothing on a rewrite call: a paraphrase a model was already told
+   to write differently is not fixed by asking the same model the same thing again, so
+   the verdict is recorded for a later, dedicated rewrite pass to act on rather than
+   acted on here. A near-copy flag flipping is, on its own, reason enough to write the
+   entry even when the entry has no headword-initial offender at all, so `_clean_renditions`
+   folds both signals into the one `items_changed`/`needs_write` decision the pass
+   already made per entry.
+
+**Consequence.** Zero measured cost: the generation-time check adds at most one shared
+retry to calls that would already exist (never a new call on its own, since a rendition
+request already crosses the register axis), and the retrofit step is a pure read/compare
+over text already on disk. The `data/sample-300` baseline above stays the number to beat
+until the store is regenerated under `PROMPT_VERSION = "8"` or swept by
+`rendition_hygiene`; because the population is small (14 near-copies) and skewed toward
+*more* diversity than the target band, the useful next measurement is not "did the
+near-copy rate drop" so much as "did the >0.60 share move down toward the band" — outside
+this feature's scope, since only the near-copy tail has a check, not the over-diverse
+majority. Nothing here touches `data/core-store`. Tests: **+27**
+(`tests/test_hygiene.py`, new, 13 pure-function cases for `content_words` /
+`lexical_diversity` / `is_near_copy`; `tests/test_enrich.py`, +9, generation-time
+rejection/retry/flag/off-switch/proper-noun/field-scoping/`_is_better` coverage plus a
+new `NEAR_COPY_HEADWORD` marker in `tests/conftest.py`; `tests/test_retrofit.py`, +5, the
+retrofit flag/clear/exempt/plain-register/proper-noun coverage sharing the existing
+`_entry_with_gloss_renditions` helper) plus the QA-instructions flag-list fixture already
+covered by the standing `test_every_flag_value_is_documented_in_the_instructions` test.

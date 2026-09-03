@@ -72,6 +72,25 @@ words*, the lower share kept, and
 ``workflows/vocabulary_hygiene.py``'s ``run_vocabulary_hygiene`` is the same fix applied
 to renditions already on disk.
 
+A fifth check rides the same retry, and it is about wording rather than difficulty
+(D-59, F7). ``RENDITIONS_INSTRUCTIONS`` now asks for a lexical diversity of 0.30-0.60
+against the canonical gloss on every register rewrite and bans copying it verbatim, and
+asking is not enough any more than it was for the headword-initial rule: a model asked
+for several registers of a ten-word sentence at once can satisfy the letter of the
+request by swapping a synonym or two. So every non-``plain`` gloss rendition is measured
+with :func:`~opengloss_generator.hygiene.is_near_copy` against the sense's canonical
+gloss, and a rendition whose content-word set overlaps it at 0.9 Jaccard similarity or
+more — 0.1 or less lexical diversity, well below the 0.30 floor the prompt asks for — is
+a miss like the other four: the same single retry, carrying feedback from
+:func:`~opengloss_generator.prompts.build_near_copy_feedback`, the more diverse candidate
+kept, and :data:`~opengloss_generator.schema.QAFlag.OG_NEAR_COPY` set on whatever still
+copies afterwards. Unlike the headword-initial check there is no proper-noun exemption:
+a proper noun's registers still have to read differently from each other.
+``workflows/retrofit.py``'s ``rendition_hygiene`` pass applies the same check to
+renditions already on disk, but only to flag them — a paraphrase a model was already
+asked to write differently is not fixed by asking it again in the same words, so that
+pass does not spend a call on it the way it does on a headword-initial rewrite.
+
 Section filling (etymology, encyclopedia, lexical explanation) is the other half of the
 workflow and is unchanged: it creates the *canonical* rendition that the rendition
 requests then rewrite, which is why it runs first.
@@ -96,7 +115,7 @@ from opengloss_generator.contracts import (
     DraftRenditionSet,
 )
 from opengloss_generator.errors import BudgetExceededError, StageFailedError
-from opengloss_generator.hygiene import is_headword_initial
+from opengloss_generator.hygiene import is_headword_initial, is_near_copy
 from opengloss_generator.log import get_logger
 from opengloss_generator.readability import (
     flesch_kincaid_grade,
@@ -276,6 +295,15 @@ class _Measured:
     #: on the text, so it is set once at the end rather than per candidate; it drives
     #: :data:`QAFlag.OG_HARD_VOCABULARY` in :func:`_apply_renditions`.
     over_vocabulary: bool = False
+    #: Whether this rendition's own text is a near-copy of the canonical gloss it was
+    #: rewritten from (:func:`~opengloss_generator.hygiene.is_near_copy`). Like
+    #: ``headword_initial`` and ``headword_absent`` this is a property of the text itself,
+    #: measured once per candidate, so whichever candidate survives already carries its
+    #: own verdict. Only ever ``True`` for a non-``plain``-register ``gloss`` rendition
+    #: with the check enabled — it drives
+    #: :data:`~opengloss_generator.schema.QAFlag.OG_NEAR_COPY` in :func:`_apply_renditions`
+    #: (D-59).
+    near_copy: bool = False
 
 
 @dataclass(slots=True)
@@ -487,6 +515,7 @@ async def _add_renditions(
                 policy,
                 check_initial=_checks_headword_initial(entry, work, policy),
                 check_absent=_checks_headword_absent(work, policy),
+                check_near_copy=_checks_near_copy(work, policy),
             )
             for work in plan
         ),
@@ -573,6 +602,27 @@ def _checks_headword_absent(work: _Work, policy: ReadabilityConfig) -> bool:
     return policy.headword_absent_retry and work.field is RenditionField.EXAMPLES
 
 
+def _checks_near_copy(work: _Work, policy: ReadabilityConfig) -> bool:
+    """Return whether this work item's renditions are checked for copying the canonical.
+
+    Only ``gloss`` renditions are checked — a register axis is not requested for the other
+    fields the way it is for the gloss's REGISTERS block, and the comparison text is the
+    canonical gloss :func:`_sense_work` already put in ``work.source``. There is no
+    proper-noun exemption (D-59), unlike :func:`_checks_headword_initial`: whatever an
+    entry names, its formal and slang registers still have to read differently from each
+    other. Which *targets* the check actually acts on (registers other than ``plain``) is
+    decided per candidate in :func:`_measure`, not here.
+
+    Args:
+        work: The unit of work.
+        policy: The run's rendition-check policy.
+
+    Returns:
+        Whether to measure and act on the check for this work item.
+    """
+    return policy.near_copy_retry and work.field is RenditionField.GLOSS
+
+
 async def _render(
     headword: str,
     work: _Work,
@@ -581,19 +631,21 @@ async def _render(
     *,
     check_initial: bool = False,
     check_absent: bool = False,
+    check_near_copy: bool = False,
 ) -> _Rendered:
     """Produce every rendition for one ``(owner, field)``, retrying what missed.
 
-    Four checks can make a target a miss: its measured grade is outside its reading
+    Five checks can make a target a miss: its measured grade is outside its reading
     level's band (:func:`_misses_band`), for gloss renditions of a common word its text
     begins by naming the headword (:func:`_checks_headword_initial`), for example
     renditions its text contains no form of the headword at all
-    (:func:`_checks_headword_absent`, D-45), or — at ``grade_1`` and ``grade_5`` — too
-    many of its words are ones its reader will not know (:func:`_misses_vocabulary`,
-    D-51). They share one retry: a target failing any combination of them is re-requested
-    once, with a feedback section per failing check, and never twice. That is the whole
-    reason the last three checks live here rather than in a pass of their own — the call
-    they need has already been made.
+    (:func:`_checks_headword_absent`, D-45), at ``grade_1`` and ``grade_5`` too many of
+    its words are ones its reader will not know (:func:`_misses_vocabulary`, D-51), or a
+    non-``plain``-register gloss rendition is a near-copy of the canonical it was
+    rewritten from (:func:`_checks_near_copy`, D-59). They share one retry: a target
+    failing any combination of them is re-requested once, with a feedback section per
+    failing check, and never twice. That is the whole reason the last four checks live
+    here rather than in a pass of their own — the call they need has already been made.
 
     Args:
         headword: The entry's surface form.
@@ -604,6 +656,8 @@ async def _render(
             :func:`_checks_headword_initial`.
         check_absent: Whether the headword-absent check applies to this work item; see
             :func:`_checks_headword_absent`.
+        check_near_copy: Whether the near-copy check applies to this work item; see
+            :func:`_checks_near_copy`.
 
     Returns:
         The measured renditions and the accounting for the one or two calls made.
@@ -623,6 +677,8 @@ async def _render(
         headword=headword,
         check_initial=check_initial,
         check_absent=check_absent,
+        check_near_copy=check_near_copy,
+        source=work.source,
         forms=work.forms,
     )
     rendered = _Rendered(
@@ -636,12 +692,14 @@ async def _render(
     vocabulary = _vocabulary_misses(produced, policy)
     initial = [key for key, measured in produced.items() if measured.headword_initial]
     absent = [key for key, measured in produced.items() if measured.headword_absent]
+    near_copy = [key for key, measured in produced.items() if measured.near_copy]
     failing = [
         key
         for key, measured in produced.items()
         if _misses_band(key, measured, policy)
         or measured.headword_initial
         or measured.headword_absent
+        or measured.near_copy
         or _misses_vocabulary(key, measured, policy)
     ]
     if not failing:
@@ -658,6 +716,7 @@ async def _render(
             vocabulary,
             headword_initial=bool(initial),
             headword_absent=bool(absent),
+            near_copy=bool(near_copy),
         ),
     )
     if retry is not None:
@@ -672,18 +731,21 @@ async def _render(
                 headword=headword,
                 check_initial=check_initial,
                 check_absent=check_absent,
+                check_near_copy=check_near_copy,
+                source=work.source,
                 forms=work.forms,
             ),
             check_initial=check_initial,
             check_absent=check_absent,
+            check_near_copy=check_near_copy,
             policy=policy,
         )
 
     # Mark each rendition's *final* miss status (after any retry), not its first-draft
     # one: a fixed retry must not carry the flag forward (docs/STANDARDS-PLAN.md § 3, B3).
-    # ``headword_initial`` and ``headword_absent`` need no equivalent sweep — each is
-    # measured on each candidate's own text, so whichever candidate survives already
-    # carries its own verdict.
+    # ``headword_initial``, ``headword_absent`` and ``near_copy`` need no equivalent sweep
+    # — each is measured on each candidate's own text, so whichever candidate survives
+    # already carries its own verdict.
     for key, measured in produced.items():
         measured.missed_band = _misses_band(key, measured, policy)
         measured.over_vocabulary = _misses_vocabulary(key, measured, policy)
@@ -692,6 +754,7 @@ async def _render(
     _log_initial_misses(headword, work, initial, produced, retried=retry is not None)
     _log_absent_misses(headword, work, absent, produced, retried=retry is not None)
     _log_vocabulary_misses(headword, work, vocabulary, produced, policy, retried=retry is not None)
+    _log_near_copy_misses(headword, work, near_copy, produced, retried=retry is not None)
     return rendered
 
 
@@ -702,6 +765,7 @@ def _build_feedback(
     *,
     headword_initial: bool,
     headword_absent: bool = False,
+    near_copy: bool = False,
 ) -> str:
     """Return the retry note, carrying a section for each check the batch failed.
 
@@ -713,11 +777,13 @@ def _build_feedback(
         headword_initial: Whether at least one target began with the headword.
         headword_absent: Whether at least one target used no form of the headword at all
             (D-45).
+        near_copy: Whether at least one target was a near-copy of the canonical gloss it
+            was rewritten from (D-59).
 
     Returns:
         The combined feedback text. A section is present for every check that failed,
         which is what keeps a target failing more than one check to one retry rather
-        than two, three or four.
+        than two, three, four or five.
     """
     parts = []
     if misses:
@@ -729,6 +795,8 @@ def _build_feedback(
         parts.append(prompts.build_headword_initial_feedback(headword))
     if headword_absent:
         parts.append(prompts.build_headword_absent_feedback(headword))
+    if near_copy:
+        parts.append(prompts.build_near_copy_feedback(headword))
     return "\n\n".join(parts)
 
 
@@ -791,6 +859,8 @@ def _measure(
     headword: str,
     check_initial: bool = False,
     check_absent: bool = False,
+    check_near_copy: bool = False,
+    source: str = "",
     forms: Sequence[str] = (),
 ) -> dict[tuple[ReadingLevel, Register], _Measured]:
     """Return the wanted renditions, markdown-stripped and scored.
@@ -803,6 +873,11 @@ def _measure(
         check_initial: Whether to also record whether each text opens with the headword.
         check_absent: Whether to also record whether each text contains no form of the
             headword at all (D-45).
+        check_near_copy: Whether to also record whether a non-``plain``-register text is
+            a near-copy of ``source`` (D-59). ``plain`` itself is never checked: it is the
+            canonical's own register, not a rewrite meant to diverge from it.
+        source: The canonical text a register rendition is compared against when
+            ``check_near_copy`` is set; ignored otherwise.
         forms: The headword's inflected/derived forms, tried alongside the bare headword
             when ``check_absent`` is set; ignored otherwise.
 
@@ -822,6 +897,9 @@ def _measure(
             grade=flesch_kincaid_grade(text, ignore=(headword,)),
             headword_initial=check_initial and is_headword_initial(text, headword),
             headword_absent=check_absent and spans.find_span(text, headword, forms) is None,
+            near_copy=(
+                check_near_copy and key[1] is not Register.PLAIN and is_near_copy(text, source)
+            ),
             # Measured at every level, not only the two that are acted on: it costs a
             # pass over a short text and it is the only familiarity signal on disk (D-51).
             hard_share=hard_word_share(text, ignore=(headword,)),
@@ -931,6 +1009,7 @@ def _keep_better(
     *,
     check_initial: bool = False,
     check_absent: bool = False,
+    check_near_copy: bool = False,
     policy: ReadabilityConfig | None = None,
 ) -> None:
     """Replace a rendition with its retry only when the retry is actually better.
@@ -943,6 +1022,9 @@ def _keep_better(
         check_absent: Whether the headword-absent verdict participates in the comparison
             (D-45). Never both ``True`` for the same work item: one applies to glosses,
             the other to examples.
+        check_near_copy: Whether the near-copy verdict participates in the comparison
+            (D-59). Can be ``True`` alongside ``check_initial`` for the same work item —
+            both apply to glosses — but never alongside ``check_absent``.
         policy: The run's rendition-check policy, read only to decide whether the
             unfamiliar-word share participates for a given target's level (D-51). ``None``
             leaves it out of the comparison entirely.
@@ -955,6 +1037,7 @@ def _keep_better(
             current,
             check_initial=check_initial,
             check_absent=check_absent,
+            check_near_copy=check_near_copy,
             check_vocabulary=check_vocabulary,
             band=vocabulary_band(key[0]),
             tolerance=policy.vocabulary_tolerance if policy is not None else 0.0,
@@ -969,23 +1052,26 @@ def _is_better(
     *,
     check_initial: bool,
     check_absent: bool = False,
+    check_near_copy: bool = False,
     check_vocabulary: bool = False,
     band: float | None = None,
     tolerance: float = 0.0,
 ) -> bool:
     """Return whether a retried rendition should replace the one it was retried for.
 
-    Not opening with the headword, and not using the headword at all, both outrank
-    reading easier. None of the three checks are commensurable — a grade is continuous,
-    the other two are right or wrong — so they are ordered rather than combined, and the
-    ordering puts the defect that no amount of grade improvement compensates for first,
-    and the unfamiliar-word share — which the judge found is what actually decides whether
-    a grade_1 passage reads as grade_1 — ahead of the grade itself (D-51).
-    Where both candidates share the same hard-defect verdict that defect is unfixed
-    either way: for headword-initial, the shorter text wins, since it is the one a later
-    ``rendition_hygiene`` rewrite has least to carry over; for headword-absent there is
-    no such tiebreak, since neither candidate has anywhere the headword could be scored
-    against, so the comparison falls through to grade like any other tie.
+    Not opening with the headword, not using the headword at all, and copying the
+    canonical gloss all outrank reading easier. None of these checks are commensurable —
+    a grade is continuous, the others are right or wrong — so they are ordered rather than
+    combined, and the ordering puts the defect that no amount of grade improvement
+    compensates for first, and the unfamiliar-word share — which the judge found is what
+    actually decides whether a grade_1 passage reads as grade_1 — ahead of the grade
+    itself (D-51). Where both candidates share the same hard-defect verdict that defect is
+    unfixed either way: for headword-initial, the shorter text wins, since it is the one a
+    later ``rendition_hygiene`` rewrite has least to carry over; for headword-absent and
+    for near-copy there is no such tiebreak — neither candidate has anywhere the headword
+    could be scored against, or there is no continuous score on hand to break the tie by —
+    so the comparison falls through to the next check, and ultimately to grade, like any
+    other tie.
 
     Args:
         candidate: The retry's rendition.
@@ -993,6 +1079,7 @@ def _is_better(
         check_initial: Whether the headword-initial verdict participates at all; when it
             does not, this is the plain "reads easier" comparison it has always been.
         check_absent: Whether the headword-absent verdict participates at all (D-45).
+        check_near_copy: Whether the near-copy verdict participates at all (D-59).
         check_vocabulary: Whether the unfamiliar-word share participates at all (D-51);
             it does only at the two levels that have a band.
         band: The level's unfamiliar-word band, used with ``tolerance`` to decide which
@@ -1008,17 +1095,42 @@ def _is_better(
         return len(candidate.text) < len(current.text)
     if check_absent and candidate.headword_absent != current.headword_absent:
         return not candidate.headword_absent
+    if check_near_copy and candidate.near_copy != current.near_copy:
+        return not candidate.near_copy
     if check_vocabulary and band is not None:
-        limit = band + tolerance
-        candidate_over = candidate.hard_share > limit
-        current_over = current.hard_share > limit
-        if candidate_over != current_over:
-            return not candidate_over
-        if candidate_over and candidate.hard_share != current.hard_share:
-            # Both still over: the one a reader trips on less often is the better of two
-            # imperfect answers, exactly as the lower grade is for the band check.
-            return candidate.hard_share < current.hard_share
+        verdict = _vocabulary_tiebreak(candidate, current, band=band, tolerance=tolerance)
+        if verdict is not None:
+            return verdict
     return candidate.grade < current.grade
+
+
+def _vocabulary_tiebreak(
+    candidate: _Measured,
+    current: _Measured,
+    *,
+    band: float,
+    tolerance: float,
+) -> bool | None:
+    """Return the unfamiliar-word verdict for one candidate/current pair, or ``None``.
+
+    Split out of :func:`_is_better` only to keep that function's own branching readable;
+    it carries no rule of its own beyond what D-51 already states there.
+
+    Returns:
+        ``True``/``False`` if the unfamiliar-word share decides the comparison,
+        ``None`` if both are on the same side of the band and equally over it, in which
+        case :func:`_is_better` falls through to the grade comparison.
+    """
+    limit = band + tolerance
+    candidate_over = candidate.hard_share > limit
+    current_over = current.hard_share > limit
+    if candidate_over != current_over:
+        return not candidate_over
+    if candidate_over and candidate.hard_share != current.hard_share:
+        # Both still over: the one a reader trips on less often is the better of two
+        # imperfect answers, exactly as the lower grade is for the band check.
+        return candidate.hard_share < current.hard_share
+    return None
 
 
 def _log_misses(
@@ -1163,6 +1275,41 @@ def _log_vocabulary_misses(
         )
 
 
+def _log_near_copy_misses(
+    headword: str,
+    work: _Work,
+    near_copy: Sequence[tuple[ReadingLevel, Register]],
+    produced: dict[tuple[ReadingLevel, Register], _Measured],
+    *,
+    retried: bool,
+) -> None:
+    """Emit one ``rendition_near_copy`` event per register that copied the canonical.
+
+    One event per target, the same granularity :func:`_log_initial_misses` and
+    :func:`_log_absent_misses` use and for the same reason: this defect is per rendition,
+    not per level (D-59).
+
+    Args:
+        headword: The entry's surface form.
+        work: The unit of work the renditions belong to.
+        near_copy: The targets whose first draft was a near-copy of the canonical gloss.
+        produced: The final renditions, after any retry.
+        retried: Whether a retry was actually made.
+    """
+    for key in near_copy:
+        measured = produced.get(key)
+        _LOG.info(
+            "rendition_near_copy",
+            headword=headword,
+            owner=work.label,
+            field=work.field.value,
+            level=key[0].value,
+            register=key[1].value,
+            retried=retried,
+            fixed=retried and measured is not None and not measured.near_copy,
+        )
+
+
 def _apply_renditions(entry: Lexeme, work: _Work, rendered: _Rendered) -> int:
     """Merge a measured rendition set onto its owner.
 
@@ -1217,6 +1364,12 @@ def _apply_renditions(entry: Lexeme, work: _Work, rendered: _Rendered) -> int:
             # `example_hygiene`'s retrofit pass can find it later without re-deriving
             # the verdict (D-45).
             assessment.flag(QAFlag.OG_HEADWORD_ABSENT)
+        if measured.near_copy:
+            # Same contract again, for the fifth check: the retry did not diverge from
+            # the canonical gloss's own wording, so the stored rendition says so and
+            # `rendition_hygiene`'s retrofit pass can find it later without re-deriving
+            # the verdict (D-59).
+            assessment.flag(QAFlag.OG_NEAR_COPY)
         work.renditions.add(
             Rendition[Any](
                 reading_level=key[0],
