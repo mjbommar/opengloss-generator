@@ -18,6 +18,8 @@ import typer
 from opengloss_generator.audit import AuditReport, audit_store
 from opengloss_generator.config import AppConfig, load_config
 from opengloss_generator.errors import BudgetExceededError, OpenGlossError
+from opengloss_generator.export.qrels import build_qrels, write_qrels
+from opengloss_generator.export.triples import build_triples, write_triples
 from opengloss_generator.migrate import detect_version
 from opengloss_generator.migrate import from_v2 as migrate_from_v2
 from opengloss_generator.migrate import from_v13 as migrate_from_v13
@@ -1187,6 +1189,62 @@ def vocabulary_hygiene(
             return session.summary(**outcome.as_dict()).as_dict()
 
     _echo_summary(_run(_main()))
+
+
+@app.command("export-triples")
+def export_triples_cmd(
+    out: Annotated[Path, typer.Option("--out", help="Output path for the triples JSONL file.")],
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+    seed: Annotated[int, typer.Option("--seed", help="Seed for deterministic sampling.")] = 0,
+    easy_negatives: Annotated[
+        int, typer.Option("--easy-negatives", help="Easy-negative triples written per query.")
+    ] = 1,
+    limit: Annotated[
+        int | None, typer.Option("--limit", help="Cap entries scanned, for a fast smoke run.")
+    ] = None,
+) -> None:
+    """Export MS MARCO-style ``(query, positive, negative)`` triples (F3, D-56).
+
+    Free: no model calls. Queries come from ``Sense.queries`` (F2) when present; when
+    absent, the sense's ``grade_5/plain`` gloss (or its canonical gloss) stands in as a
+    pseudo-query, and every record's ``query_source`` says which happened. The negative
+    is the first non-empty candidate, in priority order, among: another live sense of the
+    same headword, a ``confusable_with`` target, a co-hyponym, or a synonym-of-a-synonym;
+    ``--easy-negatives`` adds that many random-headword negatives per query as well.
+    """
+    cfg = _build_config(config_path, store, None, None)
+    lexeme_store = LexemeStore(cfg.store)
+    result = build_triples(lexeme_store, seed=seed, easy_negatives=easy_negatives, limit=limit)
+    write_triples(result, out)
+    _echo_summary({"out": str(out), "seed": seed, **result.as_summary()})
+
+
+@app.command("export-qrels")
+def export_qrels_cmd(
+    out_dir: Annotated[
+        Path,
+        typer.Option("--out-dir", help="Directory for qrels.trec, docs.jsonl, and listwise.jsonl."),
+    ],
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+    seed: Annotated[int, typer.Option("--seed", help="Seed for deterministic sampling.")] = 0,
+    limit: Annotated[
+        int | None, typer.Option("--limit", help="Cap entries scanned, for a fast smoke run.")
+    ] = None,
+) -> None:
+    """Export TREC-style graded qrels, a docs corpus, and a listwise JSONL (F4, D-56).
+
+    Free: no model calls. Grades: 3 = the query's own sense, 2 = a direct synonym
+    target, 1 = a direct hypernym or a co-hyponym, 0 = everything else (the same graph
+    hard-negative kinds ``export-triples`` uses, plus random easy negatives). Queries
+    follow the same F2-or-gloss-pseudo-query rule as ``export-triples``.
+    """
+    cfg = _build_config(config_path, store, None, None)
+    lexeme_store = LexemeStore(cfg.store)
+    result = build_qrels(lexeme_store, seed=seed, limit=limit)
+    write_qrels(result, out_dir)
+    _echo_summary({"out_dir": str(out_dir), "seed": seed, **result.as_summary()})
 
 
 @app.command()
