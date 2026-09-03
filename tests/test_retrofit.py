@@ -44,6 +44,7 @@ from opengloss_generator.schema import (
 from opengloss_generator.store import LexemeStore
 from opengloss_generator.taxonomy import TAXONOMY_VERSION, DomainTag
 from opengloss_generator.workflows import retrofit
+from opengloss_generator.workflows import retrofit as retrofit_module
 from opengloss_generator.workflows.retrofit import (
     EVIDENCE_SNIPPET_CHARS,
     RetrofitPass,
@@ -2020,16 +2021,6 @@ async def test_repair_revisits_an_entry_when_a_different_sense_later_loses_its_e
 
 
 def test_a_readability_rewrite_that_duplicates_a_sibling_example_is_refused():
-    from opengloss_generator.schema import (
-        Example,
-        Provenance,
-        ReadingLevel,
-        Register,
-        Rendition,
-        StageName,
-    )
-    from opengloss_generator.workflows import retrofit as retrofit_module
-
     twin = Rendition[Example](
         reading_level=ReadingLevel.GRADE_1,
         style=Register.PLAIN,
