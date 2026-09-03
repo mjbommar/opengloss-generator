@@ -34,7 +34,9 @@ __all__ = ["StageResult", "StageRunner"]
 _LOG = get_logger(__name__)
 
 _HTTP_TOO_MANY_REQUESTS = 429
-_RETRYABLE_STATUS = frozenset({408, 409, _HTTP_TOO_MANY_REQUESTS, 500, 502, 503, 504})
+# 529 is Anthropic's "overloaded" status: transient, unbilled, and retried by the SDK only a
+# few times. Left out, it cost the writer-diversity pilot 5-7 judged entries per arm (D-63).
+_RETRYABLE_STATUS = frozenset({408, 409, _HTTP_TOO_MANY_REQUESTS, 500, 502, 503, 504, 529})
 # Flex capacity rejections are unbilled and are the router's signal to downgrade the run
 # to ``auto``. OpenAI has sent two shapes: the documented ``resource_unavailable`` body, and
 # (observed 2026-09-02, sustained for over an hour on gpt-5.6-luna while ``default``
