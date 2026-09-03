@@ -2562,3 +2562,103 @@ vocabulary bands were, so a `--flag` run's candidate set should be spot-checked 
 rewrite pass, not trusted blind. `information_density`'s band is copied from `alea-quality-model`
 unchanged and, per the measurement above, does not discriminate on this store; a future user of the
 score should recalibrate the band or drop the dimension rather than read `0.8` as "fine."
+
+## D-56 (2026-09-03) — `export-triples` / `export-qrels`: the graph pays for its own hard negatives
+
+**Context.** F3+F4 in `docs/RETRIEVAL-DATA-PLAN.md`: the target consumer,
+`../opengloss-embedding`, needs MS MARCO-style `(query, positive, negative)` triples and
+TREC-style graded qrels. Mining hard negatives for either format normally costs a model
+call or a human annotator; OpenGloss's sense-tagged, resolved semantic graph makes the
+usual hard-negative kinds (a same-headword sense, a `confusable_with` target, a
+co-hyponym, a synonym-of-a-synonym) free reads off data the store already holds. F2
+(`Sense.queries`, doc2query-style synthetic queries) is a sibling feature on a different
+branch and has not landed on `main`.
+
+**Decision.** Two pure, offline modules, `export/triples.py` and `export/qrels.py`,
+sharing one corpus projection (`triples.load_corpus`) and one candidate classifier
+(`triples.classify`) so the two exports can never quietly disagree about what a given
+sense's graph neighbourhood looks like. No model is called anywhere in either module.
+
+1. **The query, absent F2.** Every query is read with `getattr(sense, "queries", [])`,
+   so this code runs unchanged the day F2 merges. Today that list is always empty, so
+   every sense's `grade_5/plain` gloss rendition (or its canonical `neutral/plain` gloss,
+   when `grade_5` is missing) stands in as a single pseudo-query, and every record
+   carries `query_source` — `"generated"` for an F2 query, `"gloss_pseudo"` for the
+   fallback — so a trainer can tell the two apart, or filter pseudo-queries out entirely,
+   once real queries exist for the same senses. A pseudo-query is close to the text it
+   retrieves; that is the honest cost of not having F2 yet, which is exactly what the
+   flag is for.
+
+2. **Priority-ordered fallback, not an enumeration.** The plan lists the hard-negative
+   kinds "in priority order": `other_sense` (another live sense of the same headword),
+   `confusable` (a `confusable_with` target), `co_hyponym` (a sibling sharing a direct
+   hypernym), `synonym_of_synonym` (distance-2 synonym). Read as a fallback chain — the
+   first non-empty tier wins — this keeps `export-triples` a *triples* format: one hard
+   negative per query, plus `--easy-negatives` (default 1) random-headword negatives, not
+   up to four hard-negative rows per query. `export.triples.classify` partitions every
+   related sense into exactly one of these tiers (plus `synonym`, never offered as a
+   negative — see below), highest priority first, so a sense that qualifies for two tiers
+   is kept only in the stronger one and is never offered under two `negative_kind` values.
+
+3. **A direct synonym is never a negative.** `synonym_of_synonym` (distance 2) is a hard
+   negative; a *direct* (distance-1) synonym is excluded from every negative tier,
+   because it is close enough to the query's own meaning that training against it as a
+   negative would teach a false contrast. `export-qrels` gives it partial credit instead
+   (grade 2) — the two exports treat the same relation consistently, just for different
+   purposes (a strict contrastive negative vs. a graded relevance judgement).
+
+4. **Qrels grades and their pool caps.** 3 = the query's own sense; 2 = a direct synonym
+   (capped at 3, `MAX_GRADE_2`, sampled deterministically above that); 1 = a direct
+   hypernym or a co-hyponym (capped at 3, `MAX_GRADE_1`); 0 = everything else — every
+   `export-triples` hard-negative kind **except** `co_hyponym` (already fully spent on
+   grade 1; reusing it for grade 0 would let one sense land at two different grades for
+   the same query — caught by `tests/test_export_qrels.py`'s
+   `test_a_candidate_never_appears_at_two_grades_for_one_query` before this fix, see
+   below) plus random easy negatives, padded up to `MAX_GRADE_0` (3). The easy-negative
+   pad additionally excludes every sense grade 3/2/1 already claimed for that query — the
+   graph tiers are disjoint by construction, but the easy pool (store-wide minus the
+   query's own lexeme) knows nothing about them and can otherwise redraw a co-hyponym.
+
+5. **Determinism.** Every random choice — which of a sense's gloss/example/encyclopedia
+   text is the positive, which candidate wins a tied tier, which easy negative is drawn —
+   comes from a fresh `random.Random` keyed `f"{seed}:{sense_id}:{...}"`
+   (`triples._rng`), never from dict/set iteration order or one shared generator whose
+   state depends on visitation order. The same `(store, seed)` always produces the same
+   file. `--limit` caps entries scanned for a fast smoke run.
+
+6. **A known limitation of testing this on a small sample.** `data/sample-300` is 300
+   lexemes drawn from a much larger store; a resolved relation whose target lexeme was
+   not itself sampled projects to nothing (`_resolve_graph` requires both ends live in
+   the loaded corpus). That undercounts `confusable`/`co_hyponym`/`synonym_of_synonym` on
+   a small sample relative to a full-store run — confirmed correct by construction in
+   `tests/test_export_triples.py`'s hand-built world (which exercises all four hard-negative
+   kinds and the full fallback chain directly, independent of sample size) — and is not a
+   bug in the export, just a property of subsampling a graph.
+
+**Measured on `data/sample-300`** (300 entries, `--seed 0`):
+
+| | entries scanned | live senses / queries | rows written |
+|---|---|---|---|
+| `export-triples` (`--easy-negatives 1`) | 300 | 1,041 | 2,038 triples |
+| `export-qrels` | 300 | 1,041 | 4,269 qrels rows, 1,041 docs, 1,041 listwise queries |
+
+`export-triples` negative-kind histogram: `other_sense` 997, `easy` 1,041; `confusable`,
+`co_hyponym`, and `synonym_of_synonym` did not fire on this sample (see point 6 — none of
+the 300 sampled lexemes had a resolved `confusable_with` edge at all, and the sampled
+hypernym/synonym-of-synonym edges whose *targets* also happened to be resolved to
+in-sample senses were rare). `export-qrels` grade histogram: grade 3 → 1,041; grade 2 →
+48; grade 1 → 57; grade 0 → 3,123. Every `query_source` in this run is `gloss_pseudo`,
+since F2 has not landed. Both commands touch nothing but the store they are pointed at
+(read-only; `data/core-store` and `runs/` are untouched) and spend $0.
+
+**Consequence.** `export/__init__.py` (docstring only, so a parallel `export-pairs`
+agent's own addition to the same package merges without conflict), `export/triples.py`,
+`export/qrels.py`; CLI `export-triples --store S --out FILE [--seed --easy-negatives
+--limit]` and `export-qrels --store S --out-dir DIR [--seed --limit]`, both wired in
+`cli.py` beside the other reporting commands (`show`/`stats`/`audit`), reading the store
+directly rather than through `RunSession` — there is no budget, model, or ledger for a
+$0, no-model export to account for. Tests: **+38** (`tests/test_export_triples.py` — 24,
+`tests/test_export_qrels.py` — 14), both against a hand-built store exercising every
+hard-negative and grade tier, none against `tests/conftest.py` (no model payload is
+needed). `docs/RETRIEVAL-DATA.md` created with this section, one real triple and one
+real listwise record from the run above.
