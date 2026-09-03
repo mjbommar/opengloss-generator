@@ -1193,3 +1193,12 @@ removals to keep pairs symmetric. Relations per sense on a 3,000-entry sample:
 mean **13.4 → 5.5**, median 10 → 5, p90 22 → 10; what remains is 32% synonym, 24%
 hypernym, 20% hyponym, 12% antonym, no demoted see_also. Graph-hygiene running, then
 the re-judge.
+
+**19:55 — pair stages queued (whole store, after the quality passes).** No answer yet
+on the rotation-cost question, so the stated default applies: **luna-only for queries,
+contrasts and qa-pairs** (`scripts/pair-stages-luna-only.toml`; rotation stays on
+renditions and examples). Caps = 1.5× the luna-only pilot extrapolations: queries $41
+(est. $27), contrasts $38 (est. $25), qa-pairs $69 (est. $46). Input: all 41,885
+headwords (core + tier 2). Then a final audit and the four free exports
+(`export-pairs`, `export-triples`, `export-qrels`, `export-pretrain`) into
+`data/exports/` for the encoder.
