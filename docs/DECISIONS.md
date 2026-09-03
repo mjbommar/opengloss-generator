@@ -3791,3 +3791,205 @@ list moves `relations_valid` is a prediction this pass makes cheap to test, not 
 tests; wiring a `RetrofitPass` member is left to whoever next touches `retrofit.py`; and the
 `_latest_marker` ordering bug in `relation_hygiene` / `content_hygiene` is recorded above
 and not fixed.
+
+## D-66 (2026-09-03) — `qc filler` thresholds calibrated for examples, and a `filler_examples` rewrite pass
+
+**Context.** D-60 shipped `qc filler` at the plan's own thresholds (4-grams > 0.05% of
+sentences, openers > 0.5%, both scanned together across examples *and* encyclopedia
+text) and measured, on `data/sample-300`, that those thresholds flagged 92.3% of
+encyclopedia renditions but only 1.2% of example renditions — evidence the two fields
+need different bars, left explicitly as future work ("a `--flag` run's candidate set
+should be spot-checked before it drives a rewrite pass, not trusted blind"). Separately,
+`docs/QA-DIARY.md` iteration 6's tier-2 re-judge put `examples_natural`'s defect rate at
+42%, with the judge's recurring complaint "corpus-style research prose" — the same
+symptom `stilted_examples` (D-49) already treats for a *fixed* regex
+(`researchers`/`participants`/`the study`), but not for the phrases nobody wrote a regex
+for. This closes both: a `--fields` option that lets `qc filler` measure examples on
+their own denominator, thresholds calibrated against the full production store at that
+scope, and a `content_hygiene` step that rewrites what the detector flags.
+
+**Decision.**
+
+1. **`--fields examples|encyclopedia|all`, and it changes more than what gets reported.**
+   `analyze_filler(store, *, fields="all")` (`qc/filler.py`) now filters
+   `_collect_refs`'s output *before* pass 1's sentence-level counting, not after: since a
+   key's frequency is `(sentences containing it) / (total sentences scanned)`, restricting
+   the scope changes the denominator every threshold is measured against, which is what
+   lets an example-only scan surface tells the encyclopedia's own boilerplate was
+   drowning out. `calibrate_thresholds` (same module) takes the same option, defaulting
+   to `"examples"` since that is what this decision is calibrating. `qc filler`'s own
+   `--fields` CLI option defaults to `"examples"` too — a change from D-60's implicit
+   "always all fields" — while `analyze_filler`'s own default stays `"all"`, so any
+   existing caller that does not pass `fields` keeps D-60's behavior.
+
+2. **The calibration (`qc filler-calibrate`, new command; `calibrate_thresholds`, new
+   function).** Pass 1 (sentence-level n-gram/opener counting) does not depend on the
+   threshold at all, so it runs once regardless of how many `(ngram_freq_threshold,
+   opener_freq_threshold, min_count)` triples are measured — only pass 2 (which keys
+   clear the bar) reruns per triple, which is what makes a multi-point sweep over a
+   production store's 41,918 entries practical. Read-only against
+   `/home/mjbommar/projects/personal/opengloss-generator/data/core-store` (this feature's
+   own worktree only ever writes to `data/sample-filler`), `--fields examples`:
+
+   | ngram threshold | opener threshold | min_count | renditions flagged | flag rate |
+   |---|---|---|---|---|
+   | 0.005% | 0.05% | 5 | 237,868 | 19.36% |
+   | 0.01% | 0.1% | 5 | 140,797 | 11.46% |
+   | 0.025% | 0.25% | 5 | 80,055 | **6.52%** |
+   | 0.05% (D-60's plan default) | 0.5% (D-60's plan default) | 5 | 45,217 | 3.68% |
+   | 0.1% | 1% | 5 | 0 | 0.00% |
+   | 0.2% | 2% | 5 | 0 | 0.00% |
+   | 0.5% | 4% | 5 | 0 | 0.00% |
+
+   (1,228,673 example renditions, 1,236,750 sentences scanned, held constant across every
+   row.) D-60's own plan-default thresholds already land inside the plan's "3-8%" target
+   once scoped to examples alone (3.68%) — the field-scoping in point 1 was most of the
+   fix by itself — but 0.025%/0.25% lands nearer the middle of the band (6.52%) with a
+   richer, more legible top-25 (below) rather than six near-identical two-word openers, so
+   that pair is `FillerConfig`'s new default (`min_count` unchanged at 5).
+   Top 25 phrases at the chosen defaults, by sentence count:
+
+   ```
+    1. "after the"                    (opener, 2, 10841, 0.877%)
+    2. "in the"                       (opener, 2,  9125, 0.738%)
+    3. "during the"                   (opener, 2,  8881, 0.718%)
+    4. "at the"                       (opener, 2,  8539, 0.690%)
+    5. "the museum"                   (opener, 2,  7834, 0.633%)
+    6. "the committee"                (opener, 2,  5167, 0.418%)
+    7. "the coach"                    (opener, 2,  4766, 0.385%)
+    8. "our class"                    (opener, 2,  3963, 0.320%)
+    9. "the teacher"                  (opener, 2,  3872, 0.313%)
+   10. "the report"                   (opener, 2,  3614, 0.292%)
+   11. "the school"                   (opener, 2,  3463, 0.280%)
+   12. "the old"                      (opener, 2,  3362, 0.272%)
+   13. "the team"                     (opener, 2,  3353, 0.271%)
+   14. "the museum displayed a"       (4-gram, 4,  1221, 0.099%)
+   15. "after the storm the"          (4-gram, 4,   465, 0.038%)
+   16. "her name on the"              (4-gram, 4,   449, 0.036%)
+   17. "as a hereditary surname"      (4-gram, 4,   444, 0.036%)
+   18. "the end of the"               (4-gram, 4,   433, 0.035%)
+   19. "on the birthday card"         (4-gram, 4,   381, 0.031%)
+   20. "for the school play"          (4-gram, 4,   379, 0.031%)
+   21. "attracts visitors with its"   (4-gram, 4,   369, 0.030%)
+   22. "given name on the"            (4-gram, 4,   351, 0.028%)
+   23. "name on the birthday"         (4-gram, 4,   344, 0.028%)
+   24. "wrote her name on"            (4-gram, 4,   333, 0.027%)
+   25. "his name on the"              (4-gram, 4,   320, 0.026%)
+   ```
+
+   The 4-grams (14-25) are unmistakable generation crutches — "the museum displayed a
+   ___", a birthday-card/given-name template repeated across unrelated headwords, "as a
+   hereditary surname" reused wholesale. The 2-word openers (1-13) read as a smaller,
+   subtler tell at first glance ("after the", "in the" are common English bigrams on
+   their own), but their concentration is the finding: 0.877% of *every example sentence
+   in the store, regardless of headword* opens "After the ...", which is a model reaching
+   for the same sentence frame dictionary-wide, not a property of English. The
+   institutional-subject cluster (5-13: "the museum"/"the committee"/"the coach"/"our
+   class"/"the teacher"/"the report"/"the school"/"the team") is the same habit from the
+   other end — a small, fixed set of scene-setting nouns standing in for whatever the
+   headword's sentence actually needs a subject for.
+
+3. **`filler_examples`, an eighth `content_hygiene` step.** Every example rendition of a
+   live sense carrying `QAFlag.OG_FILLER` — any reading level or register, unlike
+   `stilted_examples`' canonical-only scope, since the flag is a corpus-wide signal about
+   one piece of text rather than a rule about the canonical field — gets one luna call per
+   entry, reusing `stilted_examples`' prompt shape (same `_EXAMPLE_FIELD_RULE` slice) plus
+   one addition neither sibling step needs: the specific phrase a fresh corpus scan found
+   the rendition carrying, named as the one thing the rewrite must not reuse
+   (`qc.filler.phrases_in`, new function, checked against a `FillerReport` taken once per
+   step run rather than once per entry — pass 1's counting is store-wide and does not
+   change between entries in the same sweep). A rewrite is adopted only when
+   `spans.find_span` can still place the headword (D-45's non-negotiable) and it does not
+   collide with a sibling example at the same `(level, register)` key
+   (`workflows/example_hygiene.py`'s own `_collides`, not `stilted_examples`' canonical-only
+   check, since offenders here are not all canonical) — the store's uniqueness rule would
+   reject the entry on its next read otherwise. An adopted rewrite clears `OG_FILLER`; a
+   refused one leaves the old text and the flag exactly as they were, D-47's marker
+   (`content_hygiene:filler_examples:<digest>;attempts=<n>`) bounding retries at two per
+   entry the same as every other model step in this module. Selectable via the existing
+   `content-hygiene --only filler_examples`.
+
+**Measured on `data/sample-filler`** (300 fresh entries, seed 66, rows 15,000-31,887 of
+`tier2_50k.tsv` — disjoint from `build_sample_writers.py`'s window and sample; copied
+read-only from the production store, never written to).
+
+`qc filler --flag` (defaults: 0.025%/0.25%/5, `--fields examples`):
+
+| | value |
+|---|---|
+| entries scanned | 300 |
+| example renditions scanned (units) | 9,146 |
+| sentences scanned | 9,204 |
+| renditions flagged | 726 (7.94% of example renditions) |
+| entries with >=1 flagged rendition | 227 / 300 |
+
+`content-hygiene --only filler_examples --budget 1.00`:
+
+| | value |
+|---|---|
+| entries scanned | 300 |
+| entries changed | 227 |
+| calls | 227 ($0.037779 total; **$0.0000534/rewrite**, $0.0001664/call) |
+| rewritten (accepted) | 708 |
+| refused | 18, all "rewrite dropped the headword" (0 sibling collisions) |
+| cost per entry with an offender | $0.000167 |
+
+708 + 18 = 726: every flagged rendition got exactly one attempt and a verdict, none left
+over for a second sweep. A second run of the same command makes 0 calls and spends
+$0 (D-47: no offending set changed).
+
+**Before/after, read by hand (10 pairs, all 10 legible improvements or lateral, none
+worse):**
+
+- `levelness`: "Engineers **assessed the levelness of the** concrete floor before
+  installing the precision equipment." -> "Engineers checked the concrete floor for
+  levelness before placing the delicate equipment." — clearer and shorter, phrase gone.
+- `disuse`: "The archive suffered mold growth as a direct consequence of disuse." ->
+  "Prolonged disuse caused the irrigation system's pipes to corrode and fail." —
+  concrete and varied; the flagged phrase (`the archive`, an opener) is gone along with
+  the passive "as a direct consequence of" construction it wasn't even flagged for.
+- `uncuff`: "**After the** courtroom rehearsal ended, the director uncuffed the actor." ->
+  "The officer uncuffed the suspect once the judge dismissed the mistaken charge." —
+  drops the formulaic "After the ..." opener and reads as an actual scene.
+- `rosetta` / `rapunzel` / `massa` / `branco`: each swapped only its flagged opener
+  ("our class", "in the", "the museum") for a different one; register and content are
+  otherwise unchanged. Not worse, but a reminder that this pass targets one *specific*
+  corpus-wide phrase per rewrite, not overall naturalness — `stilted_examples` already
+  owns the broader "sounds academic" defect, and the two are complementary rather than
+  redundant.
+
+**Consequence.** `qc/filler.py`: `_VALID_FIELDS`, `_filter_fields`, `fields` parameter on
+`analyze_filler` (reported in `totals.fields`), `phrases_in`, `CalibrationPoint`,
+`calibrate_thresholds`; `FillerConfig`'s `ngram_freq_threshold`/`opener_freq_threshold`
+defaults move `0.0005`/`0.005` -> `0.00025`/`0.0025` (D-60's numbers are still reachable
+via explicit CLI flags). `cli.py`: `qc filler` gains `--fields` (default `examples`);
+new `qc filler-calibrate --out FILE [--ngram-thresholds --opener-thresholds --min-counts
+--fields --from-list --top-n]`, read-only, no model, no `RunSession` (mirrors
+`export-triples`/`export-qrels`'s own free-command pattern). `workflows/content_hygiene.py`:
+`ContentHygieneStep.FILLER_EXAMPLES`, `FILLER_EXAMPLE_NOTE`, `FILLER_EXAMPLES_INSTRUCTIONS`,
+`_filler_report`/`_filler_examples`/`_build_filler_prompt`/`_filler_collides`/
+`_apply_filler_rewrite`/`_rewrite_filler`/`_filler_examples_step`, wired into
+`ContentHygieneStep.ALL` and `_STEP_FUNCTIONS`. README gains rows for `qc filler`
+(updated) and `qc filler-calibrate` (new). Nothing here touches
+`/home/mjbommar/projects/personal/opengloss-generator/data/core-store`; the pilot ran
+only against this worktree's own `data/sample-filler`. Tests: **+12**
+(`tests/test_qc_filler.py` +6 — `--fields` scope/union/rejection, `phrases_in` hit and
+miss, `calibrate_thresholds`' flag rate and rejection; `tests/test_content_hygiene.py`
++6 — accept-and-clear, headword-dropped refusal (reusing `NO_SPAN_HEADWORD`), a
+sibling-collision refusal built from two offenders scripted the same rewrite text so the
+second collides with what the first just wrote, non-canonical-rendition coverage,
+zero-cost when unflagged, and idempotence; `tests/conftest.py` gains one payload,
+`_filler_rewrite_payload`, appended in the file's existing append-only block).
+`uv run ruff check`/`format`, `uv run ty check`, `uv run pytest` (1029 passed, 2
+pre-existing skips, up from 1017 passed on this branch's fork point) are clean on
+`hygiene/filler-rewrite`.
+
+**Left undone.** `filler_examples`' recomputed `FillerReport` (for naming the offending
+phrase) is a fresh scan taken at the step's own default thresholds, not necessarily the
+exact thresholds a prior `qc filler --flag --ngram-threshold ... --unflag` run used — a
+mismatch only ever degrades to "no phrase named," never a wrong rewrite, but a
+config-threading fix (carrying the flagging run's own config forward) would make the
+"avoid" hint reliable under a non-default `--flag` invocation too. The `"encyclopedia"`
+and `"all"` scopes still use the same calibrated-for-examples defaults; D-60 already
+flagged the encyclopedia number as unvalidated and this decision does not revisit it — an
+encyclopedia rewrite pass is out of scope here, as it was there.

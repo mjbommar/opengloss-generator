@@ -1460,3 +1460,43 @@ def _qa_pair_set_payload(prompt: str) -> dict[str, Any]:
 
 
 _PAYLOADS.update({"_draftqaset": _qa_pair_set_payload})
+
+# --------------------------------------------------------------------------------------
+# content_hygiene's filler_examples step (D-60/D-66). Appended for the same reason as the
+# blocks above: content_hygiene.py, prompts.py and cli.py are edited concurrently on
+# sibling branches.
+
+#: The scripted rewrite for a filler-flagged example. Deliberately identical whatever
+#: ``ref`` a given offender is listed under (unlike ``_fragment_rewrite_payload``'s own
+#: per-``ref`` text): two offenders on the same entry both getting this same sentence is
+#: how a test observes the second one collide with the first, once the first has already
+#: been adopted (``_filler_collides`` checks the *current* state of the sense's examples,
+#: not a snapshot taken before either rewrite was applied).
+FILLER_REWRITE_TEMPLATE = "A friend showed me the {headword} after school one afternoon."
+
+
+def _filler_rewrite_payload(prompt: str) -> dict[str, Any]:
+    """Replace every ``OG_FILLER``-flagged example the step listed.
+
+    Each listed item is ``[level/register] [gloss] (avoid: "...") text``. The scripted
+    rewrite mentions the entry's own headword, so ``find_span`` places it -- except for
+    :data:`NO_SPAN_HEADWORD`, reused from the stilted-examples payload, whose rewrite
+    still never mentions the headword.
+    """
+    headword = _headword(prompt)
+    return {
+        "rewrites": [
+            {
+                "ref": number,
+                "text": (
+                    "Nothing here names the missing word at all."
+                    if headword == NO_SPAN_HEADWORD
+                    else FILLER_REWRITE_TEMPLATE.format(headword=headword)
+                ),
+            }
+            for number, _ in _numbered(prompt)
+        ]
+    }
+
+
+_PAYLOADS.update({"_draftfillerrewrites": _filler_rewrite_payload})

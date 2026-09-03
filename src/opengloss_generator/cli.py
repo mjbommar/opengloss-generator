@@ -35,7 +35,12 @@ from opengloss_generator.pricing import (
     ServiceTier,
     estimate_cost,
 )
-from opengloss_generator.qc.filler import FillerConfig, analyze_filler, apply_filler_flags
+from opengloss_generator.qc.filler import (
+    FillerConfig,
+    analyze_filler,
+    apply_filler_flags,
+    calibrate_thresholds,
+)
 from opengloss_generator.runner import RunSession, run_pool
 from opengloss_generator.schema import (
     LexemeKind,
@@ -1722,21 +1727,28 @@ def qc_filler(
     min_count: Annotated[
         int, typer.Option("--min-count", help="Minimum sentence count for a finding.")
     ] = FillerConfig().min_count,
+    fields: Annotated[
+        str,
+        typer.Option("--fields", help="Scope the scan: 'examples', 'encyclopedia', or 'all'."),
+    ] = "examples",
     config_path: _ConfigOpt = None,
     store: _StoreOpt = None,
     concurrency: _ConcurrencyOpt = None,
 ) -> None:
-    """Corpus-level n-gram / sentence-opener filler detector (F8, D-60).
+    """Corpus-level n-gram / sentence-opener filler detector (F8, D-60, D-66).
 
-    No model call. Counts 4-grams and 2/3-word sentence openers across every example
-    rendition of every live sense and every encyclopedia rendition, reports whatever
-    clears the frequency bar with example rendition ids, and reports a per-entry
-    uniqueness / information-density score distribution alongside it. ``--flag`` sets
-    ``OG_FILLER`` on the offending renditions' assessments; ``--unflag`` reverses it.
+    No model call. Counts 4-grams and 2/3-word sentence openers across the renditions
+    ``--fields`` selects (default: canonical and non-canonical example renditions of every
+    live sense; ``encyclopedia`` or ``all`` also count entries' encyclopedia renditions),
+    reports whatever clears the frequency bar with example rendition ids, and reports a
+    per-entry uniqueness / information-density score distribution alongside it. ``--flag``
+    sets ``OG_FILLER`` on the offending renditions' assessments; ``--unflag`` reverses it.
     Both are idempotent. See ``opengloss_generator.qc.filler`` for the report format.
     """
     if flag and unflag:
         raise typer.BadParameter("--flag and --unflag are mutually exclusive")
+    if fields not in ("examples", "encyclopedia", "all"):
+        raise typer.BadParameter("--fields must be one of: examples, encyclopedia, all")
     cfg = _build_config(config_path, store, None, concurrency, False)
     core_words = set(_read_word_list(from_list)) if from_list is not None else None
     config = FillerConfig(
@@ -1747,7 +1759,9 @@ def qc_filler(
 
     async def _main() -> dict[str, object]:
         async with RunSession(cfg, install_signal_handler=True) as session:
-            report = analyze_filler(session.store, config=config, core_words=core_words)
+            report = analyze_filler(
+                session.store, config=config, core_words=core_words, fields=fields
+            )
             report_dict = report.as_dict()
             if flag or unflag:
                 flag_outcome = await apply_filler_flags(
@@ -1766,6 +1780,75 @@ def qc_filler(
             ).as_dict()
 
     _echo_summary(_run(_main()))
+
+
+@qc_app.command("filler-calibrate")
+def qc_filler_calibrate(
+    out: Annotated[Path, typer.Option("--out", help="Write the JSON calibration table here.")],
+    ngram_thresholds: Annotated[
+        str,
+        typer.Option("--ngram-thresholds", help="Comma list of 4-gram frequency bars to try."),
+    ] = "0.0001,0.00025,0.0005,0.001,0.002",
+    opener_thresholds: Annotated[
+        str,
+        typer.Option("--opener-thresholds", help="Comma list of opener frequency bars to try."),
+    ] = "0.001,0.0025,0.005,0.01,0.02",
+    min_counts: Annotated[
+        str, typer.Option("--min-counts", help="Comma list of minimum sentence counts to try.")
+    ] = "5",
+    fields: Annotated[
+        str,
+        typer.Option("--fields", help="Scope the scan: 'examples', 'encyclopedia', or 'all'."),
+    ] = "examples",
+    from_list: Annotated[
+        Path | None, typer.Option("--from-list", help="Restrict the scan to these headwords.")
+    ] = None,
+    top_n: Annotated[int, typer.Option("--top-n", help="Findings kept per threshold point.")] = 25,
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+) -> None:
+    """Measure the ``qc filler`` flag rate at several thresholds at once (D-66).
+
+    Free: no model call, and read-only regardless of what ``--store`` points at. The
+    sentence-level count is taken once; every ``--ngram-thresholds`` value is paired with
+    the matching position in ``--opener-thresholds`` and ``--min-counts`` (the shorter
+    lists' last value repeats for any extra pairing), so three five-item lists give five
+    points, not a 125-point grid. Use this against a production store before choosing
+    ``qc filler``'s own thresholds — see ``opengloss_generator.qc.filler.calibrate_thresholds``.
+    """
+    if fields not in ("examples", "encyclopedia", "all"):
+        raise typer.BadParameter("--fields must be one of: examples, encyclopedia, all")
+
+    def _floats(raw: str) -> list[float]:
+        return [float(token.strip()) for token in raw.split(",") if token.strip()]
+
+    def _ints(raw: str) -> list[int]:
+        return [int(token.strip()) for token in raw.split(",") if token.strip()]
+
+    ngram_values = _floats(ngram_thresholds)
+    opener_values = _floats(opener_thresholds)
+    count_values = _ints(min_counts)
+    if not ngram_values or not opener_values or not count_values:
+        raise typer.BadParameter("each threshold list needs at least one value")
+    width = max(len(ngram_values), len(opener_values), len(count_values))
+    triples = [
+        (
+            ngram_values[min(i, len(ngram_values) - 1)],
+            opener_values[min(i, len(opener_values) - 1)],
+            count_values[min(i, len(count_values) - 1)],
+        )
+        for i in range(width)
+    ]
+
+    cfg = _build_config(config_path, store, None, None)
+    lexeme_store = LexemeStore(cfg.store)
+    core_words = set(_read_word_list(from_list)) if from_list is not None else None
+    points = calibrate_thresholds(
+        lexeme_store, thresholds=triples, fields=fields, core_words=core_words, top_n=top_n
+    )
+    report = {"fields": fields, "points": [point.as_dict() for point in points]}
+    out.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
+    _echo_summary({"out": str(out), "fields": fields, "points": len(points)})
 
 
 @app.command()

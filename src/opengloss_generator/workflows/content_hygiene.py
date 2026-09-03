@@ -19,8 +19,8 @@ degenerate renditions       592 + 87  two targets sharing one text; a copy of th
 garbage examples                 21   ``'hypernyms(['``, ``'?'``, bare single words
 ============================  ======  ==================================================
 
-Seven steps, selectable by name through ``only=``, each idempotent, each run as its own
-pooled sweep over the id list. Three are free; four make one model call per entry.
+Eight steps, selectable by name through ``only=``, each idempotent, each run as its own
+pooled sweep over the id list. Three are free; five make one model call per entry.
 
 ``self_synonym`` (free)
     A ``synonym`` whose ``target.lexeme_id`` is the entry's own is demoted to
@@ -114,6 +114,22 @@ pooled sweep over the id list. Three are free; four make one model call per entr
     and differs from both the canonical and every sibling — otherwise the degenerate text
     stays and the attempt is counted as rejected.
 
+``filler_examples``
+    The only step whose offenders are not decided by looking at the text at all: every
+    example rendition — any reading level or register, canonical included — carrying
+    :data:`~opengloss_generator.schema.QAFlag.OG_FILLER`, which ``qc filler --flag``
+    (``qc/filler.py``, D-60/D-66) already set from a corpus-wide n-gram/opener scan. One
+    luna call per entry on the ``RENDITIONS`` policy, reusing ``stilted_examples``'
+    prompt shape and the same :data:`_EXAMPLE_FIELD_RULE` slice, plus one thing neither
+    sibling step needs: the specific phrase a corpus-wide scan found this rendition
+    repeating, named in the prompt as the one thing not to reuse
+    (:func:`~opengloss_generator.qc.filler.phrases_in` against a fresh scan taken once
+    per step run, not per entry). A rewrite is adopted only when it keeps the headword
+    (:func:`~opengloss_generator.spans.find_span`) and does not collide with a sibling
+    example at the same ``(level, register)`` key — the store's own uniqueness rule
+    (D-6) would reject the entry on its next read otherwise — and clears ``OG_FILLER``
+    on success; a refusal leaves the old text and the flag exactly as they were.
+
 Idempotence
 -----------
 
@@ -164,6 +180,7 @@ from opengloss_generator.hygiene import is_headword_initial
 from opengloss_generator.identity import rendition_id
 from opengloss_generator.log import get_logger
 from opengloss_generator.prompts import PROMPT_VERSION
+from opengloss_generator.qc.filler import FillerConfig, analyze_filler, phrases_in
 from opengloss_generator.readability import flesch_kincaid_grade, strip_markdown, word_count
 from opengloss_generator.runner import run_pool
 from opengloss_generator.schema import (
@@ -171,6 +188,7 @@ from opengloss_generator.schema import (
     Assessment,
     LexemeKind,
     Provenance,
+    QAFlag,
     RelationType,
     StageName,
 )
@@ -178,6 +196,7 @@ from opengloss_generator.schema import (
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Sequence
 
+    from opengloss_generator.qc.filler import FillerReport
     from opengloss_generator.schema import (
         Example,
         Lexeme,
@@ -209,6 +228,7 @@ PROPER_NOUN_RETYPE_NOTE = "retyped: proper noun instance"
 PROPER_NOUN_DEMOTE_NOTE = "demoted: proper noun instance"
 GARBAGE_EXAMPLE_NOTE = "removed garbage example: "
 FRAGMENT_EXAMPLE_NOTE = "superseded fragment example: "
+FILLER_EXAMPLE_NOTE = "superseded filler example: "
 
 #: The academic-register tell in a canonical example. Measured on the 10K core: 5,401
 #: canonical examples match it ("Two researchers formed a duo to complete the project."),
@@ -255,6 +275,7 @@ _SYNONYM_HYPERNYM_PREFIX = "content_hygiene:synonym_hypernym"
 _STILTED_PREFIX = "content_hygiene:stilted_examples"
 _FRAGMENT_PREFIX = "content_hygiene:fragment_examples"
 _DEGENERATE_PREFIX = "content_hygiene:degenerate_renditions"
+_FILLER_PREFIX = "content_hygiene:filler_examples"
 
 #: Shown in place of a target's gloss when the relation was never resolved to a sense.
 UNRESOLVED_GLOSS = "(unresolved)"
@@ -270,6 +291,7 @@ class ContentHygieneStep:
     STILTED_EXAMPLES = "stilted_examples"
     FRAGMENT_EXAMPLES = "fragment_examples"
     DEGENERATE_RENDITIONS = "degenerate_renditions"
+    FILLER_EXAMPLES = "filler_examples"
 
     #: The order the steps run in: the three free ones first, cheapest work before any
     #: spend, so a run stopped by its budget has already banked everything that cost
@@ -278,7 +300,10 @@ class ContentHygieneStep:
     #: ``stilted_examples`` because both rewrite canonical examples: it sees each entry's
     #: examples as ``stilted_examples`` left them, not as the store held them before that
     #: step ran, so a stilted rewrite that happens to still read as a fragment is caught
-    #: here rather than surviving the sweep.
+    #: here rather than surviving the sweep. ``filler_examples`` runs last: unlike every
+    #: other step, its offenders are decided entirely upstream by ``qc filler --flag``
+    #: (D-60/D-66), not by re-deriving them from the text each sweep, so its ordering
+    #: relative to the others has no correctness consequence either way.
     ALL: tuple[str, ...] = (
         SELF_SYNONYM,
         SYNONYM_ANTONYM,
@@ -287,6 +312,7 @@ class ContentHygieneStep:
         STILTED_EXAMPLES,
         FRAGMENT_EXAMPLES,
         DEGENERATE_RENDITIONS,
+        FILLER_EXAMPLES,
     )
 
 
@@ -2449,6 +2475,361 @@ async def _degenerate_renditions_step(
 
 
 # --------------------------------------------------------------------------------------
+# Step 8 — filler_examples
+# --------------------------------------------------------------------------------------
+#
+# The one step in this module whose offenders are not derived from the text at all: they
+# are decided entirely upstream, by ``qc filler --flag``'s corpus-wide n-gram/opener scan
+# (D-60, D-66). Every example rendition of a live sense is in scope, at any reading level
+# or register — ``OG_FILLER`` is a corpus-wide signal about one piece of stored text, not
+# a canonical-only rule the way ``STILTED_RE`` is — which is also why the collision check
+# below is ``workflows/example_hygiene.py``'s ``_collides`` (any level/register), not
+# ``_apply_stilted_rewrite``'s canonical-only one.
+
+
+FILLER_EXAMPLES_INSTRUCTIONS = f"""\
+Rewrite each numbered example sentence below. Each is a dictionary's own example for the \
+sense printed beside it, and each repeats a phrase or sentence-opener that a corpus-wide \
+scan found recurring far more than chance across this dictionary's own examples -- a \
+model habit that keeps resurfacing regardless of the headword, not a coincidence of \
+subject matter. Where one is named in parentheses as "avoid", your rewrite must not use \
+that exact phrase or a close paraphrase of it.
+
+Write one natural everyday sentence for the same sense, at the same reading level and \
+register named beside it: the kind of thing a person would actually write or say, not a \
+corpus-style construction repeated dictionary-wide. The sentence must contain the \
+headword itself or a natural inflected form of it, or it will be discarded. At most 20 \
+words for grade_1 or grade_5.
+
+{_EXAMPLE_FIELD_RULE}
+
+Formatting: plain prose, no markdown. Write one sentence and nothing else.
+
+Answer every sentence you are given, identified by the number it was listed under."""
+
+
+class _DraftFillerRewrite(BaseModel):
+    """One replacement sentence for a corpus-level-filler example."""
+
+    model_config = ConfigDict(
+        extra="forbid", validate_by_name=True, validate_by_alias=True, serialize_by_alias=True
+    )
+
+    ref: Annotated[int, Field(ge=1)]
+    text: Annotated[str, Field(min_length=3, max_length=1000)]
+
+
+class _DraftFillerRewrites(BaseModel):
+    """Replacements for every filler-flagged example of one entry, produced together."""
+
+    model_config = ConfigDict(
+        extra="forbid", validate_by_name=True, validate_by_alias=True, serialize_by_alias=True
+    )
+
+    rewrites: Annotated[list[_DraftFillerRewrite], Field(min_length=1)]
+
+
+@dataclass(slots=True)
+class _FillerExample:
+    """One example rendition carrying :data:`~opengloss_generator.schema.QAFlag.OG_FILLER`.
+
+    Attributes:
+        rendition: The offending rendition, mutated in place once a rewrite is adopted.
+        sense: The owning sense, needed to check a rewrite against its sibling examples.
+        pos_entry: The owning part-of-speech entry, for the headword's inflected forms.
+        gloss: The sense's canonical gloss, shown to the model so the replacement fits
+            this sense and no other.
+        label: ``"level/register"``, shown to the model alongside the gloss — unlike
+            ``stilted_examples``, this step's offenders are not all canonical.
+        phrase: The corpus-level phrase this rendition's text was found to carry, from a
+            fresh scan taken once per step run (see :func:`_filler_report`), or ``None``
+            when that scan found no match — the flag can have been set by an earlier
+            ``qc filler --flag`` run under a different configuration, or the text may
+            have changed since. Not an error case; the prompt just omits the "avoid" hint.
+        ref_id: A stable identifier for the digest. Example renditions have no unique
+            keyed id of their own (several may share one ``(level, register)``), so this
+            carries the offender's position in its sense's example list, the same shape
+            every other example-rewriting step in this module uses.
+    """
+
+    rendition: Rendition[Example]
+    sense: Sense
+    pos_entry: POSEntry
+    gloss: str
+    label: str
+    phrase: str | None
+    ref_id: str
+
+
+def _filler_report(store: LexemeStore) -> FillerReport:
+    """Return a fresh corpus-level filler scan, for naming each offender's phrase.
+
+    Run once per step invocation, not per entry: :func:`~opengloss_generator.qc.filler.
+    analyze_filler` is a read-only, model-free, whole-store pass, and this step's own
+    thresholds default to exactly what ``qc filler``'s own defaults are (D-66), scoped to
+    ``fields="examples"`` since that is what set the flags this step acts on. Whether a
+    given offender's flag actually traces back to *this* scan's findings, and under this
+    same configuration, is not assumed — :func:`~opengloss_generator.qc.filler.phrases_in`
+    degrades to "no phrase found" rather than erroring when it does not.
+
+    Args:
+        store: The store to scan.
+
+    Returns:
+        The :class:`~opengloss_generator.qc.filler.FillerReport`.
+    """
+    return analyze_filler(store, config=FillerConfig(), fields="examples")
+
+
+def _filler_examples(entry: Lexeme, report: FillerReport) -> list[_FillerExample]:
+    """Return every live example rendition of an entry carrying ``OG_FILLER``.
+
+    Unlike :func:`_stilted_examples`, every ``(level, register)`` is in scope: the flag is
+    a corpus-wide signal about one piece of stored text, not a canonical-only rule.
+
+    Args:
+        entry: The entry to inspect. Never mutated.
+        report: The current corpus-level scan, for naming each offender's phrase.
+
+    Returns:
+        One :class:`_FillerExample` per offender, in document order — the order the model
+        is shown them in and refers to them by.
+    """
+    offenders: list[_FillerExample] = []
+    for pos_entry, sense, sid in _live_senses(entry):
+        gloss = sense.canonical_gloss()
+        for index, rendition in enumerate(sense.examples):
+            assessment = rendition.assessment
+            if assessment is None or QAFlag.OG_FILLER not in assessment.qa_flags:
+                continue
+            phrases = phrases_in(rendition.content.text, report)
+            offenders.append(
+                _FillerExample(
+                    rendition=rendition,
+                    sense=sense,
+                    pos_entry=pos_entry,
+                    gloss=gloss,
+                    label=f"{rendition.reading_level.value}/{rendition.style.value}",
+                    phrase=phrases[0] if phrases else None,
+                    ref_id=(
+                        rendition_id(sid, rendition.reading_level.value, rendition.style.value)
+                        + f"[{index}]"
+                    ),
+                )
+            )
+    return offenders
+
+
+def _build_filler_prompt(headword: str, offenders: Sequence[_FillerExample]) -> str:
+    """Return the volatile half of this step's rewrite prompt.
+
+    Args:
+        headword: The lexeme's surface form.
+        offenders: The examples to rewrite, in the order the model should answer them —
+            ``ref`` in the reply is a 1-based position into this sequence.
+
+    Returns:
+        The per-call prompt body.
+    """
+    lines = []
+    for i, offender in enumerate(offenders):
+        text = " ".join(offender.rendition.content.text.split())
+        avoid = f' (avoid: "{offender.phrase}")' if offender.phrase else ""
+        lines.append(f"  {i + 1}. [{offender.label}] [{offender.gloss}]{avoid} {text}")
+    listed = "\n".join(lines)
+    return f"Headword: {headword}\nExamples ({len(offenders)}):\n{listed}"
+
+
+def _filler_collides(offender: _FillerExample, new_text: str) -> bool:
+    """Return whether adopting ``new_text`` would duplicate a sibling rendition's key.
+
+    An example's uniqueness key is ``(level, register, text)``: two members sharing it
+    are exactly what the store rejects on its next read. Mirrors
+    ``workflows/example_hygiene.py``'s own ``_collides`` — the same question, the same
+    answer — rather than ``_apply_stilted_rewrite``'s canonical-only collision check,
+    since this step's offenders are not all canonical.
+
+    Args:
+        offender: The offending example and its owning sense.
+        new_text: The candidate rewrite text, already markdown-stripped.
+
+    Returns:
+        Whether a sibling example at the same reading level and register already holds
+        this exact text.
+    """
+    own = offender.rendition
+    return any(
+        other is not own
+        and other.reading_level is own.reading_level
+        and other.style is own.style
+        and other.content.text == new_text
+        for other in offender.sense.examples
+    )
+
+
+def _apply_filler_rewrite(
+    entry: Lexeme,
+    offender: _FillerExample,
+    drafted_text: str,
+    base_provenance: Provenance,
+) -> bool:
+    """Adopt one replacement sentence, if it is actually usable.
+
+    Three conditions, all cheap and all deterministic, mirroring
+    :func:`_apply_stilted_rewrite`: the markdown-stripped rewrite must be new,
+    :func:`~opengloss_generator.spans.find_span` must be able to place the headword in it
+    (a rewrite that dropped the word it illustrates has traded one defect for a worse
+    one), and it must not collide with a sibling example at the same ``(level,
+    register)`` (:func:`_filler_collides`) — the store's own uniqueness rule would reject
+    the entry on its next read otherwise. A refused rewrite leaves the old text and
+    ``OG_FILLER`` exactly as they were; an adopted one clears the flag.
+
+    Args:
+        entry: The entry the example belongs to, mutated in place.
+        offender: The offending example and the context needed to rewrite it.
+        drafted_text: The model's proposed replacement, before markdown stripping.
+        base_provenance: The call's own record, used to build the zero-cost note record
+            that keeps the superseded text.
+
+    Returns:
+        Whether the rewrite was adopted.
+    """
+    example = offender.rendition.content
+    new_text = strip_markdown(drafted_text)
+    if not new_text or new_text == example.text:
+        return False
+    span = spans.find_span(new_text, entry.headword, _forms_for(entry, offender.pos_entry))
+    if span is None:
+        _LOG.info(
+            "content_hygiene_filler_rejected_no_span",
+            headword=entry.headword,
+            rendition=offender.ref_id,
+        )
+        return False
+    if _filler_collides(offender, new_text):
+        _LOG.info(
+            "content_hygiene_filler_rejected_collision",
+            headword=entry.headword,
+            rendition=offender.ref_id,
+        )
+        return False
+
+    old_text = example.text
+    example.text = new_text
+    example.span = span
+    offender.rendition.provenance_id = entry.add_provenance(
+        _note_provenance(base_provenance, f"{FILLER_EXAMPLE_NOTE}{old_text}")
+    )
+    assessment = offender.rendition.assessment or Assessment()
+    assessment.readability_grade = round(
+        flesch_kincaid_grade(new_text, ignore=(entry.headword,)), 2
+    )
+    if QAFlag.OG_FILLER in assessment.qa_flags:
+        assessment.qa_flags.remove(QAFlag.OG_FILLER)
+    offender.rendition.assessment = assessment
+    return True
+
+
+async def _rewrite_filler(
+    entry: Lexeme,
+    offenders: Sequence[_FillerExample],
+    runner: StageRunner,
+    tally: _Tally,
+    marker_note: str,
+) -> tuple[int, int]:
+    """Ask luna for phrase-free replacements and adopt the ones that are actually usable.
+
+    Args:
+        entry: The entry whose examples need rewriting, mutated in place.
+        offenders: The examples to rewrite, in the order the model was shown them.
+        runner: The stage runner.
+        tally: The step tally, for the call and its cost.
+        marker_note: The offending-set sentinel to stamp on the call's record.
+
+    Returns:
+        ``(rewrites adopted, rewrites refused)``.
+
+    Raises:
+        BudgetExceededError: A budget stop is a run-level condition and propagates.
+    """
+    try:
+        stage_result = await runner.run(
+            # Reuses the RENDITIONS policy (luna): this is prose for a reader, held to a
+            # register, not a structural verdict.
+            stage=StageName.RENDITIONS,
+            output_type=_DraftFillerRewrites,
+            instructions=FILLER_EXAMPLES_INSTRUCTIONS,
+            prompt=_build_filler_prompt(entry.headword, offenders),
+            prompt_version=PROMPT_VERSION,
+        )
+    except BudgetExceededError:
+        raise
+    except GenerationError as exc:
+        _LOG.warning("content_hygiene_filler_failed", headword=entry.headword, error=str(exc))
+        return 0, 0
+
+    await tally.call(stage_result.cost_usd)
+    entry.add_provenance(stage_result.provenance.model_copy(update={"note": marker_note}))
+
+    accepted = rejected = 0
+    for drafted in stage_result.output.rewrites:
+        position = drafted.ref - 1
+        if not 0 <= position < len(offenders):
+            rejected += 1
+            continue
+        if _apply_filler_rewrite(entry, offenders[position], drafted.text, stage_result.provenance):
+            accepted += 1
+        else:
+            rejected += 1
+    return accepted, rejected
+
+
+async def _filler_examples_step(
+    store: LexemeStore,
+    runner: StageRunner,
+    ids: Sequence[str],
+    *,
+    workers: int,
+    stop_event: asyncio.Event | None,
+    changed_ids: set[str],
+) -> StepResult:
+    """Rewrite every example rendition carrying ``OG_FILLER`` (D-60/D-66).
+
+    Args:
+        store: The store to clean. Each entry is read, cleaned — including its one call
+            when one is due — and written inside one hold of its own lock.
+        runner: The stage runner.
+        ids: The entry ids to visit.
+        workers: Pool size.
+        stop_event: Shared stop event.
+        changed_ids: Run-level set of entries written by any step.
+
+    Returns:
+        The step's :class:`StepResult`.
+    """
+    tally = _Tally(ContentHygieneStep.FILLER_EXAMPLES, changed_ids)
+    report = _filler_report(store)
+
+    async def clean(lexeme_id: str) -> None:
+        accepted = rejected = 0
+        async with store.locked(lexeme_id):
+            entry = store.read(lexeme_id)
+            if entry is None:
+                return
+            offenders = _filler_examples(entry, report)
+            marker = _attempt_due(entry, _FILLER_PREFIX, [o.ref_id for o in offenders])
+            if marker is not None:
+                accepted, rejected = await _rewrite_filler(entry, offenders, runner, tally, marker)
+                # Written even when nothing was adopted: the sentinel is the only thing
+                # that call bought, and losing it re-bills the same answer.
+                store.write(entry)
+        await tally.entry(lexeme_id, rewritten=accepted, accepted=accepted, rejected=rejected)
+
+    await _drive(ids, clean, tally, workers=workers, stop_event=stop_event)
+    return tally.result
+
+
+# --------------------------------------------------------------------------------------
 # The entry point
 # --------------------------------------------------------------------------------------
 
@@ -2465,6 +2846,7 @@ _STEP_FUNCTIONS: dict[str, _StepFn] = {
     ContentHygieneStep.STILTED_EXAMPLES: _stilted_examples_step,
     ContentHygieneStep.FRAGMENT_EXAMPLES: _fragment_examples_step,
     ContentHygieneStep.DEGENERATE_RENDITIONS: _degenerate_renditions_step,
+    ContentHygieneStep.FILLER_EXAMPLES: _filler_examples_step,
 }
 
 
@@ -2479,18 +2861,19 @@ async def run_content_hygiene(
 ) -> ContentHygieneOutcome:
     """Repair the content defects measured on the 10K core store.
 
-    Seven steps, described in full in the module docstring: three free ones that demote
+    Eight steps, described in full in the module docstring: three free ones that demote
     relations no sense can consistently assert and remove examples that are not
-    sentences, and four that ask a model the questions no rule can answer. Every step is
-    idempotent, every entry is read and written inside one hold of its own lock, and
-    nothing is deleted except an unusable example whose text is preserved in a note
-    first.
+    sentences, and five that ask a model the questions no rule can answer (four derive
+    their own offenders from the text; ``filler_examples`` acts on what ``qc filler
+    --flag`` already found). Every step is idempotent, every entry is read and written
+    inside one hold of its own lock, and nothing is deleted except an unusable example
+    whose text is preserved in a note first.
 
     Args:
         store: The store to repair.
         runner: The stage runner. Used by ``synonym_hypernym`` (nano, ``HYGIENE`` policy)
-            and by ``stilted_examples``, ``fragment_examples`` and
-            ``degenerate_renditions`` (luna, ``RENDITIONS`` policy); the three free steps
+            and by ``stilted_examples``, ``fragment_examples``, ``degenerate_renditions``
+            and ``filler_examples`` (luna, ``RENDITIONS`` policy); the three free steps
             never touch it.
         workers: Pool size for every step.
         stop_event: Shared stop event. A budget stop sets it; a caller may also set it

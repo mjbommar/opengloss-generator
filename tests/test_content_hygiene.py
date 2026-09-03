@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 
 from opengloss_generator.schema import (
+    Assessment,
     EntityType,
     Example,
     Lexeme,
@@ -19,6 +20,7 @@ from opengloss_generator.schema import (
     PartOfSpeech,
     POSEntry,
     ProperNounInfo,
+    QAFlag,
     ReadingLevel,
     Register,
     Relation,
@@ -31,6 +33,7 @@ from opengloss_generator.schema import (
 )
 from opengloss_generator.workflows import content_hygiene as module
 from opengloss_generator.workflows.content_hygiene import (
+    FILLER_EXAMPLE_NOTE,
     FRAGMENT_EXAMPLE_NOTE,
     GARBAGE_EXAMPLE_NOTE,
     PROPER_NOUN_RETYPE_NOTE,
@@ -953,3 +956,184 @@ def test_a_pre_existing_marker_is_parsed():
     assert note is not None
     assert note.startswith(f"{module._STILTED_PREFIX}:")
     assert note.endswith(";attempts=1")
+
+
+# --------------------------------------------------------------------------------------
+# Step 8 — filler_examples
+# --------------------------------------------------------------------------------------
+
+
+def _flag_filler(rendition: Rendition[Example]) -> None:
+    """Set ``OG_FILLER`` on one example rendition, as ``qc filler --flag`` would."""
+    rendition.assessment = Assessment(qa_flags=[QAFlag.OG_FILLER])
+
+
+async def test_a_filler_flagged_example_is_rewritten_and_the_flag_cleared(session):
+    entry = _entry(
+        "duo", examples=["During the festival the researchers observed the duo perform."]
+    )
+    _flag_filler(entry.pos_entries[0].senses[0].examples[0])
+    session.store.write(entry)
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.FILLER_EXAMPLES}
+    )
+
+    result = outcome.steps[ContentHygieneStep.FILLER_EXAMPLES]
+    assert result.calls == 1
+    assert result.accepted == 1
+    assert result.rejected == 0
+    assert result.rewritten == 1
+    assert result.cost_usd > 0.0
+
+    stored = session.store.read("duo")
+    rendition = stored.pos_entries[0].senses[0].examples[0]
+    assert rendition.content.text != "During the festival the researchers observed the duo perform."
+    assert rendition.content.span is not None
+    assert "duo" in (rendition.content.matched or "").lower()
+    assert rendition.assessment is not None
+    assert QAFlag.OG_FILLER not in rendition.assessment.qa_flags
+    assert rendition.assessment.readability_grade is not None
+    assert (
+        f"{FILLER_EXAMPLE_NOTE}During the festival the researchers observed the duo perform."
+        in _notes(stored)
+    )
+
+
+async def test_a_filler_rewrite_that_loses_the_headword_is_refused(session):
+    entry = _entry(NO_SPAN_HEADWORD, examples=["Researchers observed the spanlessword closely."])
+    _flag_filler(entry.pos_entries[0].senses[0].examples[0])
+    session.store.write(entry)
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.FILLER_EXAMPLES}
+    )
+
+    result = outcome.steps[ContentHygieneStep.FILLER_EXAMPLES]
+    assert result.calls == 1
+    assert result.accepted == 0
+    assert result.rejected == 1
+    assert result.rewritten == 0
+
+    stored = session.store.read(NO_SPAN_HEADWORD)
+    rendition = stored.pos_entries[0].senses[0].examples[0]
+    assert rendition.content.text == "Researchers observed the spanlessword closely."
+    assert rendition.assessment is not None
+    assert QAFlag.OG_FILLER in rendition.assessment.qa_flags
+
+
+async def test_a_filler_rewrite_that_collides_with_a_sibling_is_refused(session):
+    # Both offenders are scripted the exact same replacement sentence (see
+    # ``FILLER_REWRITE_TEMPLATE``): the first is adopted, and the second then collides
+    # with what the first just wrote, at the shared (level, register) canonical key.
+    sense = Sense(
+        index=0,
+        gloss=Renditions[str](root=[canonical_rendition(DEFAULT_GLOSS)]),
+        examples=Renditions[Example](
+            root=[
+                canonical_rendition(
+                    Example(text="During the festival the researchers observed the duo.")
+                ),
+                canonical_rendition(
+                    Example(text="The data set showed the duo performing twice a week.")
+                ),
+            ]
+        ),
+    )
+    entry = Lexeme.empty(
+        "duo",
+        kind=LexemeKind.SIMPLEX,
+        pos_entries=[POSEntry(pos=PartOfSpeech.NOUN, senses=[sense], morphology=Morphology())],
+    )
+    for rendition in sense.examples:
+        _flag_filler(rendition)
+    session.store.write(entry)
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.FILLER_EXAMPLES}
+    )
+
+    result = outcome.steps[ContentHygieneStep.FILLER_EXAMPLES]
+    assert result.calls == 1
+    assert result.accepted == 1
+    assert result.rejected == 1
+    assert result.rewritten == 1
+
+    stored = session.store.read("duo")
+    texts = [rendition.content.text for rendition in stored.pos_entries[0].senses[0].examples]
+    # The first offender was rewritten (to the scripted template, shared by both since
+    # they carry the same headword); the second collided with what the first just wrote
+    # and kept its own original text instead.
+    assert "During the festival the researchers observed the duo." not in texts
+    assert "The data set showed the duo performing twice a week." in texts
+    flags = [
+        QAFlag.OG_FILLER in (rendition.assessment.qa_flags if rendition.assessment else [])
+        for rendition in stored.pos_entries[0].senses[0].examples
+    ]
+    assert flags.count(True) == 1
+    assert flags.count(False) == 1
+
+
+async def test_filler_examples_covers_non_canonical_renditions_too(session):
+    sense = Sense(
+        index=0,
+        gloss=Renditions[str](root=[canonical_rendition(DEFAULT_GLOSS)]),
+        examples=Renditions[Example](
+            root=[
+                Rendition[Example](
+                    reading_level=ReadingLevel.COLLEGE,
+                    style=Register.FORMAL,
+                    content=Example(text="The committee noted that the duo performed well."),
+                )
+            ]
+        ),
+    )
+    entry = Lexeme.empty(
+        "duo",
+        kind=LexemeKind.SIMPLEX,
+        pos_entries=[POSEntry(pos=PartOfSpeech.NOUN, senses=[sense], morphology=Morphology())],
+    )
+    _flag_filler(sense.examples[0])
+    session.store.write(entry)
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.FILLER_EXAMPLES}
+    )
+
+    result = outcome.steps[ContentHygieneStep.FILLER_EXAMPLES]
+    assert result.accepted == 1
+
+    stored = session.store.read("duo")
+    rendition = stored.pos_entries[0].senses[0].examples[0]
+    assert rendition.reading_level is ReadingLevel.COLLEGE
+    assert rendition.style is Register.FORMAL
+    assert rendition.assessment is not None
+    assert QAFlag.OG_FILLER not in rendition.assessment.qa_flags
+
+
+async def test_an_unflagged_example_costs_nothing(session):
+    session.store.write(_entry("duo", examples=["The duo played two songs at the fair."]))
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.FILLER_EXAMPLES}
+    )
+
+    assert outcome.steps[ContentHygieneStep.FILLER_EXAMPLES].calls == 0
+    assert session.meter.summary().total_usd == 0.0
+
+
+async def test_a_second_filler_sweep_is_free_once_resolved(session):
+    entry = _entry(
+        "duo", examples=["During the festival the researchers observed the duo perform."]
+    )
+    _flag_filler(entry.pos_entries[0].senses[0].examples[0])
+    session.store.write(entry)
+    only = {ContentHygieneStep.FILLER_EXAMPLES}
+
+    first = await run_content_hygiene(session.store, session.stages, workers=4, only=only)
+    assert first.steps[ContentHygieneStep.FILLER_EXAMPLES].calls == 1
+    spent = session.meter.summary().total_usd
+
+    second = await run_content_hygiene(session.store, session.stages, workers=4, only=only)
+    assert second.steps[ContentHygieneStep.FILLER_EXAMPLES].calls == 0
+    assert session.meter.summary().total_usd == spent
