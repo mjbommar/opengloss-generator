@@ -45,6 +45,11 @@ from opengloss_generator.workflows.examples import plan_examples, run_examples
 from opengloss_generator.workflows.generate import EntrySpec, generate_entry
 from opengloss_generator.workflows.graph_hygiene import run_graph_hygiene
 from opengloss_generator.workflows.qa import QAOutcome, run_qa, stratified_sample
+from opengloss_generator.workflows.qa_pairs import (
+    QACallRecord,
+    plan_qa_pairs,
+    run_qa_pairs,
+)
 from opengloss_generator.workflows.relation_hygiene import run_relation_hygiene
 from opengloss_generator.workflows.resolve import resolve_entry, resolve_store
 from opengloss_generator.workflows.retrofit import RetrofitPass, run_retrofit
@@ -188,6 +193,19 @@ _DRY_RUN_EXAMPLES_CHECK_OUTPUT_TOKEN_ESTIMATE = 850
 #: replaced (4,000/900) under-priced a sweep by a factor of three (D-48).
 _DRY_RUN_QA_INPUT_TOKEN_ESTIMATE = 8000
 _DRY_RUN_QA_OUTPUT_TOKEN_ESTIMATE = 3300
+
+#: Per-sense token estimates for ``qa-pairs --dry-run``. Measured, not modelled, over the
+#: 1,034 calls of D-58's sample-300 pilot: mean 2,874 input tokens of which 2,006 were the
+#: cached instruction prefix (a 70% hit rate across the sweep, rising as the run warmed),
+#: for a mean 510 output tokens — seven pairs plus luna's ``low`` reasoning, which is
+#: billed as output. Input is nearly constant per sense, because the prompt is one gloss,
+#: up to six example sentences, one capped encyclopedia passage and one etymology summary
+#: whatever the entry, so unlike ``enrich``'s estimate this one is tight: it priced the
+#: pilot at $0.000708 per sense against $0.000413 measured, the gap being almost entirely
+#: the cache warming past the mean.
+_DRY_RUN_QA_PAIRS_INPUT_TOKEN_ESTIMATE = 2900
+_DRY_RUN_QA_PAIRS_CACHED_INPUT_TOKEN_ESTIMATE = 2000
+_DRY_RUN_QA_PAIRS_OUTPUT_TOKEN_ESTIMATE = 510
 
 #: How many failure messages a batch sweep keeps for the run summary.
 _MAX_REPORTED_FAILURES = 5
@@ -899,6 +917,128 @@ def qa(
             return session.summary(
                 sample_size=len(ids), seed=seed, report=str(report) if report else None, qa=metrics
             ).as_dict()
+
+    _echo_summary(_run(_main()))
+
+
+def _qa_pairs_dry_run_estimate(
+    store: LexemeStore, words: Sequence[str], cfg: AppConfig
+) -> dict[str, object]:
+    """Plan a ``qa-pairs`` sweep without calling a model, and price the plan.
+
+    The plan itself is free and exact — ``workflows.qa_pairs.plan_qa_pairs`` reads each
+    sense's sources and its D-47 marker — so ``senses_due`` and ``pairs_planned`` are
+    counts, not guesses. Only the money is estimated, from the measured per-call means
+    above.
+
+    Args:
+        store: The store to read entries from.
+        words: The ids the sweep would visit.
+        cfg: The run configuration, for the ``qa_pairs`` model policy.
+
+    Returns:
+        Extra summary fields describing the plan and its estimated cost.
+    """
+    scanned = 0
+    entries_due = 0
+    senses = 0
+    pairs = 0
+    for word in words:
+        entry = store.read(word)
+        if entry is None:
+            continue
+        scanned += 1
+        plan = plan_qa_pairs(entry)
+        if not plan.due:
+            continue
+        entries_due += 1
+        senses += plan.senses
+        pairs += plan.pairs
+
+    policy = cfg.policy(StageName.QA_PAIRS)
+    per_call = estimate_cost(
+        policy.model,
+        input_tokens=_DRY_RUN_QA_PAIRS_INPUT_TOKEN_ESTIMATE,
+        cached_input_tokens=_DRY_RUN_QA_PAIRS_CACHED_INPUT_TOKEN_ESTIMATE,
+        output_tokens=_DRY_RUN_QA_PAIRS_OUTPUT_TOKEN_ESTIMATE,
+        tier=policy.service_tier,
+    )
+    return {
+        "entries_scanned": scanned,
+        "entries_due": entries_due,
+        "senses_due": senses,
+        "pairs_planned": pairs,
+        "estimated_calls": senses,
+        "estimated_cost_usd_per_sense": round(per_call.total_usd, 6),
+        "estimated_cost_usd": round(per_call.total_usd * senses, 6),
+        "note": "estimate only; --dry-run makes no model calls",
+    }
+
+
+@app.command("qa-pairs")
+def qa_pairs(
+    from_list: Annotated[
+        Path | None,
+        typer.Option("--from-list", help="Write pairs for every headword in this file."),
+    ] = None,
+    limit: Annotated[int | None, typer.Option("--limit", help="Cap entries visited.")] = None,
+    offset: Annotated[int, typer.Option("--offset", help="Skip this many entries.")] = 0,
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+    budget: _BudgetOpt = None,
+    concurrency: _ConcurrencyOpt = None,
+    dry_run: _DryRunOpt = False,
+) -> None:
+    """Write grounded question/answer pairs for every live sense (D-58).
+
+    One call per sense buys seven pairs, one of each question type, at mixed difficulty,
+    answered only from that sense's own stored text — its canonical gloss, its example
+    sentences, its entry's encyclopedia passage and etymology — each labelled with an id
+    the answer must cite. A pair citing an id that was not supplied, or whose answer
+    shares fewer than two content words with what it cited, or which repeats a question
+    already asked, is dropped and counted. Idempotent: an unchanged sense costs $0, and a
+    sense whose gloss or sources changed earns one more call, up to two in all.
+
+    Without --from-list the whole store is visited. This command is not `opengloss qa`,
+    which is the Opus judge scoring stored content.
+    """
+    cfg = _build_config(config_path, store, budget, concurrency, dry_run)
+
+    async def _main() -> dict[str, object]:
+        async with RunSession(cfg, install_signal_handler=True) as session:
+            words = _batch_targets(session, from_list, from_list is None, limit, offset)
+            if cfg.dry_run:
+                session.stop_reason = "dry_run"
+                extra = _qa_pairs_dry_run_estimate(session.store, words, cfg)
+                return session.summary(**extra).as_dict()
+
+            async def emit(call: QACallRecord) -> None:
+                await session.emit(
+                    session.record_for(
+                        "qa_pairs",
+                        call.sense_id,
+                        "written" if call.accepted else "empty",
+                        cost_usd=call.cost_usd,
+                        input_tokens=call.input_tokens,
+                        cached_input_tokens=call.cached_input_tokens,
+                        output_tokens=call.output_tokens,
+                        attempts=call.attempts,
+                        duration_seconds=round(call.duration_seconds, 3),
+                        detail={"generated": call.generated, "accepted": call.accepted},
+                    )
+                )
+
+            outcome = await run_qa_pairs(
+                session.store,
+                session.stages,
+                lexeme_ids=words,
+                workers=cfg.concurrency.workers,
+                stop_event=session.stop_event,
+                on_call=emit,
+            )
+            if outcome.stopped_reason is not None:
+                session.stop_reason = outcome.stopped_reason
+            return session.summary(**outcome.as_dict()).as_dict()
 
     _echo_summary(_run(_main()))
 

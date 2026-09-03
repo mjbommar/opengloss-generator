@@ -2366,3 +2366,139 @@ for a no-op change.
 No model was called and no money was spent: this branch adds storage, not a stage.
 Nothing here touches `data/core-store` or `runs/`; `data/sample-300` was read only.
 Tests: **+31** (`tests/test_retrieval_schema.py`).
+
+## D-58 (2026-09-03) — `qa-pairs`: seven grounded question/answer pairs per sense, one call each, checked against what they cite
+
+**Context.** F6 of `docs/RETRIEVAL-DATA-PLAN.md`. The consumer (`../opengloss-embedding`)
+wants question/answer text; the pipeline can generate it freely, and generating it freely
+would be a mistake. A QA pair written out of the model's own knowledge is a fact this
+project neither verified nor paid for, sitting in a store whose entire claim is that its
+content has been through a judge and a set of hygiene passes. So this stage writes pairs
+**out of stored text only**, and the stored text is what makes the result checkable.
+
+**Decision.**
+
+1. **One call per live sense**, not per entry — the reverse of D-53's choice for
+   `examples`. `examples` needs the whole inventory in one prompt so a sentence can be
+   written to fit *only* its own sense. Nothing here does: a question about sense 2 is
+   answered out of sense 2's own material, and showing the model the neighbouring senses
+   would invite precisely the failure the grounding check exists to catch. The unit of
+   *locking* is still the entry (D-31): read, one call per live sense, apply, write, all
+   inside one hold.
+
+2. **Four kinds of source, each labelled with an id the answer must cite**: the canonical
+   gloss, up to six de-duplicated example sentences, the entry's `(neutral, plain)`
+   encyclopedia passage capped at 500 words, and the etymology summary. Retired senses are
+   skipped (D-52).
+
+3. **Two of the four id forms are stage-local**, and this is the one place this project
+   formats an id outside `identity.py`. `Lexeme.rendition_ids()` already documents why an
+   example rendition has no derived id — several may share one `(level, register)` key —
+   and worse, a sense's `(neutral, plain)` *example* and its `(neutral, plain)` *gloss*
+   produce the **same** string under `rendition_id`, which is exactly the ambiguity a
+   citation cannot have. So examples are addressed `<sense_id>#ex<n>`, in the `#q<n>` /
+   `#qa<n>` family, and the etymology — not a rendition set at all — is addressed
+   `<lexeme_id>:etymology`. Both live in `workflows/qa_pairs.py`. An id form with one
+   consumer belongs next to that consumer; F1/F3's exports are the second consumer that
+   would justify promoting them, and the plan's working rules do not list `identity.py`
+   among the shared files this agent may edit.
+
+4. **Three free post-checks, no retry.** A pair is dropped and counted when its
+   `grounded_in` is empty (`no_citation`) or names an unsupplied id (`unknown_citation`);
+   when its answer shares fewer than two content words with the text it cited
+   (`not_grounded`); or when its normalised question repeats one already accepted or
+   already stored (`duplicate_question`). There is no retry loop, for D-53's reason: the
+   next sense's call buys seven more pairs more cheaply than a retry buys back one, and the
+   reason counters are the feedback loop instead.
+
+5. **D-47's marker, per sense**, on the generating call's own zero-cost provenance record:
+   `qa_pairs:<sense_id>:<digest>;attempts=<n>`, two attempts maximum. The digest covers the
+   sorted source ids **and the canonical gloss text**, because a rewritten gloss keeps its
+   rendition id and is exactly the case where the stored pairs have gone stale.
+
+**Pilot (sample-300, 2026-09-03, `runs/20260903T093145Z-0866e86d.ledger.jsonl`).** 1,034
+calls at concurrency 16, 17.8 minutes, `--budget 0.50`, completed rather than stopped.
+
+| measured | |
+|---|---|
+| cost | **$0.426915** (with the 7-call smoke run: $0.430123 for all 1,041 senses) |
+| cost per sense | **$0.000413** |
+| cost per accepted pair | **$0.000060** |
+| output tokens per call | mean **510**, median 496, p90 585, max 959 |
+| input tokens per call | mean 2,874, 2,006 of them cached (70% hit rate) |
+| pairs generated / accepted | 7,238 / 7,121 (**98.4%**) |
+| drops | `not_grounded` **100**, `unknown_citation` **17**; `no_citation` and `duplicate_question` never fired |
+| drops per call | 933 calls lost nothing, 95 lost one, 4 lost two, 2 lost all seven |
+| full 7-type coverage | 896 of 1,034 senses (86.7%) |
+| difficulty mix | easy 3,084 / medium 2,974 / hard 1,063 |
+| retries / failed calls | 0 / 0 |
+
+The measured mean, 510 output tokens, **replaces the schema branch's provisional
+`expected_output_tokens=900`** in `config.py` (D-41: the budget guard reserves at a
+measured typical output, and 900 held nearly twice what a call spends).
+
+**Quality verdict.** Three senses read in full — `projection:noun:1`, `firm:verb:0`,
+`mediterranean:noun:2`, twenty-one pairs. Every citation resolved to text that genuinely
+supports its answer; no invented fact was found in any of the twenty-one. The type labels
+are doing real work at the top of the range: `projection`'s `reasoning` pair combines the
+entry-level encyclopedia's *geometric* projection with this sense's *optical* one into a
+statement neither source makes alone, and cites both, which is exactly the output this
+stage was bought for. Verdict: ship.
+
+Three defects are recorded rather than fixed, because each is a prompt change whose value
+should be measured against a second pilot rather than assumed:
+
+* **Meta-reference leakage, 7.9%** (498 of 6,289 stored pairs contain "the example(s)",
+  "according to", "the passage", "the text", "the definition"). The instructions ban it
+  explicitly and it happens anyway. A reader of these questions has never seen the sources,
+  so "What kind of traditions do Mediterraneans have, according to the examples?" is a
+  broken question. This is a **free post-check waiting to be written** — a regex over
+  question and answer — and it is the highest-value next change.
+* **Definition pairs restate the gloss verbatim, 11.6%** (105 of 907). The instructions ask
+  for the meaning "in your own words"; a verbatim echo is a training row that teaches
+  nothing the gloss did not.
+* **`procedural` degrades into `factual`** when a sense describes no procedure ("How did
+  projection change the empty warehouse wall?" is not a procedural question). Seven types
+  per sense is a coverage plan, not a guarantee that all seven are natural for every sense.
+
+The `not_grounded` floor is doing something, but less than it looks: at two content words
+it is lenient by design, and one of the two is very often the headword itself, which
+appears in nearly every answer and nearly every source. The two calls that lost all seven
+pairs are the interesting case, and the drop rate should be read as *the floor is set where
+a paraphrase is never punished*, not as *1.4% of answers were fabrications*. A stricter
+variant — excluding the headword and its forms from both sides — is the obvious experiment,
+and should be run against a pilot before it is adopted, because the failure mode it invites
+(refusing honest short answers) is worse than the one it catches.
+
+**Consequence.** New: `src/opengloss_generator/workflows/qa_pairs.py` (module-private
+contract and instructions, following `sense_hygiene` and `relation_hygiene`, so this stage
+does not touch `prompts.py` or `contracts.py` while three sibling agents are editing them);
+`tests/test_qa_pairs.py` (+14); `docs/RETRIEVAL-DATA.md` § F6. Minimal additive edits to
+`cli.py` (the `qa-pairs` command — **not** `qa`, which is the Opus judge, plus the dry-run
+token constants), `config.py` (the measured `expected_output_tokens`), `tests/conftest.py`
+(one payload builder and one registry line, appended), `README.md` (one table row).
+`run_qa_pairs` takes an optional `on_call` sink so the CLI can put one ledger record per
+call on the run ledger; without it, per-call output tokens and cost per sense could not be
+recovered from a sweep's totals at all.
+
+**Left undone, and one caveat about the pilot's store.** `data/sample-300` was written by
+several sibling retrieval-data agents concurrently with this pilot. The store's lock is
+per-entry and *in-process*, so cross-process writes are last-writer-wins: 6,289 of the
+7,121 accepted pairs survive on disk, the rest having been clobbered by another agent's
+write of the same entry. The ledger numbers above are unaffected — they record what this
+run generated, accepted and paid for — but a later reader counting `Sense.qa` rows in
+`data/sample-300` will find fewer than 7,121, and re-running `qa-pairs` over the sample
+will re-bill the clobbered senses because their markers went with them. `data/core-store`
+and `runs/` in the main checkout were untouched.
+
+A second, related consequence: D-62's
+`test_every_stored_sample_entry_still_validates` and
+`test_stored_entries_serialise_back_to_what_they_were` assert that `data/sample-300`
+carries *no* queries, QA pairs or contrasts. Both are guarded by
+`skipif(not SAMPLE_STORE.is_dir())`, so they skip unless a worktree has linked the sample
+store — and they now fail wherever it is linked, because the plan told F2, F5 and F6 to
+pilot against exactly that store. They fail identically with this branch's changes
+stashed, so they are not this stage's regression, and they are not this stage's file to
+edit either; the assertion they need is "loads and round-trips", not "is empty". Recorded
+here so the next agent to see red knows what it is. Without the link, `uv run pytest` is
+829 passed, 2 skipped.

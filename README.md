@@ -65,6 +65,7 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Enrich | `enrich` | Diff what an entry has against what was asked for; generate only the missing renditions. Reading levels and registers are crossed; all renditions for one (sense, field) come from one call. |
 | Resolve | `resolve` | Fill in `sense_id` / `confidence` on relation targets whose lexeme already exists in the store; targets absent from the store stay unresolved at zero cost. |
 | Retrofit | `retrofit` | Run `classify_kind`, `tag_domain`, and/or `spans` over an existing store; idempotent, `--only` selects one pass. |
+| QA pairs | `qa-pairs` | One call per live sense buys seven question/answer pairs — one of each question type, at mixed difficulty — answered only from that sense's own stored text (gloss, examples, encyclopedia, etymology), each source labelled with an id the answer must cite. Uncited, mis-cited, ungrounded and duplicate pairs are dropped and counted. Not `qa`, which is the Opus judge. |
 | Migrate | `migrate` | Upgrade a v1.3 or v2.0 payload to schema v3 via `migrate.from_v13` / `migrate.from_v2`; never renumbers a sense. |
 
 ## Cost defaults
