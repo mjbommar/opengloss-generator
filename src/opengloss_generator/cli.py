@@ -30,6 +30,7 @@ from opengloss_generator.pricing import (
     ServiceTier,
     estimate_cost,
 )
+from opengloss_generator.qc.filler import FillerConfig, analyze_filler, apply_filler_flags
 from opengloss_generator.runner import RunSession, run_pool
 from opengloss_generator.schema import LexemeKind, ReadingLevel, Register, StageName
 from opengloss_generator.store import LexemeStore
@@ -59,6 +60,17 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+
+#: Free, model-free quality-control passes over a whole store (see `opengloss_generator.qc`).
+#: Its own group because it is neither a generation workflow nor a repair pass: it only
+#: measures, and optionally flags, for a later pass to act on.
+qc_app = typer.Typer(
+    name="qc",
+    help="Free, model-free quality-control passes over a store (measure, optionally flag).",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(qc_app, name="qc")
 
 _ConfigOpt = Annotated[Path | None, typer.Option("--config", help="TOML config file.")]
 _StoreOpt = Annotated[Path | None, typer.Option("--store", help="Store root directory.")]
@@ -1311,6 +1323,77 @@ def audit(
         typer.echo(f"entries_total: {report.entries_total}")
         for gap in report.top_gaps(5):
             typer.echo(f"- {gap}")
+
+
+@qc_app.command("filler")
+def qc_filler(
+    out: Annotated[Path, typer.Option("--out", help="Write the JSON report here.")],
+    flag: Annotated[
+        bool, typer.Option("--flag", help="Set OG_FILLER on offending renditions.")
+    ] = False,
+    unflag: Annotated[
+        bool, typer.Option("--unflag", help="Remove OG_FILLER from offending renditions.")
+    ] = False,
+    from_list: Annotated[
+        Path | None, typer.Option("--from-list", help="Restrict the scan to these headwords.")
+    ] = None,
+    ngram_threshold: Annotated[
+        float,
+        typer.Option(
+            "--ngram-threshold", help="4-gram filler frequency bar (fraction of sentences)."
+        ),
+    ] = FillerConfig().ngram_freq_threshold,
+    opener_threshold: Annotated[
+        float,
+        typer.Option("--opener-threshold", help="Sentence-opener filler frequency bar."),
+    ] = FillerConfig().opener_freq_threshold,
+    min_count: Annotated[
+        int, typer.Option("--min-count", help="Minimum sentence count for a finding.")
+    ] = FillerConfig().min_count,
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+    concurrency: _ConcurrencyOpt = None,
+) -> None:
+    """Corpus-level n-gram / sentence-opener filler detector (F8, D-60).
+
+    No model call. Counts 4-grams and 2/3-word sentence openers across every example
+    rendition of every live sense and every encyclopedia rendition, reports whatever
+    clears the frequency bar with example rendition ids, and reports a per-entry
+    uniqueness / information-density score distribution alongside it. ``--flag`` sets
+    ``OG_FILLER`` on the offending renditions' assessments; ``--unflag`` reverses it.
+    Both are idempotent. See ``opengloss_generator.qc.filler`` for the report format.
+    """
+    if flag and unflag:
+        raise typer.BadParameter("--flag and --unflag are mutually exclusive")
+    cfg = _build_config(config_path, store, None, concurrency, False)
+    core_words = set(_read_word_list(from_list)) if from_list is not None else None
+    config = FillerConfig(
+        ngram_freq_threshold=ngram_threshold,
+        opener_freq_threshold=opener_threshold,
+        min_count=min_count,
+    )
+
+    async def _main() -> dict[str, object]:
+        async with RunSession(cfg, install_signal_handler=True) as session:
+            report = analyze_filler(session.store, config=config, core_words=core_words)
+            report_dict = report.as_dict()
+            if flag or unflag:
+                flag_outcome = await apply_filler_flags(
+                    session.store,
+                    report,
+                    workers=cfg.concurrency.workers,
+                    remove=unflag,
+                    stop_event=session.stop_event,
+                )
+                report_dict["flag_action"] = flag_outcome.as_dict()
+                if flag_outcome.stopped_reason:
+                    session.stop_reason = flag_outcome.stopped_reason
+            out.write_text(json.dumps(report_dict, indent=2, sort_keys=True), encoding="utf-8")
+            return session.summary(
+                report_path=str(out), **{"totals": report_dict["totals"]}
+            ).as_dict()
+
+    _echo_summary(_run(_main()))
 
 
 @app.command()

@@ -67,6 +67,7 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Retrofit | `retrofit` | Run `classify_kind`, `tag_domain`, and/or `spans` over an existing store; idempotent, `--only` selects one pass. |
 | Migrate | `migrate` | Upgrade a v1.3 or v2.0 payload to schema v3 via `migrate.from_v13` / `migrate.from_v2`; never renumbers a sense. |
 | Export retrieval pairs | `export-pairs` | Free: mine WiC-style positive/hard-negative pairs from a sense's own example renditions, plus example→gloss and example→encyclopedia positives; `--easy-negatives N` adds sampled cross-headword, same-domain negatives. See `docs/RETRIEVAL-DATA.md`. |
+| Filler QC | `qc filler` | Count 4-grams and sentence openers across every example and encyclopedia rendition; report what recurs more than chance, with a per-entry uniqueness / information-density score. No model call. `--flag` sets `OG_FILLER` on the offenders; `--unflag` reverses it (D-60). |
 
 ## Cost defaults
 

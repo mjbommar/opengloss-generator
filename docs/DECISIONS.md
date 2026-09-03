@@ -2453,3 +2453,112 @@ question left for the embedding project, not this feature: whether `wic_hard_neg
 capped per entry (an entry with many live senses gives `C(k, 2)` hard negatives, which can
 outweigh its `wic_positive` count for a highly polysemous headword) — not capped here, since the
 plan asks for "all pairs" and a downstream consumer can always subsample a JSONL file for free.
+## D-60 (2026-09-03) — `qc filler`: a corpus-level, model-free filler detector, and 92% of encyclopedia renditions are boilerplate
+
+**Context.** `workflows/content_hygiene.py`'s `stilted_examples` step (D-49) catches *known* academic
+tells — `STILTED_RE` matches "researchers", "participants", "the study" — one canonical example at a
+time. It cannot catch a tell nobody has named yet, and it never looks at the encyclopedia field at
+all. `docs/RETRIEVAL-DATA-PLAN.md` (F8) asks for the complementary, model-free check: count 4-grams
+and sentence openers across the *whole store*, and anything that recurs far more than chance is a
+model habit, whatever words it happens to use — plus a per-entry uniqueness (type/token ratio) and
+information-density score "in the spirit of" `alea-quality-model`'s `estimate_document_quality`
+heuristic gate (band the words-per-sentence average: 0.8 inside 10-30 words, 0.6 inside 5-40, 0.4
+outside both).
+
+**Decision.** `src/opengloss_generator/qc/filler.py` (`qc/__init__.py` re-exports it), two literal
+passes over `store.iter_entries()`, exactly as the plan specifies:
+
+1. **Count.** Every non-retired sense's example renditions and every entry's encyclopedia
+   renditions are split into sentences; each sentence contributes its *set* of 4-grams (deduplicated
+   within the sentence, so one repetitive sentence cannot inflate its own count) and its 2- and
+   3-word openers to a corpus-wide tally. A key's frequency is `(sentences containing it) / (total
+   sentences)` — document frequency, which is what "appearing in >X% of sentences" means, not a raw
+   occurrence count.
+2. **Score.** A key clears the bar at `frequency > threshold` (4-grams 0.05%, openers 0.5% — the
+   plan's own numbers, both configurable) **and** `count >= min_count` (default 5, a floor so a small
+   store's tiny denominator cannot turn one repeated pair into a "finding" — not in the plan text,
+   added because a literal reading of the frequency-only rule flags noise on any corpus under a few
+   thousand sentences). A rewalk over the corpus (pass 2) locates every rendition with at least one
+   over-threshold sentence — the "offending" renditions — and lists up to 3 example rendition ids per
+   finding. `--flag` sets the new `QAFlag.OG_FILLER` on each offender's `Assessment` (creating one if
+   absent); `--unflag` recomputes the same offending set and removes it. Both go through
+   `apply_filler_flags`, one entry per work item with its lock held across read and write (D-31), and
+   both re-locate the rendition by `(level, register, text)` rather than trusting a position computed
+   before the lock was taken — `workflows/graph_hygiene.py`'s plan-then-apply discipline. Both are
+   idempotent: `Assessment.flag` already dedupes, and a write only happens when something actually
+   changed, so a second `--flag` or a `--unflag` on a clean store touches disk zero times.
+
+An example rendition has no derivable id (`Lexeme.rendition_ids` deliberately excludes examples —
+several may share one `(level, register)` key), so the report mints one: sense id, `(level,
+register)` key, and position in that sense's example list, e.g. `abseil:verb:0#neutral/plain#0`.
+Only the report reads it; flagging re-locates by content, never by this position.
+
+`QAFlag.OG_FILLER = "og_filler"` is added to `schema.py` without the `og.` prefix every other
+project-specific flag uses, on purpose: another branch is adding the same member to
+`retrieval/schema` independently, and matching its exact spelling makes that merge a no-op instead
+of a conflict. Two minimal, necessary edits followed from adding it: `QA_INSTRUCTIONS`'s closed QA
+vocabulary list now names it beside the other five `og.*` flags (a flag the judge cannot see is a
+flag it cannot recognise as already-handled, and `tests/test_qa.py` enforces this for every
+`QAFlag` member), and `PROMPT_VERSION` moves `7` -> `8` per the module's own rule ("bump it whenever
+instruction text changes"). CLI: `opengloss qc filler --store S --out report.json [--flag|--unflag]
+[--from-list L] [--ngram-threshold --opener-threshold --min-count]`, under a new `qc` command group
+(the CLI had none; F8 is the first free, measure-only-by-default pass with its own module, so it
+gets its own group rather than a bare top-level verb).
+
+**Measured on `data/sample-300`** (a copy in the worktree; nothing written, no `--flag`):
+
+| | value |
+|---|---|
+| entries scanned | 300 |
+| live senses | 1,041 |
+| units scanned (examples + encyclopedia renditions) | 8,155 (6,655 example, 1,500 encyclopedia) |
+| sentences scanned | 36,251 |
+| over-threshold 4-grams | 75 |
+| over-threshold 2-word openers | 10 |
+| over-threshold 3-word openers | 2 |
+| offending renditions (`--flag` candidates) | 1,467 |
+| — of which encyclopedia | 1,385 (**92.3%** of all 1,500 encyclopedia renditions) |
+| — of which example | 82 (1.2% of 6,655 example renditions) |
+| entries with >=1 offending rendition | 300 / 300 |
+
+Top findings, by sentence count: the 4-gram **"during the twentieth century"** (75 sentences, 0.21%
+— `kennedy:encyclopedia#grade_5/plain`, `#grade_10/plain`, `#college/plain`), **"within broader
+frameworks of"** (73), **"nineteenth and twentieth centuries"** (71), **"the word comes from"** (65);
+the 2-word opener **"it can"** (478 sentences, 1.32% — `projection:encyclopedia#grade_1/plain`,
+`#grade_5/plain`, `#grade_10/plain`), **"the word"** (406), **"related concepts"** (363, almost
+entirely the 3-word opener "related concepts include", 294 sentences on its own). Every one of these
+is encyclopedia connective tissue — cross-reference and etymology transitions ("the word comes
+from", "the term derives from", "comes from the latin/an old"), hedges ("it can also mean"),
+period-naming filler ("during the nineteenth and", "the late twentieth century") — never example
+prose, matching the 92.3%-vs-1.2% split above: the four graded encyclopedia renditions per entry
+share a template the model reaches for regardless of headword, in a way the sense-grounded example
+sentences (D-53) mostly do not.
+
+Entry scores: `information_density` is `0.8` for all 300 entries (every entry's average sentence
+length across its own text falls inside the 10-30 word "ideal" band, 10.7-16.7 measured) —
+uninformative at this corpus's actual sentence-length distribution, which is worth recording as a
+finding in itself: the band is calibrated for arbitrary web-scale documents, not for a store whose
+every sentence was already generated to a length constraint. `uniqueness` (type/token ratio over an
+entry's *concatenated* text) ranges 0.234-0.430, mean 0.305 — the lowest scores (`euros` 0.234 over
+2,092 words / 139 sentences, `henry` 0.245, `prefer` 0.247) belong to the entries with the most text,
+which is TTR's well-known length bias rather than a defect specific to these entries; a per-entry
+score should not be compared across entries of very different length without normalising for it,
+which this module does not attempt (out of scope for a free heuristic gate; noted for whoever builds
+on this number next).
+
+**Tests:** +6, `tests/test_qc_filler.py` — an obvious six-entry stilted-encyclopedia-style corpus
+is caught (4-gram and both opener lengths, exactly the six offending renditions and none of ten
+varied control entries); the varied corpus alone produces zero findings; a retired sense's example
+is excluded from both the count and the offender set; per-entry scores separate a three-word
+fragment from a well-formed 24-word sentence; `--flag` is applied and a second detect-then-flag
+cycle changes nothing (`renditions_flagged=0`, `renditions_already=6`); `--unflag` reverses it and
+is itself idempotent against an already-clean store. `uv run ruff check/format`, `uv run ty check`,
+and `uv run pytest` (792 passed) are clean.
+
+**Left undone.** No rewrite pass reads `OG_FILLER` yet — the plan scopes that to "a later rewrite
+pass", out of F8. The frequency and count thresholds are the plan's own numbers plus one addition
+(`min_count`) not in the plan text; they have not been tuned against a judged sample the way D-51's
+vocabulary bands were, so a `--flag` run's candidate set should be spot-checked before it drives a
+rewrite pass, not trusted blind. `information_density`'s band is copied from `alea-quality-model`
+unchanged and, per the measurement above, does not discriminate on this store; a future user of the
+score should recalibrate the band or drop the dimension rather than read `0.8` as "fine."
