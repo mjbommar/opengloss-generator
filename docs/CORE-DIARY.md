@@ -1145,3 +1145,10 @@ Whole-store extrapolation (110,869 live senses; contrasts by entry ratio): queri
 ≈ $95 luna-only. Whole-store run held pending the user's choice (options in
 WRITER-DIVERSITY.md "Cost correction"); default if unanswered when the quality passes
 finish: luna-only on these three stages, rotation kept on renditions/examples.
+
+**18:05 — domain-retag pilot (D-67, merged):** on the 40-entry judge sample, luna
+retagged 45/98 senses and cut the `domain_fits` defect rate **22.4% → 14.3%** at
+$0.000039/sense (27% cheaper than nano). D-46's version bump only clears `.general`
+tags (15% of senses), so a new `--force-retag-domains` flag clears every live sense.
+Whole-store retag launched: luna, cap $6.5 (1.5× the $4.34 extrapolation), followed by
+the forced 40-entry re-judge.
