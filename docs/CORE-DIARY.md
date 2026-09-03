@@ -826,3 +826,278 @@ QA-DIARY iteration 5 — so that entry is picked up by the follow-up's passes.)
 
 **Stage 17 started 04:29 — per-sense example generation** (8 verified sentences per
 sense, D-53; cap $45). Tier-2 spend ≈ $109.
+
+**Accounting gap found 05:15 (2026-09-03):** the pooled sweeps that own their own worker
+pool — `examples`, `content_hygiene`, `relation_hygiene`, `sense_hygiene` (and the new
+`contrasts`) — emit no per-item ledger records; their `runs/<id>.ledger.jsonl` stays
+empty and only the final printed summary carries the cost. Per-call cost is still
+recorded in each entry's provenance, which is how the running examples stage was measured
+(**$4.24 for 4,566 entries, $0.0009/entry, at 05:15**). Fix after the chain: have the
+pooled sweeps write ledger records like the CLI-driven loops do. Not changed now because
+the running process imports the code.
+
+## Retrieval-data feature build (2026-09-03, 05:00–06:00)
+
+Nine features from `docs/RETRIEVAL-DATA-PLAN.md`, built by nine subagents in separate
+worktrees and merged on branch `retrieval/integration` (19 commits over `main`, 36 files,
++14,293 lines; ruff / format / ty / pytest all clean, 900+ tests). Not merged to `main`
+until the tier-2 chain and follow-up finish, since the chain imports the main checkout.
+
+| Feature | Decision | Measured on `data/sample-300` (300 core entries) |
+|---|---|---|
+| Schema: `Query`, `QAPair`, `Contrast`; new stage names and flags | D-62 | 300/300 pre-addition entries validate unchanged |
+| F1 `export-pairs` (WiC + positive pairs) | D-54 | 22,684 pairs; free |
+| F3+F4 `export-triples` / `export-qrels` | D-56 | 7,043 triples with generated queries (2,038 with gloss pseudo-queries); qrels grades 3/2/1/0 = 1,041/48/57/3,123; free |
+| F7 register diversity target + near-copy check | D-59 | existing near-copy rate 0.34%; diversity mean 0.72 |
+| F8 `qc filler` | D-60 | 92% of encyclopedia renditions carry an over-threshold phrase vs 1.2% of examples — thresholds need tuning before `--flag` |
+| F9 `export-pretrain` (4 templates) | D-61 | 2,400 docs / 720,565 words at grade_5+college |
+| F2 `queries` (doc2query, 8 styles) | D-55 | luna $0.000245/sense, 78% headword-free, beat nano on cost and quality |
+| F5 `contrasts` ("X vs Y" + verdict) | D-57 | $0.000124/contrast, 48 paragraphs, verdicts 29 typed / 19 differently / 0 unrelated |
+| F6 `qa-pairs` (7 types, grounded) | D-58 | $0.000413/sense, $0.000060/pair, 98.4% grounded |
+
+Findings from the pilots worth acting on: contrasts' `related_differently` verdicts mostly
+flag relations resolved to the wrong POS (free work list for relation-hygiene); qa-pairs
+has 7.9% meta-reference leakage ("the example…") and 11.6% of definition answers echo the
+gloss; both are regex post-checks to add before a full run. The shared sample store was
+written to by several pilots at once (cross-process writes are last-writer-wins), so the
+sample's pilot output is partial; per-agent sample copies next time.
+
+**Stage 17 result — per-sense example generation (04:29 → 08:44, 4h15m):** 54,431 calls
+(luna generation + nano sense-check), **$25.67**, 31,883 entries changed, 0 downgrades,
+completed under the $45 cap. Cache hit rate 0.60 (lower than the rendition stages: the
+per-sense prompt carries more volatile text). The stage's own ledger is empty (see the
+accounting note above); the cost is from its printed summary and matches the
+provenance-derived running total. Tier-2 spend ≈ $135.
+
+**Stage 18 started 08:44 — encyclopedia renditions, grade_5 + college** (cap $45).
+
+**Stage 18 mid-run note (10:35):** the encyclopedia run hit three consecutive flex
+capacity rejections at 09:18 and downgraded itself to the `auto` tier (D-40's
+mechanism, first time it has fired in production). Effect: throughput roughly doubled
+(82 → ~180 entries/min) and cost per entry roughly doubled ($0.00078 → $0.00150). At
+19,868 / 31,886 entries and $28.48, the projected total is ≈ $46.5 against the $45 cap,
+so the stage will most likely stop on budget a few hundred entries short. Added an
+"encyclopedia remainder" stage (cap $12, back on flex) to the front of the follow-up
+script, which was still waiting for `DONE-TIER2`; relaunched it (one waiter, verified).
+
+## Writer-diversity pilot (2026-09-03, 10:00–11:20) — branch `retrieval/writers`, D-63
+
+Frozen spec on 300 tier-2 entries, only the writer varied; two tasks (graded example
+renditions, D-53 per-sense examples); five writers. Full report:
+`docs/WRITER-DIVERSITY.md`. Ledger-sourced results:
+
+| writer | worked? | cost / rendition | judge (Opus, n≈35) | distinct-4-gram | any-flag rate |
+|---|---|---|---|---|---|
+| gpt-5.6-luna (existing) | baseline | — | 64.2 | 0.890 | 1.9% |
+| claude-haiku-4-5 | both tasks | $0.00373 | 62.8 | 0.991 | 0.7% |
+| gemini-3.7-flash | renditions only; D-53 schema rejected (400) | $0.00433 (4.7× haiku's tokens) | 64.6 | 0.979 | 1.6% |
+| qwen3.5-397b (OpenRouter) | yes, but reasoning blow-ups to 8K tokens, ~30× cost on bad calls; leaks prompt labels ("grade_10") into text | unpredictable | 64.5 | 0.984 | 1.2% |
+| deepseek-v4-pro (OpenRouter) | no: pydantic-ai marks it as not supporting native structured output | $0 | — | — | — |
+
+Attribution (TF-IDF + LR, 4 writers, balanced 517 each): 66% vs 25% chance; luna is
+most confused with haiku; qwen most separable (label leakage). Confounded by uneven
+per-arm coverage (each arm's budget stopped at a different point in the alphabetical
+list) — re-measure on a matched subset before using it as a target metric. Headword
+anchoring ≥ 98% for every writer. Judge scores within 1.8 points across arms.
+
+**Recommendation adopted for evaluation:** rotate luna (majority) with haiku (minority,
+~20%) on RENDITIONS and EXAMPLES via the new `ModelPolicy.writers` / `writer_for`
+(deterministic by sense id; provenance records `provider`). Gemini is a candidate for
+renditions once its D-53 schema failure is understood; qwen and deepseek are out.
+Not yet enabled on the store.
+
+Plumbing shipped: multi-provider router (Anthropic, Google, OpenRouter, local base-URL),
+price rows for the tested writers, `Provenance.provider`. Two housekeeping findings:
+`stages._RETRYABLE_STATUS` lacks 529 (Anthropic "overloaded"), which cost 5–7 judged
+entries per arm; and the pilot's research subagent exceeded its read-only brief and ran
+paid arms itself — the pilot's ~$30 total (judge ≈ $11, writers ≈ $4, plus the
+duplicate runs) includes that. No production store was touched.
+
+**Stage 18 result — encyclopedia grade_5 + college (08:44 → 11:39, 2h54m): stopped on
+its $45 cap.** 34,246 calls, **$45.00**, 30,408 / 31,886 entries, 60,816 renditions
+added, 0 failures, `flex_downgraded=True` (from 09:18), cache hit rate 0.66. The
+remaining 1,478 entries run first in the follow-up (cap $12, flex). Tier-2 spend ≈ $180.
+
+**Stage 19 started 11:39 — retrofit readability_hygiene + rendition_hygiene**, then
+audit → `DONE-TIER2`.
+
+**Stage 19 did not run.** `opengloss retrofit --only` takes a single pass name; the
+chain passed `readability_hygiene,rendition_hygiene` and the CLI rejected it (stderr was
+discarded by the chain, so it surfaced only as the JSON parser's traceback). Queued a
+second follow-up (`$SP/tier2_followup2.sh`) that runs the two passes separately and
+re-audits after the first follow-up finishes.
+
+**Stage 20 — audit at 11:39, and `DONE-TIER2` at 11:39:51.** Tier-2 coverage
+(31,886 entries, 76,855 live senses): gloss 9 renditions ≥ 99.95%; example levels
+160–195% (multiple per level after D-53); example registers (formal / informal /
+slang / technical, written by the D-53 per-sense stage) 83–91%; encyclopedia
+grade_5 + college 95.4% (remainder running); explanation 100%; spans 99.97%; domain
+100%; relations resolved 99.0% of in-core targets; 0 hypernym cycles; synonym
+reciprocity 98.4%, antonym 99.7%. Open: 19,938 readability-miss flags await the
+retrofit passes above; relation-validity and sense-hygiene remainders are in the
+follow-up. Chain spend ≈ $180.
+
+**Follow-up 1 — encyclopedia remainder (11:40 → 11:52, 12m):** 1,712 calls, $2.10,
+1,478 entries, 0 failures, completed (flex downgraded again after 3 rejections, so the
+capacity squeeze on luna flex is persistent today). Encyclopedia grade_5 + college now
+at 100% of tier 2. Tier-2 spend ≈ $182.
+
+**Follow-up 1 — sense-hygiene remainder started 11:52** (cap $8).
+
+**Follow-up 1 — sense-hygiene remainder (11:52 → 12:07, 15m):** 7,143 calls, $1.94,
+completed. `distinctness` made 0 calls over 41,886 entries scanned — the "unjudged"
+entries from the marker census were single-sense entries with nothing to compare, so
+the census overstated the remainder. `example_fit`: 1,175 examples moved, 1,855 removed,
+628 senses emptied (repair regenerates them next), 1,566 entries changed.
+
+**Follow-up 1 — repair started 12:07.**
+
+**Follow-up 1 — repair (12:07, 53s):** 428 calls, $0.04, completed.
+
+**Follow-up 1 — relation-hygiene validity remainder started 12:08** (cap $20).
+
+## Writer-diversity pilot, round 2 (2026-09-03, 13:00–13:40) — branch `retrieval/writers2`, D-64
+
+| arm | result |
+|---|---|
+| gemini-3.8-flash (direct) | judge **64.9** (best of all writers), any-flag rate **0.09%** (best), $4.68 incl. judge; but mean 3,714 output tokens/call on per-sense examples (up to 6,830) → 10% hard failures from JSON truncation at max_tokens 8192; coverage only 41/300 entries within the $0.75 cap |
+| z-ai/glm-5.2:free | 0 calls: pydantic-ai's OpenRouter profile registry says "native structured output not supported" (client-side) |
+| nvidia/nemotron-3-super-120b:free | same client-side refusal |
+
+**Gemini schema diagnosis:** the 400 on `DraftExampleBatch` is Gemini's structured-output
+compiler rejecting a `list[...]` whose *encoded schema weight* (item schema size ×
+`maxItems`) exceeds an internal budget; under `NativeOutput(strict=True)` the real
+contract passes at `maxItems=32` and fails at 40. The agent lowered
+`MAX_EXAMPLE_SENTENCES` 200→32 to get the arm running; that makes 7.3% of entries (>4
+live senses) fail for every writer, so the cap is **kept at 200** on integration and the
+Gemini path needs a provider-aware batch split (open in D-64).
+
+**Matched-subset attribution:** 52.7% unmatched → **38.6%** on the 27-headword subset
+every writer covered (5 writers, chance 20%). Round 1's 66% was inflated by uneven
+coverage, as suspected.
+
+**Free models, follow-up probe (this session):** the refusal is pydantic-ai's model
+profile, not the server. With `OpenAIModelProfile(supports_json_schema_output=True)`
+passed to `OpenRouterModel`, **nemotron-3-super-120b:free answered strict JSON in 6–7 s,
+~500 output tokens for three sentences** (reasoning included), sentences usable;
+glm-5.2:free returned upstream 429 "temporarily rate-limited" on every try (free-tier
+congestion). So a free arm is feasible for nemotron via a one-line profile override in
+the router, at 20 req/min; not yet piloted end to end. Note the nemotron sample
+included a "the researcher demonstrated…" sentence — the stilted-register pattern the
+content-hygiene pass exists to catch.
+
+Recommendation stands: luna/haiku 80/20 on renditions and examples. Gemini-3.8 is the
+highest-quality writer measured but needs the batch split and a verbosity cap before it
+can carry a share.
+
+**Follow-up 1 — relation-hygiene validity remainder (12:08 → 13:52, 1h44m): stopped on
+its $20 cap.** 27,282 validity calls, **$20.02**, 32,030 entries changed: 200,358 edges
+demoted, 44,622 far-side demotions, 28,722 retyped. (The free `inflections` step also
+demoted 1,308 more.) Marker census afterwards: 34,921 judged, **6,965 still without a
+marker** (some of those have no edges to judge). Added a second validity pass (cap $8)
+plus graph-hygiene to the front of follow-up 2. The validity step has now demoted or
+retyped ~430K edges across the whole store, by far the largest single correction in the
+tier-2 pass — consistent with the Opus judge's 88% relations-invalid rate on tier 2
+before it ran. Spend ≈ $206.
+
+**Follow-up 1 — graph-hygiene started 13:52**, then example catch-up and audit.
+
+**Follow-up 1 — graph-hygiene (13:52, 46s):** 4,409 entries changed, $0. Completed.
+**Follow-up 1 — example renditions catch-up started 13:53.**
+
+**Follow-up 1 — example renditions catch-up (13:53 → 13:55, 2m):** 871 calls, $0.14,
+587 entries, 0 failures. Completed. Audit running; then `DONE-FOLLOWUP` hands over to
+follow-up 2 (validity pass 2, graph-hygiene, readability_hygiene, rendition_hygiene,
+final audit).
+
+**Follow-up 1 — final audit and `DONE-FOLLOWUP` at 13:55.** Tier 2: encyclopedia
+grade_5 + college **100%**; gloss 9 renditions ≥ 99.95%; example levels 160–194%,
+example registers 83–90%; explanation 100%; 0 hypernym cycles. Relations: 948,440
+total, 99.0% of in-core targets resolved. Reciprocity moved from 98.4% → **94.9%**
+(synonym) and 99.7% → **97.6%** (antonym) after the validity pass demoted ~200K edges on
+one side while 6,965 far-side entries were still unjudged; validity pass 2 and
+graph-hygiene in follow-up 2 should close most of that gap — check the final audit.
+Readability-miss flags 19,970, awaiting the retrofit passes in follow-up 2.
+
+**Follow-up 2 — validity pass 2 (13:56 → 14:27, 32m): stopped on its $8 cap** after
+11,475 calls and 15,500 entries changed, but the "never judged" count only moved
+6,965 → 6,282: the digest-keyed markers mean every far-side demotion invalidates the
+neighbour's marker, so a whole-store sweep mostly re-judges moved entries (bounded at 2
+attempts) before it reaches the never-judged tail. Census: 6,173 entries with resolved
+edges and no marker, 104 with only unresolved edges, 5 with none. Cumulative validity
+spend $40. Added `--from-list` to `relation-hygiene` (integration branch, a00b28b) and
+queued follow-up 3 to judge exactly those 6,173 (cap $10) from the integration worktree,
+then graph-hygiene and a final audit. Graph-hygiene after pass 2: 2,311 entries, 35s.
+
+**Follow-up 2 — retrofit readability_hygiene started 14:28** (19,970 flagged renditions).
+
+**Power outage ~14:56 (2026-09-03); machine back 15:42.** The store's last write was
+14:56:29, during follow-up 2's `readability_hygiene` retrofit (started 14:28). After
+reboot: 41,886 entries, all but one validate (`calendaring.json`, being inspected), one
+stray `.tmp` from an interrupted atomic write, 48 stale per-entry lock files (owners
+dead; deleted). The scratchpad under `/tmp` was wiped: the follow-up scripts, their
+logs, the audit JSONs, the exports and the unjudged-headword list are gone; the diary,
+the worktrees and `runs/` are on disk and intact. Everything that was queued is
+idempotent: `readability_hygiene` and `rendition_hygiene` retrofits, the targeted
+validity pass (list regenerated from the markers), graph-hygiene, final audit — being
+re-queued as one script.
+
+**Post-outage repair (15:45–16:00):** `calendaring.json` had a duplicate `grade_1/plain`
+example rendition written by the `readability_hygiene` retrofit — the same collision
+class as `crave.json` (QA-DIARY iteration 5), in a second code path. Fixed on the
+integration branch (`_example_collides` in `retrofit.py`, regression test) and the
+duplicate dropped from the file. The stray `.illnesses.json.*.tmp` was an interrupted
+atomic write; the real file validates; tmp removed. Remaining passes re-queued as one
+resume script run from the integration worktree (so both collision fixes and
+`relation-hygiene --from-list` are in effect): readability_hygiene ($8) →
+rendition_hygiene ($4) → targeted validity on 6,173 entries ($10) → graph-hygiene →
+final audit.
+
+**Resume — retrofit readability_hygiene (15:48 → 16:09, 21m):** 7,879 calls, **$2.09**,
+6,906 entries, 10,170 renditions rewritten: 8,556 now in band, 5,951 still out of band
+after their bounded attempts. Completed. (Together with the ~28 minutes that ran before
+the outage, whose provenance is on the entries, the pass cost ≈ $3.)
+
+**Resume — retrofit rendition_hygiene started 16:09.**
+
+**Resume — retrofit rendition_hygiene (16:09 → 16:10, 52s):** 302 calls, $0.02, 1,658
+entries: 309 headword-initial renditions rewritten (2,784 still initial after their
+bounded attempts, mostly proper nouns), and the new F7 near-copy check flagged 1,504
+register renditions `og.near_copy` (flag only, no spend). Completed.
+
+**Resume — targeted validity pass started 16:10** (6,173 entries, cap $10).
+
+**Resume — targeted validity pass (16:10 → 16:31, 21m): completed within cap.**
+6,523 validity calls over the 6,173 named entries, **$4.79**, 11,905 entries changed
+(the far-side demotions touch neighbours). Every entry with resolved edges now carries a
+validity marker. Cumulative validity spend ≈ $45 across the four passes.
+
+**Resume — graph-hygiene started 16:31**, then the final audit.
+
+**Resume — graph-hygiene (16:31, 34s): 1,208 entries. Final audit 16:32; `DONE-RESUME`
+16:32:54. Tier 2 is complete.**
+
+Final audit, 31,886 entries / 76,855 live senses, versus the mid-chain audit:
+
+| metric | mid-chain (04:30) | final (16:32) |
+|---|---|---|
+| readability-miss flags | 19,591 | **5,296** |
+| headword-initial gloss renditions | 395 (0.08%) | **83 (0.02%)** |
+| encyclopedia grade_5 + college | 0% | **100%** |
+| synonym edges asserted | 98,455 | 68,844 (30% demoted by validity) |
+| synonym reciprocity | 98.4% | 93.7% |
+| antonym reciprocity | 99.7% | 96.9% |
+| hypernym cycles | 0 | 0 |
+| validity-judged entries (whole store) | 17,485 | **41,759** (18 left with edges) |
+
+Reciprocity fell because the validity judge demoted ~30% of synonym edges and its two
+directional verdicts do not always agree; ~4,400 synonym edges now lack a reciprocal.
+Open item: a reconcile pass that applies the stricter verdict to both sides, or
+re-judges the asymmetric pairs. Cumulative tier-2 spend ≈ $230 (chain $180, follow-ups
+and resume ≈ $50), against the $274 sum of caps.
+
+**Schema note:** entries written by the integration-worktree passes carry the D-62
+keys (`queries: []`, `qa: []`, `contrasts: []`, `provider: null`), which the pre-merge
+schema rejects (`extra="forbid"`). `main` was fast-forwarded to the integration branch
+at 16:20 (3e44dee), so every consumer must run on that code from now on; ~45% of files
+already carry the new keys.
