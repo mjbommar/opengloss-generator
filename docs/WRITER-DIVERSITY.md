@@ -652,3 +652,30 @@ real measurement.
 * Did not re-measure `qc filler` restricted to only this pilot's generated content
   (same limitation Round 1 named), and did not re-measure gloss-level anchoring for any
   arm, since neither task in either round touches the `GLOSS` field.
+
+## Cost correction (2026-09-03, first production use of the rotation)
+
+The recommendation above says an 80/20 luna/haiku mix costs "a few percent" more than
+luna alone. **Measured on the first 300-entry production pilot (`queries`, 890 senses),
+it costs 4.0× more**: haiku 166 calls (19%) $0.700 = $0.00421/call; luna 724 calls
+$0.175 = $0.00024/call. Two causes, both now measured:
+
+1. **Haiku never hits the prompt cache here.** `anthropic_cache_instructions=True` is
+   set, but Haiku 4.5's minimum cacheable prefix is 4,096 tokens (probed: 1,896 and
+   3,897-token instruction blocks → `cache_write=0`; an 8,155-token block → write then
+   read). Every stage's static instructions are ~1,900–2,200 tokens, so Haiku pays the
+   uncached $1.00/M on all of it; luna's cache hit rate on the same prefix is 0.7–0.9
+   at $0.02/M.
+2. **List price.** Haiku is $1.00/$5.00 per M tokens with no flex/batch discount on the
+   sync API; luna on flex is $0.20/$1.20. Output tokens (~320/call) alone make a Haiku
+   call 6× a luna call even with perfect caching.
+
+Consequence: at 20% share, haiku carries ~80% of a stage's cost. Whole-store projections
+from this pilot (110,869 live senses): queries ≈ $109 with the rotation vs ≈ $27
+luna-only. Options: (a) accept ~4× on the three pair stages for the measured diversity
+gain; (b) drop haiku to 5–10%; (c) put haiku only on the stages whose text the encoder
+trains on most (examples, renditions) and leave queries/contrasts/qa-pairs on luna;
+(d) pad Anthropic instructions past 4,096 tokens with genuinely useful reference
+material (e.g. the taxonomy) so caching engages — saves ~30% of a Haiku call, not the
+gap. The pilot's "few percent" figure came from comparing per-call costs without the
+share-weighted total and is withdrawn.

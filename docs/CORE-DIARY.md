@@ -1101,3 +1101,33 @@ keys (`queries: []`, `qa: []`, `contrasts: []`, `provider: null`), which the pre
 schema rejects (`extra="forbid"`). `main` was fast-forwarded to the integration branch
 at 16:20 (3e44dee), so every consumer must run on that code from now on; ~45% of files
 already carry the new keys.
+
+## Goal 2 — finish the tier-2 store (2026-09-03, from 16:50)
+
+Plan: (1) relation-reconcile pass (asymmetric verdicts → stricter side; tombstone
+demoted `see_also` edges out of the list the judge reads; per-type cap), (2) D-46 domain
+retag if a luna pilot beats nano on `domain_fits`, (3) filler rewrite on flagged
+examples; each verified by a forced re-judge of the same 40 entries (seed 7; baseline
+68.6). Then (4) the luna/haiku 80/20 rotation, (5) queries, contrasts and qa-pairs on
+the whole store, caps at 1.5× the pilot-derived cost.
+
+**16:50** — three agents launched in worktrees off `main`: `relation-reconcile`
+(Opus), `filler_examples` content-hygiene step + threshold calibration (Sonnet), domain
+retag pilot luna vs nano on the 40-entry judge sample (Sonnet). Measured before
+launching: relations/sense mean 13.4 (see_also 49%, mostly demotions); the judge is
+shown every relation including demoted see_also, which is why relation defects stayed
+at 84% after ~430K demotions. Domain leaves 159, `.general` 11.7%. `og.filler` flags
+on examples: 0 (never run with `--flag`).
+
+**17:05** — rotation enabled on `main` (5252ea1): `writers=[luna 0.8, haiku 0.2]` on
+RENDITIONS, EXAMPLES, QUERIES, CONTRASTS, QA_PAIRS; writer keys added at the three
+pair-stage call sites. 300-entry pilot of the three pair stages started on the store
+(top-300 tier-2 headwords; caps $3/$3/$4) to derive whole-store caps.
+
+**17:49 — queries pilot (300 entries, 890 senses) done:** 890 calls, **$0.875**, 10,679
+queries stored (12/sense), 79% headword-free, 882/890 senses with all 8 styles, 7
+rejected (surplus). Rotation drew haiku for 19% of senses. **Cost is 4.0× luna-only**
+($0.00098/sense vs $0.000245): haiku gets no prompt-cache hits (its 4,096-token cache
+minimum exceeds our ~2K instruction blocks) and lists at 5× luna's flex price. See
+`docs/WRITER-DIVERSITY.md` "Cost correction" — the earlier "few percent" claim was
+wrong. Contrasts pilot running (haiku $0.0068/call vs luna $0.00054 so far).
