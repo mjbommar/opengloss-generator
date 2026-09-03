@@ -207,6 +207,7 @@ idempotence marker before the stop, relaunching resumes without re-billing anyth
 from __future__ import annotations
 
 import asyncio
+import functools
 import hashlib
 import re
 from dataclasses import dataclass, field
@@ -613,6 +614,8 @@ async def run_retrofit(
     limit: int | None = None,
     workers: int | None = None,
     stop_event: asyncio.Event | None = None,
+    taxonomy_version: str = TAXONOMY_VERSION,
+    force_retag_domains: bool = False,
 ) -> RetrofitOutcome:
     """Run the retrofit passes over a store.
 
@@ -635,6 +638,15 @@ async def run_retrofit(
             ``concurrency.workers``.
         stop_event: Shared stop event. A budget stop sets it; a caller may also set it
             from outside (the CLI passes its session's event, which ``SIGINT`` sets).
+        taxonomy_version: Version compared against and stamped by the ``hygiene`` and
+            ``tag_domain`` passes (D-46); defaults to the live
+            :data:`~opengloss_generator.taxonomy.TAXONOMY_VERSION`. An override lets a
+            caller stage a version bump — or re-run a pilot retag — without editing the
+            module constant (D-67).
+        force_retag_domains: Passed to the ``hygiene`` pass's domain-clearing step —
+            clears *every* live sense's domain, not only weak ``.general`` ones, so the
+            next ``tag_domain`` pass re-tags the whole selection (D-67). Off by default;
+            never changes an ordinary sweep's cost or behaviour.
 
     Returns:
         A :class:`RetrofitOutcome` carrying counts and cost per pass. If a pass stopped
@@ -663,9 +675,13 @@ async def run_retrofit(
         if name == RetrofitPass.CLASSIFY_KIND:
             runnable = _classify_kind_pass
         elif name == RetrofitPass.HYGIENE:
-            runnable = _hygiene_pass
+            runnable = functools.partial(
+                _hygiene_pass,
+                taxonomy_version=taxonomy_version,
+                force_retag_domains=force_retag_domains,
+            )
         elif name == RetrofitPass.TAG_DOMAIN:
-            runnable = _tag_domain_pass
+            runnable = functools.partial(_tag_domain_pass, taxonomy_version=taxonomy_version)
         elif name == RetrofitPass.SPANS:
             runnable = _spans_pass
         elif name == RetrofitPass.REPAIR:
@@ -1106,7 +1122,9 @@ def _note_provenance(base: Provenance, note: str) -> Provenance:
     )
 
 
-def _clear_weak_domains(entry: Lexeme) -> int:
+def _clear_weak_domains(
+    entry: Lexeme, *, taxonomy_version: str = TAXONOMY_VERSION, force_all: bool = False
+) -> int:
     """Clear every sense's weak domain tag so the ``tag_domain`` pass re-tags it.
 
     A tag is weak when it is its root's ``.general`` catch-all *and* was assigned under
@@ -1118,6 +1136,16 @@ def _clear_weak_domains(entry: Lexeme) -> int:
 
     Args:
         entry: The entry to clean, mutated in place.
+        taxonomy_version: The version a verdict must carry to count as current; defaults
+            to the live :data:`~opengloss_generator.taxonomy.TAXONOMY_VERSION`. An
+            override lets a caller stage a version bump (or a pilot re-tag) without
+            editing the module constant — see D-67.
+        force_all: Clear *every* non-retired sense's domain, not only the weak ones
+            (D-46's ``.general``-and-stale rule under-covers a deliberate full re-tag —
+            on the D-67 pilot sample only 15 of 98 live senses were ``.general``). Off by
+            default; a whole-store run with this set re-bills every live sense's
+            ``tag_domain`` call, so it is opt-in and never touched by the default
+            ``retrofit`` sweep.
 
     Returns:
         How many senses had their domain cleared.
@@ -1127,10 +1155,14 @@ def _clear_weak_domains(entry: Lexeme) -> int:
     # tagger's considered answer, not a weak tag; re-clearing it every sweep re-billed
     # ~11.5K senses per run on the core (CORE-DIARY iteration 6). Only a verdict that
     # predates the current taxonomy version is cleared for a retag.
-    stale_taxonomy = not _tagged_under_current_taxonomy(entry)
+    stale_taxonomy = not _tagged_under_current_taxonomy(entry, taxonomy_version=taxonomy_version)
     cleared = 0
     for _, sense, _ in entry.iter_senses():
         if sense.retired or sense.domain is None:
+            continue
+        if force_all:
+            sense.domain = None
+            cleared += 1
             continue
         legacy_mapped = legacy_mapped_only and sense.domain_hint is not None
         if (is_general(sense.domain) and stale_taxonomy) or legacy_mapped:
@@ -1139,16 +1171,24 @@ def _clear_weak_domains(entry: Lexeme) -> int:
     return cleared
 
 
-def _taxonomy_version_note() -> str:
-    """Return the provenance note stamped on a ``tag_domain`` verdict."""
-    return f"taxonomy_version={TAXONOMY_VERSION}"
+def _taxonomy_version_note(version: str = TAXONOMY_VERSION) -> str:
+    """Return the provenance note stamped on a ``tag_domain`` verdict.
+
+    Args:
+        version: Defaults to the live :data:`~opengloss_generator.taxonomy.TAXONOMY_VERSION`;
+            a caller overrides this to stamp a different version note without editing
+            the module constant (D-67).
+    """
+    return f"taxonomy_version={version}"
 
 
-def _tagged_under_current_taxonomy(entry: Lexeme) -> bool:
-    """Return whether the entry's latest ``tag_domain`` verdict used the current taxonomy."""
+def _tagged_under_current_taxonomy(
+    entry: Lexeme, *, taxonomy_version: str = TAXONOMY_VERSION
+) -> bool:
+    """Return whether the entry's latest ``tag_domain`` verdict used ``taxonomy_version``."""
+    note = _taxonomy_version_note(taxonomy_version)
     return any(
-        p.stage is StageName.TAG_DOMAIN and p.note == _taxonomy_version_note()
-        for p in entry.provenance.values()
+        p.stage is StageName.TAG_DOMAIN and p.note == note for p in entry.provenance.values()
     )
 
 
@@ -1217,6 +1257,9 @@ async def _clean_entry(
     entry: Lexeme,
     runner: StageRunner,
     tally: _Tally,
+    *,
+    taxonomy_version: str = TAXONOMY_VERSION,
+    force_retag_domains: bool = False,
 ) -> tuple[int, dict[str, float]]:
     """Run the four hygiene steps over one entry, in place.
 
@@ -1224,6 +1267,9 @@ async def _clean_entry(
         entry: The entry to clean, mutated in place.
         runner: The stage runner, used only by step (c).
         tally: The pass tally, for step (c)'s call and cost.
+        taxonomy_version: Forwarded to :func:`_clear_weak_domains` (D-67).
+        force_retag_domains: Forwarded to :func:`_clear_weak_domains` as ``force_all``
+            (D-67) — off by default.
 
     Returns:
         ``(items changed, per-step metric increments)``.
@@ -1252,7 +1298,9 @@ async def _clean_entry(
     if offenders and not _has_run(entry, StageName.HYGIENE):
         rewritten = await _rewrite_glosses(entry, offenders, runner, tally)
 
-    cleared = _clear_weak_domains(entry)
+    cleared = _clear_weak_domains(
+        entry, taxonomy_version=taxonomy_version, force_all=force_retag_domains
+    )
     metrics = {
         "markdown_stripped": float(stripped),
         "artifacts_dropped": float(dropped),
@@ -1269,6 +1317,8 @@ async def _hygiene_pass(
     *,
     workers: int,
     stop_event: asyncio.Event | None = None,
+    taxonomy_version: str = TAXONOMY_VERSION,
+    force_retag_domains: bool = False,
 ) -> PassResult:
     """Run the four hygiene steps over every entry; see the module docstring for order.
 
@@ -1279,6 +1329,9 @@ async def _hygiene_pass(
         ids: The entry ids to visit.
         workers: Pool size.
         stop_event: Shared stop event; set by a budget stop.
+        taxonomy_version: Forwarded to step (d) (D-67); defaults to the live constant.
+        force_retag_domains: Forwarded to step (d) as ``force_all`` (D-67); off by
+            default, so an ordinary sweep's cost and behaviour are unchanged.
 
     Returns:
         A :class:`PassResult` whose ``metrics`` carry per-step counts.
@@ -1290,7 +1343,13 @@ async def _hygiene_pass(
             entry = store.read(lexeme_id)
             if entry is None:
                 return
-            changed, metrics = await _clean_entry(entry, runner, tally)
+            changed, metrics = await _clean_entry(
+                entry,
+                runner,
+                tally,
+                taxonomy_version=taxonomy_version,
+                force_retag_domains=force_retag_domains,
+            )
             if changed:
                 store.write(entry)
         await tally.entry(items_changed=changed, metrics=metrics)
@@ -1317,6 +1376,7 @@ async def _tag_domain_pass(
     *,
     workers: int,
     stop_event: asyncio.Event | None = None,
+    taxonomy_version: str = TAXONOMY_VERSION,
 ) -> PassResult:
     """Tag every untagged sense with a controlled domain, one call per entry.
 
@@ -1328,6 +1388,8 @@ async def _tag_domain_pass(
         workers: Pool size — this is the pass the worker count matters most for, since
             after ``hygiene`` nearly every entry needs a call.
         stop_event: Shared stop event; set by a budget stop.
+        taxonomy_version: Stamped on each verdict's provenance note (D-67); defaults to
+            the live :data:`~opengloss_generator.taxonomy.TAXONOMY_VERSION`.
 
     Returns:
         A :class:`PassResult` for the pass.
@@ -1348,7 +1410,9 @@ async def _tag_domain_pass(
                 if sense.domain is None and not sense.retired
             ]
             if untagged:
-                tagged = await _tag_entry(entry, untagged, runner, tally)
+                tagged = await _tag_entry(
+                    entry, untagged, runner, tally, taxonomy_version=taxonomy_version
+                )
                 if tagged:
                     store.write(entry)
         await tally.entry(items_changed=tagged)
@@ -1362,8 +1426,17 @@ async def _tag_entry(
     untagged: Sequence[tuple[Sense, str]],
     runner: StageRunner,
     tally: _Tally,
+    *,
+    taxonomy_version: str = TAXONOMY_VERSION,
 ) -> int:
     """Ask for and apply the domain tags of one entry's untagged senses.
+
+    Args:
+        entry: The entry whose senses need tagging, mutated in place.
+        untagged: ``(sense, label)`` for every sense to send, in prompt order.
+        runner: The stage runner.
+        tally: The pass tally to accumulate cost and call count onto.
+        taxonomy_version: Stamped on the verdict's provenance note (D-67).
 
     Returns:
         How many senses gained a tag.
@@ -1388,7 +1461,9 @@ async def _tag_entry(
 
     await tally.call(stage_result.cost_usd)
     entry.add_provenance(
-        stage_result.provenance.model_copy(update={"note": _taxonomy_version_note()})
+        stage_result.provenance.model_copy(
+            update={"note": _taxonomy_version_note(taxonomy_version)}
+        )
     )
     tagged = 0
     for drafted in stage_result.output.tags:

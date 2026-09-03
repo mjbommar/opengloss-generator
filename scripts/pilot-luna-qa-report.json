@@ -1,0 +1,84 @@
+{
+  "calls": 40,
+  "cost_usd": 3.175075,
+  "cost_usd_per_entry": 0.079377,
+  "encyclopedia_defects": 2,
+  "encyclopedia_judged": 40,
+  "entries_failed": 0,
+  "entries_judged": 40,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "awkward_style": 27,
+    "factual_error": 6,
+    "grammar_error": 2,
+    "hallucination": 11,
+    "inconsistent_style": 3,
+    "missing_content": 3,
+    "other": 2,
+    "punctuation_error": 1,
+    "scope_mismatch": 3,
+    "terminology_error": 39,
+    "unsupported_addition": 2
+  },
+  "mean_score": 68.78,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.025,
+    "example grade_1/plain": 0.0612,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.0714,
+    "gloss neutral/technical": 0.0306
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 40,
+    "example grade_1/plain": 98,
+    "gloss college/plain": 98,
+    "gloss grade_1/plain": 98,
+    "gloss neutral/technical": 98
+  },
+  "score_buckets": {
+    "60-79": 32,
+    "80-89": 2,
+    "90+": 0,
+    "<60": 6
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 10,
+    "domain_fits": 14,
+    "examples_fit_sense": 35,
+    "examples_natural": 33,
+    "gloss_accurate": 13,
+    "relations_valid": 84
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.102,
+    "domain_fits": 0.1429,
+    "examples_fit_sense": 0.3571,
+    "examples_natural": 0.3367,
+    "gloss_accurate": 0.1327,
+    "relations_valid": 0.8571
+  },
+  "senses_judged": 98,
+  "stopped_reason": null,
+  "top_issues": [
+    "noun 0 relations: female bartender, serving staff",
+    "notes: Two examples are corpus-style research prose with missing possessive apostrophes (\"barmaids labor conditions\", \"barmaids duties\"); see_also->barman is listed twice and \"female bartender\" is a definition fragment rather than a term.",
+    "noun 0 relations: braggart, gaston, egotist, hotshot, character, stock character, fictional figure, modest character, humble figure",
+    "notes: Several examples are near-duplicates built around academic grants/awards, and one (\"displayed a persistent self-enhancement bias\") reads as assembled rather than said. The relation list includes a self-reference, meta-labels (stock character, fictional figure), and a proper name (gaston).",
+    "noun 0 relations: role, moderators, referees, partisan",
+    "noun 2 relations: expert, connoisseur, auguste, layperson",
+    "notes: Several sense-2 examples (referee/score, committee chair, panel) show dispute resolution, i.e. sense 1, weakening the boundary the glosses draw; one sense-1 example embeds its own definition as an appositive.",
+    "noun 1 relations: Byrne, Professor Byrne",
+    "noun 2 relations: the work of Byrne, Byrne\u2019s interpretive framework, Byrne\u2019s conditional reasoning model",
+    "notes: Sense 3's examples mostly use possessive \"Byrne's model/idea\" rather than the metonymic bare use the gloss defines; several relation targets are phrasal artifacts or self-references.",
+    "verb 0 relations: assessed, assesses, assessing, evaluated, evaluates, evaluating, rated, rates, rating, valued, values, valuing, priced, prospects, inventory, eyes, views, criticised, critiques, estimate price",
+    "verb 1 relations: criticized, judged, judges, assess merit, judge quality",
+    "verb 1 domain: suggested general evaluation and critical thinking",
+    "notes: Both senses' relation lists are padded with inflected forms, phrase fragments, and loosely associated nouns; a few sense-2 examples force \"appraised as\" where a speaker would say \"judged\".",
+    "noun 0 relations: city, urban center, ancient city, port city, countryside, rural area, village",
+    "noun 0 gloss grade_1/plain: drops ancient/Phoenician; 'lived in for years' loses 'continuously inhabited'",
+    "notes: Named-entity relations are mistyped: broader categories (city, urban center, ancient city) are listed as synonyms, port city is inverted as a hyponym, and contrastive terms (countryside, village) appear as see_also.",
+    "noun 1 gloss: defines beryllium oxide/beryllia, not the headword; 'beryllium' does not denote BeO",
+    "noun 1 relations: beryllia",
+    "noun 2 gloss: 'beryllium' does not name a disease or hazard; this is berylliosis, not a sense of the headword"
+  ]
+}

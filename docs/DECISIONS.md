@@ -3467,3 +3467,166 @@ would be needed even to attempt measuring them. The `ModelPolicy._all_model_ids`
 not fixed — orthogonal to writer diversity). `data/core-store` and the main checkout's
 `runs/` were never touched; this round's own worktree (`opengloss-wt-writers2`) is
 separate from D-63's (`opengloss-wt-writers`).
+
+## D-67 (2026-09-03) — Domain-retag pilot: `gpt-5.6-luna` cuts `domain_fits` defects and costs less than `gpt-5.4-nano`
+
+**Context.** QA-DIARY iterations 5-6 found the Opus judge marking `domain_fits` as
+defective on 29% of tier-2 senses (40 entries, 98 senses, seed 7) — the single largest
+remaining defect after `relations_valid`. Domain tags were assigned by the `tag_domain`
+retrofit pass on `gpt-5.4-nano`. This pilot asks whether re-tagging with `gpt-5.6-luna`
+(the model D-55 and D-63 already prefer for other stages on cost and quality) fixes it,
+without touching `data/core-store`.
+
+**D-46's retag mechanism does not reach most of the defect.** `_clear_weak_domains`
+only clears a sense's domain when it is the root's `.general` catch-all *and* was
+tagged under a stale `TAXONOMY_VERSION` — bumping the version alone re-tags only that
+slice. On this pilot's 98 live senses, only **15 (15.3%)** were `.general`; the other
+84.7% already carried a specific leaf a plain version bump would never touch, yet the
+judge flags 22-29% of all senses. D-46's mechanism structurally cannot fix most of this
+defect. Per the task's own fallback clause, two small additive knobs were added to
+`workflows/retrofit.py` / `cli.py` (`opengloss retrofit`), both off by default and
+covered by 7 new tests in `tests/test_retrofit.py`:
+
+* `--taxonomy-version` overrides the version `hygiene`/`tag_domain` compare against and
+  stamp, without editing the `TAXONOMY_VERSION` module constant (`run_retrofit`,
+  `_hygiene_pass`, `_tag_domain_pass`, `_clear_weak_domains`, `_tagged_under_current_taxonomy`,
+  `_taxonomy_version_note`, `_tag_entry` all gained a `taxonomy_version` parameter,
+  threaded via `functools.partial` in `run_retrofit`'s pass dispatch).
+* `--force-retag-domains` clears **every** live sense's domain in the hygiene pass, not
+  only weak `.general` ones (`_clear_weak_domains` gained a `force_all` flag). This is
+  the flag actually used for the pilot's "every live sense" leg; the version-bump path
+  was tried first and confirmed to under-cover (15/98), so it was not used alone.
+
+**A second gotcha, matching the QA-DIARY finding "a nested env override replaces a
+whole policy":** the same is true of a *partial* TOML `[policies.tag_domain]` table —
+`AppConfig.policies` is validated as one dict field, so a config file naming only one
+stage fails `_every_stage_has_a_policy` for every other stage. The supported way to
+override one stage's model via `--config` is a TOML file carrying the **complete**
+default policy set with only the target stage changed (generated from
+`config._default_policies()`, not hand-typed) — same conclusion for the `OPENGLOSS_POLICIES__*`
+nested-env route. `scripts/pilot-luna-tag-domain.toml` is that file for this pilot.
+
+**Pilot design.** Worktree `opengloss-wt-retag` off `main` (`git worktree add`), never
+touching `data/core-store`. The judge's 40-entry sample was reproduced exactly via
+`opengloss qa --dry-run --from-list data/core/tier2_50k.tsv --sample 40 --seed 7 --store
+<prod core-store>` (same 40 headwords, 98 live senses as QA-DIARY iterations 5-6). Those
+40 entries were copied (`scripts/_pilot_copy_sample.py`, using `LexemeStore.read`/`write`,
+never the production store's `write`) into two scratch stores: `data/sample-retag-nano`
+(untouched control) and `data/sample-retag-luna` (treatment). On the treatment copy:
+
+1. `opengloss retrofit --only hygiene --store data/sample-retag-luna --force-retag-domains`
+   — 98/98 live senses cleared, **$0, 0 calls** (the copied entries already carry a
+   `hygiene` marker, so step (c)'s rewrite call never fires; clearing domains is pure
+   Python).
+2. `opengloss retrofit --only tag_domain --store data/sample-retag-luna --config
+   scripts/pilot-luna-tag-domain.toml` — re-tags all 98 senses with `gpt-5.6-luna`.
+3. Both copies re-judged with the same Opus QA stage, forced: `opengloss qa --from-list
+   data/core/tier2_50k.tsv --sample 40 --seed 7 --force --budget 5 --store <copy>`.
+
+**Ledger — the retag call itself.**
+
+| | model | calls | senses tagged | cost | cost/sense | input tok (cached) | output tok |
+|---|---|---|---|---|---|---|---|
+| control (historical, from copied provenance) | gpt-5.4-nano | 38 | 98 | $0.005241 | $0.0000535 | 132,055 (107,008) | 2,666 |
+| treatment (this pilot) | gpt-5.6-luna | 40 | 98 | $0.003832 | $0.0000391 | 138,654 (128,136) | 2,498 |
+
+Luna is **27% cheaper per sense** than nano on this stage — the same direction as D-55
+(`queries`) and D-63/D-64 (writer rotation): reasoning tokens billed as output make nano
+more expensive despite its lower headline price. (The nano row is not a fresh call —
+re-billing it would have doubled judge-adjacent spend for a number already on disk in
+every copied entry's `tag_domain` provenance.)
+
+**Domain changes.** 45 of 98 live senses (45.9%) changed `root.leaf` under the retag.
+Top 15 (old → new):
+
+| count | old | new |
+|---|---|---|
+| 2 | people_society.emotion_attitude | people_society.character_traits |
+| 2 | everyday_life.general | everyday_life.actions_routines |
+| 2 | humanities.literature | language.rhetoric |
+| 2 | nature.animals | science.biology |
+| 1 | people_society.emotion_attitude | business.value_quality |
+| 1 | business.value_quality | people_society.social_roles |
+| 1 | technology.engineering | science.chemistry |
+| 1 | technology.device_operation | nature.animals |
+| 1 | technology.device_operation | technology.hardware_devices |
+| 1 | people_society.emotion_attitude | people_society.social_issues |
+| 1 | people_society.general | people_society.personal_names |
+| 1 | sports_recreation.track_field | sports_recreation.general |
+| 1 | sports_recreation.track_field | arts.dance |
+| 1 | law_government.elections_politics | business.management |
+| 1 | law_government.civics | business.management |
+
+Full list in `scripts/_pilot_diff_domains.py`'s output. Only 15/98 were `.general`
+before the retag, so most of the 45 changes are specific-leaf-to-specific-leaf
+corrections D-46's mechanism would never have attempted at all — e.g. `beryllium`
+(noun, "a light, brittle metal") moved `technology.engineering` → `science.chemistry`,
+and `comet` (noun, the astronomical body) moved `nature.general` → `science.astronomy`.
+
+**Judge before/after, same 40 entries/98 senses/seed 7, forced re-judge in this session
+(claude-opus-5, $3.36 / $3.18):**
+
+| sense-level defect rate | nano (control, fresh re-judge) | luna (treatment) |
+|---|---|---|
+| domain_fits | **22.45%** | **14.29%** |
+| distinct_from_other_senses | 11.22% | 10.20% |
+| examples_fit_sense | 35.71% | 35.71% |
+| examples_natural | 38.78% | 33.67% |
+| gloss_accurate | 11.22% | 13.27% |
+| relations_valid | 81.63% | 85.71% |
+| mean score | 68.3 | 68.78 |
+| entries <60 / 60-79 / 80-89 | 7 / 30 / 3 | 6 / 32 / 2 |
+
+Note the control's fresh `domain_fits` draw (22.45%) differs from iteration 6's
+historical 29% on the identical 98 senses — the judge is a stochastic model, not a
+deterministic check, so the two are separate draws. The valid comparison is the two
+rows above, judged in the same session under identical rubric and sampling. `relations_valid`
+and `examples_natural` moved 4 and 5 points respectively on **identical underlying
+relation and example data** (this pilot only changed `domain`), which calibrates the
+judge's own noise band on this sample size; `domain_fits`' 8.16-point move is the
+largest of any metric and in the direction the retag predicts, `gloss_accurate` and
+`relations_valid` moved slightly the other way (both within that noise band).
+
+**Extrapolation to the whole store (110,869 live senses, QA-DIARY iteration-5 whole-store
+scan) — pilot per-sense cost × count, not a measurement:**
+
+| | luna | nano |
+|---|---|---|
+| extrapolated full-store re-tag cost | **$4.34** | $5.93 |
+
+This is a *full* re-tag of every live sense (this pilot's `--force-retag-domains`), not
+D-46's narrower `.general`-only sweep (QA-DIARY's earlier ~$1-at-nano estimate was for
+that narrower sweep, on the 10K core, and is not comparable).
+
+**Recommendation: retag the whole store with `gpt-5.6-luna`**, using
+`--force-retag-domains` rather than a plain `TAXONOMY_VERSION` bump — a bump alone would
+reach only the 15.3% `.general` slice this pilot measured, leaving most of the
+`domain_fits` defect (specific-but-wrong leaves) untouched. Full-store cost ($4.34,
+extrapolated) is lower than nano's equivalent ($5.93) and lower than the ≈$3.36 spent on
+*one* 40-entry judge sample, for a measured 8-point absolute (36% relative) reduction in
+the judge's `domain_fits` defect rate with no measured regression outside the judge's own
+noise band. A `.general`-only retag (D-46's existing path) was not pursued further: it
+would leave 84.7% of this pilot's changed senses (and, by extension, most of the
+store-wide defect) untouched for a fraction of the saving.
+
+**Total pilot spend:** $6.537659 (nano judge $3.358752 + luna judge $3.175075 + luna
+retag $0.003832), against a $12 cap; no nano judge or retag calls were re-billed beyond
+what was already on disk.
+
+**Left undone.** The whole-store retag itself was not run (out of scope for a pilot;
+`data/core-store` was never touched, per instructions). A fresh, larger post-retag QA
+sample after any real run, to confirm the 40-entry pilot's 8-point move holds at scale
+and is not itself a lucky draw — the judge's own noise band measured here (4-5 points on
+untouched metrics) means an 8-point single-sample move is suggestive, not conclusive.
+
+**Consequence.** New: `workflows/retrofit.py` (`taxonomy_version` and
+`force_retag_domains` parameters on `run_retrofit`, `_hygiene_pass`, `_tag_domain_pass`,
+`_clean_entry`, `_clear_weak_domains`, `_tag_entry`; `_taxonomy_version_note` and
+`_tagged_under_current_taxonomy` take an explicit version), `cli.py` (`--taxonomy-version`,
+`--force-retag-domains` on `opengloss retrofit`), `tests/test_retrofit.py` (+7). Pilot
+scripts (`scripts/_pilot_copy_sample.py`, `scripts/_pilot_diff_domains.py`,
+`scripts/pilot-luna-tag-domain.toml`, `scripts/pilot-nano-qa-report.json`,
+`scripts/pilot-luna-qa-report.json`) are not wired into the CLI, following the D-63/D-64
+convention for one-off pilot tooling. `ruff check`/`ruff format --check`/`ty check`/`pytest`
+(1023 passed, 2 skipped) all clean. Both new flags default to the pre-D-67 behaviour
+exactly, so an ordinary `retrofit` sweep's cost and output are unchanged.

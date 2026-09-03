@@ -1,0 +1,84 @@
+{
+  "calls": 40,
+  "cost_usd": 3.358752,
+  "cost_usd_per_entry": 0.083969,
+  "encyclopedia_defects": 3,
+  "encyclopedia_judged": 40,
+  "entries_failed": 0,
+  "entries_judged": 40,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "awkward_style": 26,
+    "factual_error": 8,
+    "grammar_error": 2,
+    "hallucination": 11,
+    "missing_content": 4,
+    "off_topic": 2,
+    "other": 1,
+    "punctuation_error": 2,
+    "scope_mismatch": 5,
+    "terminology_error": 39,
+    "unsupported_addition": 4
+  },
+  "mean_score": 68.3,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.025,
+    "example grade_1/plain": 0.0816,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.1224,
+    "gloss neutral/technical": 0.0408
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 40,
+    "example grade_1/plain": 98,
+    "gloss college/plain": 98,
+    "gloss grade_1/plain": 98,
+    "gloss neutral/technical": 98
+  },
+  "score_buckets": {
+    "60-79": 30,
+    "80-89": 3,
+    "90+": 0,
+    "<60": 7
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 11,
+    "domain_fits": 22,
+    "examples_fit_sense": 35,
+    "examples_natural": 38,
+    "gloss_accurate": 11,
+    "relations_valid": 80
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.1122,
+    "domain_fits": 0.2245,
+    "examples_fit_sense": 0.3571,
+    "examples_natural": 0.3878,
+    "gloss_accurate": 0.1122,
+    "relations_valid": 0.8163
+  },
+  "senses_judged": 98,
+  "stopped_reason": null,
+  "top_issues": [
+    "noun 0 relations: female bartender",
+    "notes: Two examples are corpus-style research prose with missing possessive apostrophes (\"barmaids labor conditions\", \"barmaids duties\"), and two others are near-duplicates; see_also->barman is listed twice.",
+    "noun 0 relations: braggart, egotist, hotshot, gaston, stock character, fictional figure, character",
+    "encyclopedia: Etymology wrong: braggart is a 16th-century borrowing from French bragard, not a Middle English form",
+    "notes: Several examples are assembled or clinical rather than natural ('displayed a persistent self-enhancement bias'), and near-duplicates about research grants/awards recur. Relation list includes a self-reference and meta-labels.",
+    "noun 0 relations: city, urban center, ancient city, port city, countryside, rural area, village, Byblos harbor, Byblos ruins, Byblos temple, Byblos old city",
+    "noun 0 gloss grade_1/plain: \"lived in for years\" badly understates continuous habitation for thousands of years",
+    "notes: Generic category terms are tagged as synonyms rather than hypernyms, \"port city\" is an inverted hyponym, and several see_also targets are contrastive or self-derived place labels.",
+    "noun 0 relations: role, referees, moderators",
+    "noun 2 relations: auguste, expert, assessor",
+    "noun 2 domain: suggested arts and culture (taste and aesthetic judgement)",
+    "noun 2 example grade_1/plain: illustrates the dispute-settling sense, not the taste/quality sense it is filed under",
+    "notes: Several sense 2 examples (referee, committee chair, panel resolving disputes) belong to sense 1; \"see_also->auguste\" has no basis, and \"hypernym->role\" is a category error.",
+    "noun 1 gloss: unsupported narrowing to scholars, intellectuals or artists; any bearer of the surname can be so referred to",
+    "noun 1 relations: Byrne, Professor Byrne",
+    "noun 2 relations: the work of Byrne, Byrne\u2019s theory, Byrne\u2019s conditional reasoning model, Byrne\u2019s interpretive framework",
+    "notes: Several sense 1 examples (Professor Byrne, Dr. Byrne, Byrne coached the debate team) illustrate the sense 2 use rather than the surname itself; senses 2 and 3 carry phrasal see_also targets that are descriptions, not terms.",
+    "verb 0 relations: assessed, assesses, assessing, criticised, critiques, evaluated, evaluates, evaluating, rated, rates, rating, reviewing, scrutinized, valued, values, valuing, views, priced, inventory, prospects",
+    "verb 1 relations: criticized, judged, judges, assess merit, judge quality",
+    "verb 1 domain: suggested general critical evaluation"
+  ]
+}
