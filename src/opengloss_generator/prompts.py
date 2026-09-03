@@ -60,6 +60,7 @@ __all__ = [
     "build_headword_absent_feedback",
     "build_headword_initial_feedback",
     "build_lexical_explanation_prompt",
+    "build_near_copy_feedback",
     "build_overview_prompt",
     "build_qa_prompt",
     "build_readability_feedback",
@@ -72,7 +73,7 @@ __all__ = [
     "build_vocabulary_feedback",
 ]
 
-PROMPT_VERSION = "7"
+PROMPT_VERSION = "8"
 
 # ``(sense_ref, part of speech, canonical gloss, one existing example)`` for one live
 # sense shown to the example-writing stage. ``sense_ref`` is the number the sense is
@@ -237,6 +238,16 @@ duty manager.
 
 marketing - benefit-led and vivid, but never overstated and never inaccurate.
   marketing: A deadline is the finish line that turns a good intention into finished work.
+
+A register rewrite of the gloss must land at a lexical diversity of 0.30-0.60 against the \
+canonical gloss you were given — measured as 1 minus the overlap of the two sentences' \
+content words. Below 0.30 you have copied the source with a synonym or two swapped in; \
+above 0.60 you have likely drifted from its meaning. Never reuse the canonical gloss's \
+own sentence verbatim, or with only a word or two changed: read it, understand it, then \
+write the definition again from scratch, in the vocabulary and rhythm the register calls \
+for. "A deadline is a time by which a task must be finished." next to "A deadline is the \
+time by which a task must be finished" is not a rewrite, whatever register it is labelled \
+with.
 
 WHAT THE FIELD MEANS FOR YOUR OUTPUT.
 
@@ -975,6 +986,37 @@ def build_headword_absent_feedback(headword: str) -> str:
             "forms: a plural, a past tense, an -ing form, and so on. A sentence that "
             "fits the meaning without ever using the word does not satisfy this, however "
             "natural it reads.",
+        ]
+    )
+
+
+def build_near_copy_feedback(headword: str) -> str:
+    """Return the retry note for a register rendition that copied its canonical gloss.
+
+    Named for the defect it targets rather than for a measured value, on the same footing
+    as :func:`build_headword_initial_feedback`: "make it more different" reliably produces
+    the same sentence with a synonym or two swapped, so the note states the rule plainly
+    and shows what counts as satisfying it (D-59).
+
+    Args:
+        headword: The entry's surface form, as the model was shown it.
+
+    Returns:
+        Text to append to a rendition prompt as its ``feedback``, alongside
+        :func:`build_readability_feedback` when a target failed both checks.
+    """
+    return "\n".join(
+        [
+            f'Your previous rewrite of these targets for "{headword}" stayed too close '
+            "to the source: an automatic check found it reuses almost all of the "
+            "canonical gloss's own words. Write a new rewrite for each target listed "
+            "here, and for no other target.",
+            "  - A register rewrite is not a paraphrase. Read the source, work out what "
+            "it means, set its sentence aside, then write the definition again in the "
+            "vocabulary and rhythm the register calls for. Swapping a synonym or two, "
+            "or reordering a clause, is not a rewrite.",
+            "  - Keep the meaning and the reading level you were asked for; only the "
+            "wording has to change.",
         ]
     )
 

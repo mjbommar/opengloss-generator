@@ -303,6 +303,15 @@ class ReadabilityConfig(BaseModel):
             "failing the first (docs/QA-DIARY.md)."
         ),
     )
+    near_copy_retry: bool = Field(
+        default=True,
+        description=(
+            "Whether a non-plain-register gloss rendition whose content-word set is at "
+            "least 90% the same as the canonical gloss's "
+            "(:func:`~opengloss_generator.hygiene.is_near_copy`) is re-requested once and, "
+            "if it still is, flagged og_near_copy (D-59). Independent of `enabled`."
+        ),
+    )
     vocabulary_tolerance: float = Field(
         default=0.05,
         ge=0.0,

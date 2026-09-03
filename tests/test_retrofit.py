@@ -14,7 +14,7 @@ from pydantic_ai.messages import ModelResponse
 from pydantic_ai.models.function import FunctionModel
 
 from opengloss_generator.config import AppConfig, ConcurrencyConfig, StoreConfig
-from opengloss_generator.hygiene import is_headword_initial
+from opengloss_generator.hygiene import is_headword_initial, is_near_copy
 from opengloss_generator.prompts import build_classify_kind_prompt
 from opengloss_generator.readability import flesch_kincaid_grade
 from opengloss_generator.runner import RunSession
@@ -1448,6 +1448,148 @@ def test_a_pre_d47_boolean_marker_earns_exactly_one_more_attempt():
         Provenance(stage=StageName.HYGIENE, model="m", prompt_version="1", note=note)
     )
     assert retrofit._hygiene_attempt_due(entry, prefix, ["ban:noun:0#grade_10/plain"]) is None
+
+
+# --------------------------------------------------------------------------------------
+# D-59: rendition_hygiene also flags stored register renditions that copy their canonical
+# --------------------------------------------------------------------------------------
+
+
+async def test_rendition_hygiene_flags_a_stored_near_copy_register_rendition(session):
+    # Free (D-59): no model call, only a verdict recorded. The formal rendition here
+    # echoes the canonical gloss verbatim.
+    canonical = "An order from someone in charge that stops something."
+    entry = _entry_with_gloss_renditions(
+        "ban", [(ReadingLevel.NEUTRAL, Register.FORMAL, canonical)], canonical=canonical
+    )
+    session.store.write(entry)
+
+    outcome = await run_retrofit(
+        session.store, session.stages, only=[RetrofitPass.RENDITION_HYGIENE]
+    )
+    result = outcome.passes["rendition_hygiene"]
+
+    assert result.metrics["near_copy_flagged"] == 1
+    assert result.calls == 0
+    assert result.cost_usd == 0.0
+
+    formal = (
+        session.store.read("ban")
+        .pos_entries[0]
+        .senses[0]
+        .gloss.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    )
+    assert formal.assessment.qa_flags == [QAFlag.OG_NEAR_COPY]
+    assert is_near_copy(formal.content, canonical)
+
+
+async def test_rendition_hygiene_does_not_flag_a_genuinely_different_register_rendition(session):
+    canonical = "An order from someone in charge that stops something."
+    entry = _entry_with_gloss_renditions(
+        "ban",
+        [(ReadingLevel.NEUTRAL, Register.FORMAL, "A formally issued prohibition on conduct.")],
+        canonical=canonical,
+    )
+    session.store.write(entry)
+
+    outcome = await run_retrofit(
+        session.store, session.stages, only=[RetrofitPass.RENDITION_HYGIENE]
+    )
+    result = outcome.passes["rendition_hygiene"]
+
+    assert result.metrics["near_copy_flagged"] == 0
+    formal = (
+        session.store.read("ban")
+        .pos_entries[0]
+        .senses[0]
+        .gloss.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    )
+    assert formal.assessment is None or QAFlag.OG_NEAR_COPY not in formal.assessment.qa_flags
+
+
+async def test_rendition_hygiene_clears_a_stale_near_copy_flag_once_the_text_diverges(session):
+    canonical = "An order from someone in charge that stops something."
+    entry = _entry_with_gloss_renditions(
+        "ban",
+        [
+            (
+                ReadingLevel.NEUTRAL,
+                Register.FORMAL,
+                "A wholly reworded formal definition of conduct.",
+            )
+        ],
+        canonical=canonical,
+    )
+    stale = entry.pos_entries[0].senses[0].gloss.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    stale.assessment = Assessment()
+    stale.assessment.flag(QAFlag.OG_NEAR_COPY)
+    session.store.write(entry)
+
+    outcome = await run_retrofit(
+        session.store, session.stages, only=[RetrofitPass.RENDITION_HYGIENE]
+    )
+    result = outcome.passes["rendition_hygiene"]
+
+    assert result.metrics["near_copy_flagged"] == 1  # the flag changed -- it was removed
+    formal = (
+        session.store.read("ban")
+        .pos_entries[0]
+        .senses[0]
+        .gloss.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    )
+    assert formal.assessment.qa_flags == []
+
+
+async def test_rendition_hygiene_never_checks_the_plain_register_for_near_copy(session):
+    # plain is the canonical's own register, not a rewrite meant to diverge from it, so
+    # even a plain rendition identical to the canonical is never flagged.
+    canonical = "An order from someone in charge that stops something."
+    entry = _entry_with_gloss_renditions(
+        "ban", [(ReadingLevel.GRADE_5, Register.PLAIN, canonical)], canonical=canonical
+    )
+    session.store.write(entry)
+
+    outcome = await run_retrofit(
+        session.store, session.stages, only=[RetrofitPass.RENDITION_HYGIENE]
+    )
+    result = outcome.passes["rendition_hygiene"]
+
+    assert result.metrics["near_copy_flagged"] == 0
+    grade_5 = (
+        session.store.read("ban")
+        .pos_entries[0]
+        .senses[0]
+        .gloss.get(ReadingLevel.GRADE_5, Register.PLAIN)
+    )
+    assert grade_5.assessment is None or QAFlag.OG_NEAR_COPY not in grade_5.assessment.qa_flags
+
+
+async def test_rendition_hygiene_does_not_exempt_proper_nouns_from_near_copy(session):
+    # Unlike the headword-initial step (D-30), there is no proper-noun exemption here: a
+    # proper noun's formal and slang registers still have to read differently (D-59).
+    canonical = "The Congo River is a major central African river."
+    entry = _entry_with_gloss_renditions(
+        "Congo",
+        [(ReadingLevel.NEUTRAL, Register.FORMAL, canonical)],
+        canonical=canonical,
+        kind=LexemeKind.PROPER_NOUN,
+        proper_noun=ProperNounInfo(entity_type=EntityType.PLACE),
+    )
+    session.store.write(entry)
+
+    outcome = await run_retrofit(
+        session.store, session.stages, only=[RetrofitPass.RENDITION_HYGIENE]
+    )
+    result = outcome.passes["rendition_hygiene"]
+
+    assert result.metrics["near_copy_flagged"] == 1
+    formal = (
+        session.store.read("congo")
+        .pos_entries[0]
+        .senses[0]
+        .gloss.get(ReadingLevel.NEUTRAL, Register.FORMAL)
+    )
+    assert formal.assessment.qa_flags == [QAFlag.OG_NEAR_COPY]
 
 
 # --------------------------------------------------------------------------------------

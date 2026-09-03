@@ -112,6 +112,14 @@ ABSENT_RENDITION = (
 )
 HEADWORD_ABSENT_FEEDBACK_MARKER = "did not use the word"
 
+# A headword whose gloss renditions in any register but plain are scripted to echo the
+# canonical gloss almost verbatim (D-59), and the marker its retry-fixed text is
+# recognised by. A prompt carrying the marker returns SIMPLE_RENDITION instead, whose
+# words share nothing with any source, so a test can watch one miss and one fix, exactly
+# as the other generation-time checks do.
+NEAR_COPY_HEADWORD = "nearcopyword"
+NEAR_COPY_FEEDBACK_MARKER = "stayed too close to the source"
+
 # A headword whose renditions come back wrapped in markdown and quoting the source text
 # back, so one test can watch both directions of the markdown strip: what the model wrote
 # and what it was shown.
@@ -268,17 +276,18 @@ def _rendition_set_payload(prompt: str) -> dict[str, Any]:
     its band, so a test that is not about readability never triggers the regeneration pass
     and its call count stays predictable.
 
-    Marker headwords drive the three generation-time checks. A prompt for
+    Marker headwords drive the four generation-time checks. A prompt for
     :data:`COMPLEX_HEADWORD` returns an unreadable ``grade_1`` rendition; one for
     :data:`INITIAL_HEADWORD` returns renditions that open with the headword; one for
     :data:`BOTH_HEADWORD` returns a ``grade_1`` rendition that does both at once; one for
     :data:`ABSENT_HEADWORD` returns an ``examples`` rendition that never mentions the
-    headword at all. A prompt carrying any of the three feedback markers — which only a
-    retry does — returns the simple text for every target it asks for, so each marker
-    scripts one miss and one fix, and :data:`BOTH_HEADWORD` scripts a target that fails
-    both checks and is fixed by the one retry they share. :data:`MARKDOWN_HEADWORD`
-    returns markdown wrapped around the source text it was shown, which is how a test
-    sees both ends of the markdown strip.
+    headword at all; one for :data:`NEAR_COPY_HEADWORD` returns a non-``plain``-register
+    gloss rendition that echoes the canonical source almost verbatim (D-59). A prompt
+    carrying any of the four feedback markers — which only a retry does — returns the
+    simple text for every target it asks for, so each marker scripts one miss and one fix,
+    and :data:`BOTH_HEADWORD` scripts a target that fails both checks and is fixed by the
+    one retry they share. :data:`MARKDOWN_HEADWORD` returns markdown wrapped around the
+    source text it was shown, which is how a test sees both ends of the markdown strip.
     """
     headword = _headword(prompt)
     field = _field(prompt, "Field") or "gloss"
@@ -286,6 +295,7 @@ def _rendition_set_payload(prompt: str) -> dict[str, Any]:
         READABILITY_FEEDBACK_MARKER in prompt
         or HEADWORD_FEEDBACK_MARKER in prompt
         or HEADWORD_ABSENT_FEEDBACK_MARKER in prompt
+        or NEAR_COPY_FEEDBACK_MARKER in prompt
     )
 
     def content(level: str, register: str) -> str:
@@ -297,6 +307,13 @@ def _rendition_set_payload(prompt: str) -> dict[str, Any]:
             return INITIAL_RENDITION.format(headword=headword)
         if not retrying and headword == ABSENT_HEADWORD and field == "examples":
             return ABSENT_RENDITION
+        if (
+            not retrying
+            and headword == NEAR_COPY_HEADWORD
+            and field == "gloss"
+            and register != "plain"
+        ):
+            return _field(prompt, "Source") or ""
         if headword == MARKDOWN_HEADWORD:
             return MARKDOWN_RENDITION.format(source=_field(prompt, "Source") or "")
         template = SIMPLE_EXAMPLE if field == "examples" else SIMPLE_RENDITION

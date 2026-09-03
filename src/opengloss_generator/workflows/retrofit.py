@@ -83,6 +83,16 @@ Every pass is **idempotent** and does the free work first:
     (D-30). The superseded text is kept in a zero-cost ``Provenance.note``, exactly as
     ``hygiene`` keeps a superseded gloss.
 
+    A second, free step rides along in the same pass (D-59, F7): every stored non-``plain``
+    gloss rendition is measured with :func:`~opengloss_generator.hygiene.is_near_copy`
+    against its sense's canonical gloss, and
+    :data:`~opengloss_generator.schema.QAFlag.OG_NEAR_COPY` is set or cleared to match.
+    Unlike the headword-initial step this one spends nothing: a paraphrase a model was
+    already told to write differently is not made better by asking it again in the same
+    words, so there is no rewrite call to make, only a verdict to record for a later,
+    dedicated rewrite pass to act on. It runs on every sweep rather than being gated by an
+    attempt marker, since there is no cost to bound.
+
 ``readability_hygiene``
     Runs before ``rendition_hygiene``, and after everything else. It used to run last, on
     the argument that the more expensive of the two rendition-reading passes should not
@@ -213,7 +223,7 @@ from opengloss_generator.contracts import (
     DraftSpanBatch,
 )
 from opengloss_generator.errors import BudgetExceededError, GenerationError
-from opengloss_generator.hygiene import is_headword_initial
+from opengloss_generator.hygiene import is_headword_initial, is_near_copy
 from opengloss_generator.identity import (
     encyclopedia_owner_id,
     explanation_owner_id,
@@ -236,6 +246,7 @@ from opengloss_generator.schema import (
     Provenance,
     QAFlag,
     ReadingLevel,
+    Register,
     Rendition,
     Renditions,
     Sense,
@@ -2066,12 +2077,65 @@ async def _rewrite_renditions(
     return rewritten
 
 
+def _reconcile_near_copy(rendition: Rendition[str], canonical_text: str) -> bool:
+    """Set or clear ``OG_NEAR_COPY`` on one stored gloss rendition to match its text now.
+
+    Free (D-59): comparing two already-stored strings costs nothing, so unlike
+    :func:`_rewrite_renditions`'s offenders this is not gated by an attempt marker — there
+    is no cost to bound, and the verdict can simply be recomputed on every sweep.
+
+    Args:
+        rendition: The stored register rendition, mutated in place.
+        canonical_text: The sense's canonical gloss to compare it against.
+
+    Returns:
+        Whether the flag's presence changed (added or removed), so the caller can tell
+        whether the entry needs writing.
+    """
+    assessment = rendition.assessment or Assessment()
+    was_flagged = QAFlag.OG_NEAR_COPY in assessment.qa_flags
+    now_near_copy = is_near_copy(rendition.content, canonical_text)
+    if now_near_copy:
+        assessment.flag(QAFlag.OG_NEAR_COPY)
+    elif was_flagged:
+        assessment.qa_flags.remove(QAFlag.OG_NEAR_COPY)
+    rendition.assessment = assessment
+    return now_near_copy != was_flagged
+
+
+def _flag_near_copy_renditions(entry: Lexeme) -> int:
+    """Reconcile ``OG_NEAR_COPY`` on every stored non-``plain`` gloss rendition (D-59).
+
+    No proper-noun exemption, unlike :func:`_headword_initial_renditions`: a proper noun's
+    formal and slang registers still have to read differently from each other.
+
+    Args:
+        entry: The entry to inspect, mutated in place.
+
+    Returns:
+        How many renditions had their flag added or removed.
+    """
+    changed = 0
+    for _, sense, _ in entry.iter_senses():
+        if sense.retired:
+            continue
+        canonical = sense.canonical_gloss()
+        if not canonical:
+            continue
+        for rendition in sense.gloss:
+            if rendition.style is Register.PLAIN:
+                continue
+            if _reconcile_near_copy(rendition, canonical):
+                changed += 1
+    return changed
+
+
 async def _clean_renditions(
     entry: Lexeme,
     runner: StageRunner,
     tally: _Tally,
 ) -> tuple[int, dict[str, float], bool]:
-    """Rewrite one entry's headword-initial gloss renditions, in place.
+    """Rewrite one entry's headword-initial gloss renditions, and flag its near-copies.
 
     Args:
         entry: The entry to clean, mutated in place.
@@ -2080,9 +2144,13 @@ async def _clean_renditions(
 
     Returns:
         ``(items changed, metric increments, whether the entry needs writing)``. The
-        third element is not the first one's truth value: a call that succeeded but
-        rewrote nothing still leaves the entry's idempotence marker to be persisted, or
-        the next sweep pays for the same answer again.
+        first element covers both the rewrite and the flag-only step, so the pass's
+        ``entries_changed``/``items_changed`` totals count a near-copy flag flipping as a
+        change even on an entry with no headword-initial offender at all. The third
+        element is not the first one's truth value: a call that succeeded but rewrote
+        nothing still leaves the entry's idempotence marker to be persisted, or the next
+        sweep pays for the same answer again — and a near-copy flag changing is reason
+        enough to write on its own, even with no rewrite call at all.
 
     Raises:
         BudgetExceededError: A budget stop is a run-level condition and propagates —
@@ -2098,11 +2166,17 @@ async def _clean_renditions(
         rewritten = await _rewrite_renditions(entry, offenders, runner, tally, marker_note)
         called = True
     still_initial = len(_headword_initial_renditions(entry)) if offenders else 0
+    near_copy_flagged = _flag_near_copy_renditions(entry)
     metrics = {
         "renditions_rewritten": float(rewritten),
         "still_initial": float(still_initial),
+        "near_copy_flagged": float(near_copy_flagged),
     }
-    return rewritten, metrics, called or bool(rewritten)
+    return (
+        rewritten + near_copy_flagged,
+        metrics,
+        called or bool(rewritten) or bool(near_copy_flagged),
+    )
 
 
 async def _rendition_hygiene_pass(
@@ -2115,6 +2189,9 @@ async def _rendition_hygiene_pass(
 ) -> PassResult:
     """Rewrite stored gloss renditions that begin by naming their own headword.
 
+    Also flags, for free, every stored non-``plain`` gloss rendition that is a near-copy
+    of its sense's canonical gloss (D-59) — see :func:`_flag_near_copy_renditions`.
+
     Args:
         store: The store to clean. Each entry is read, cleaned — including its one model
             call when it is due — and written inside one hold of its own lock.
@@ -2124,8 +2201,9 @@ async def _rendition_hygiene_pass(
         stop_event: Shared stop event; set by a budget stop.
 
     Returns:
-        A :class:`PassResult` whose ``metrics`` carry ``renditions_rewritten`` and
-        ``still_initial`` alongside the usual ``calls`` and ``cost``.
+        A :class:`PassResult` whose ``metrics`` carry ``renditions_rewritten``,
+        ``still_initial`` and ``near_copy_flagged`` alongside the usual ``calls`` and
+        ``cost``.
     """
     tally = _Tally(RetrofitPass.RENDITION_HYGIENE)
 
@@ -2142,7 +2220,7 @@ async def _rendition_hygiene_pass(
     await _drive(ids, clean, tally, workers=workers, stop_event=stop_event)
 
     result = tally.result
-    for name in ("renditions_rewritten", "still_initial"):
+    for name in ("renditions_rewritten", "still_initial", "near_copy_flagged"):
         result.metrics.setdefault(name, 0.0)
     result.metrics["calls"] = float(result.calls)
     result.metrics["cost"] = result.cost_usd
