@@ -700,3 +700,20 @@ CORE-DIARY. `examples_natural` rose slightly (36% → 42%): the per-sense exampl
 added 8 sentences per sense and the judge's "corpus-style" complaint applies to more of
 them; the F8 filler detector plus a rewrite pass is the intended answer. Domain fit
 (29%) is unchanged because no pass targets it; the versioned retag (D-46) is the fix.
+
+## Iteration 7 — after the whole-store domain retag (2026-09-03 19:40)
+
+Same 40 entries / 98 senses, seed 7, forced. $3.48.
+
+| | iteration 6 (before) | iteration 7 (after retag) |
+|---|---|---|
+| mean score | 68.6 | 68.5 |
+| entries 80+ / below 60 | 2 / 5 | **4 / 4** |
+| domain_fits defect | 28.6% | **16.3%** |
+| relations_valid | 83.7% | 85.7% (relations untouched; noise) |
+| examples_natural | 41.8% | 34.7% |
+| examples_fit_sense | 35.7% | 34.7% |
+| gloss_accurate | 14.3% | 14.3% |
+
+The retag did what its pilot predicted: domain defects down by 43% relative, other
+criteria within noise. Next: reconcile (relations), then filler rewrite (examples).
