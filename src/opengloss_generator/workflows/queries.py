@@ -823,6 +823,7 @@ async def _write_queries(
             instructions=QUERIES_INSTRUCTIONS,
             prompt=_build_prompt(entry.headword, slot, siblings, per_sense),
             prompt_version=PROMPT_VERSION,
+            writer_key=slot.sense_id,
         )
     except BudgetExceededError:
         raise

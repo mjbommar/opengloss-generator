@@ -1092,6 +1092,7 @@ async def _write_sense(
             instructions=QA_PAIRS_INSTRUCTIONS,
             prompt=_build_prompt(entry.headword, pos_entry.pos.value, sources),
             prompt_version=PROMPT_VERSION,
+            writer_key=owner_sense_id,
         )
     except BudgetExceededError:
         raise

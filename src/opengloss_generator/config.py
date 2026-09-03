@@ -185,6 +185,10 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
     on a different model family from the generator so it is not marking its own homework.
     """
     luna = "gpt-5.6-luna"
+    # D-63: the writer rotation the pilot recommended — luna majority, haiku minority —
+    # on every prose stage, drawn per sense id so reruns are idempotent (`writer_for`).
+    haiku = "claude-haiku-4-5"
+    rotation = [WriterOption(model=luna, weight=0.8), WriterOption(model=haiku, weight=0.2)]
     nano = "gpt-5.4-nano"
     # `expected_output_tokens` below are measured, not modelled (docs/COST-MODEL.md,
     # docs/CORE-DIARY.md Iteration 4): renditions ~250, resolve ~36 on the fixed prompt,
@@ -206,7 +210,11 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
         # input tokens because the prefix was ~350. A readability retry (below) re-sends
         # the same prefix, so its input is cached at a tenth of the price.
         StageName.RENDITIONS: ModelPolicy(
-            model=luna, reasoning_effort="low", max_tokens=8192, expected_output_tokens=400
+            model=luna,
+            reasoning_effort="low",
+            max_tokens=8192,
+            expected_output_tokens=400,
+            writers=rotation,
         ),
         # One call per entry writes every sense's whole set of fresh example sentences
         # (D-53). Prose for a reader, so luna, but low effort: a natural sentence using a
@@ -218,7 +226,11 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
         # scales with the entry rather than sitting around a mean, so the reservation is
         # set above the measured mean (~1,050) at a typical multi-sense entry's cost.
         StageName.EXAMPLES: ModelPolicy(
-            model=luna, reasoning_effort="low", max_tokens=8192, expected_output_tokens=1200
+            model=luna,
+            reasoning_effort="low",
+            max_tokens=8192,
+            expected_output_tokens=1200,
+            writers=rotation,
         ),
         # The examples sense-fit verdict is a handful of integers; at "low" the hidden
         # reasoning tokens were half the cost of a many-sense entry (D-53). Same lever as D-38.
@@ -277,7 +289,11 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
         # on luna. `expected_output_tokens` is the measured mean of 330 rounded up (D-41);
         # the largest single answer measured 602.
         StageName.QUERIES: ModelPolicy(
-            model=luna, reasoning_effort="low", max_tokens=4096, expected_output_tokens=400
+            model=luna,
+            reasoning_effort="low",
+            max_tokens=4096,
+            expected_output_tokens=400,
+            writers=rotation,
         ),
         # `expected_output_tokens` here is now **measured**, replacing D-62's placeholder
         # (D-57's pilot, 2026-09-03: 37 calls over `data/sample-300`, mean 202 output
@@ -289,7 +305,11 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
         # are simply not present — so the reservation is set above the pilot's mean, at
         # roughly a three-pair call, rather than at a number a full store would blow past.
         StageName.CONTRASTS: ModelPolicy(
-            model=luna, reasoning_effort="low", max_tokens=4096, expected_output_tokens=500
+            model=luna,
+            reasoning_effort="low",
+            max_tokens=4096,
+            expected_output_tokens=500,
+            writers=rotation,
         ),
         StageName.QA_PAIRS: ModelPolicy(
             # ``expected_output_tokens`` is D-58's measured mean over the 1,034-call
@@ -301,6 +321,7 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
             reasoning_effort="low",
             max_tokens=8192,
             expected_output_tokens=510,
+            writers=rotation,
         ),
         StageName.QA: ModelPolicy(
             model="claude-opus-5",

@@ -254,3 +254,22 @@ def test_example_batch_cap_stays_under_the_gemini_bisected_threshold():
     # Kept at 200 on integration (see contracts.py); the Gemini limit is recorded, not
     # imposed, until the batch is split per provider (D-64).
     assert MAX_EXAMPLE_SENTENCES == 200
+
+
+def test_default_prose_policies_rotate_luna_and_haiku():
+    cfg = AppConfig()
+    for stage in (
+        StageName.RENDITIONS,
+        StageName.EXAMPLES,
+        StageName.QUERIES,
+        StageName.CONTRASTS,
+        StageName.QA_PAIRS,
+    ):
+        policy = cfg.policies[stage]
+        assert policy.writers is not None
+        weights = {w.model: w.weight for w in policy.writers}
+        assert weights == {"gpt-5.6-luna": 0.8, "claude-haiku-4-5": 0.2}
+        # Deterministic per key, and both writers actually get drawn.
+        drawn = {policy.writer_for(f"abseil:verb:{i}") for i in range(200)}
+        assert drawn == {"gpt-5.6-luna", "claude-haiku-4-5"}
+        assert policy.writer_for("abseil:verb:0") == policy.writer_for("abseil:verb:0")

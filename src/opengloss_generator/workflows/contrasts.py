@@ -963,6 +963,7 @@ async def _write_contrasts(
             instructions=CONTRAST_INSTRUCTIONS,
             prompt=_build_contrasts_prompt(entry.headword, refs),
             prompt_version=prompts.PROMPT_VERSION,
+            writer_key=entry.lexeme_id,
         )
     except BudgetExceededError:
         raise
