@@ -12,6 +12,7 @@ so they cannot be serialised into a log line or a run manifest.
 from __future__ import annotations
 
 import itertools
+import random
 import tomllib
 from pathlib import Path
 from typing import Any, Self
@@ -34,6 +35,7 @@ __all__ = [
     "ModelPolicy",
     "ReadabilityConfig",
     "StoreConfig",
+    "WriterOption",
     "load_config",
 ]
 
@@ -69,6 +71,23 @@ DEFAULT_EXAMPLE_REGISTERS: tuple[Register, ...] = (
 MAX_EXAMPLES_PER_SENSE = 25
 
 
+class WriterOption(BaseModel):
+    """One weighted choice in a policy's writer rotation (D-63).
+
+    Attributes:
+        model: A model id, in any form :func:`~opengloss_generator.router.ModelRouter.model_for`
+            accepts — bare (routed by its own shape) or with an explicit provider prefix.
+        weight: Relative draw weight. Not required to sum to 1 across a policy's
+            ``writers``; :meth:`ModelPolicy.writer_for` normalises by drawing with
+            ``random.Random.choices``, which accepts any positive weights.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    model: str
+    weight: float = Field(default=1.0, gt=0)
+
+
 class ModelPolicy(BaseModel):
     """Which model, tier, and effort a single stage uses."""
 
@@ -86,16 +105,25 @@ class ModelPolicy(BaseModel):
     expected_output_tokens: int = 512
     timeout_seconds: float = 900.0
     max_attempts: int = 3
+    # Writer rotation (D-63): a rendition or examples policy may name a weighted list of
+    # writers instead of (or in addition to — `model` is still the fallback for any call
+    # made without a `writer_key`) a single model. `None` preserves the pre-D-63 single-
+    # writer behaviour exactly.
+    writers: list[WriterOption] | None = None
+    # The seed half of writer selection's `random.Random(f"{seed}:{key}")` (D-63). Fixed
+    # per run rather than derived from anything time-based, so the same sense id always
+    # draws the same writer and a rerun of an unchanged store spends nothing.
+    writer_seed: int = 0
 
     @model_validator(mode="after")
     def _model_must_be_priced(self) -> Self:
-        """Refuse a model with no price row, so no run can report a false $0."""
-        bare = self.model.split(":", 1)[-1]
-        if bare not in known_models():
-            raise ValueError(
-                f"model {bare!r} has no entry in pricing.PRICE_TABLE; "
-                "add its rates before selecting it"
-            )
+        """Refuse a model (or writer) with no price row, so a run cannot report a false $0."""
+        for bare in self._all_model_ids():
+            if bare not in known_models():
+                raise ValueError(
+                    f"model {bare!r} has no entry in pricing.PRICE_TABLE; "
+                    "add its rates before selecting it"
+                )
         return self
 
     @model_validator(mode="after")
@@ -107,6 +135,37 @@ class ModelPolicy(BaseModel):
                 f"max_tokens ({self.max_tokens})"
             )
         return self
+
+    def _all_model_ids(self) -> list[str]:
+        """Return every bare model id this policy can select: `model` plus any writers."""
+        ids = [self.model.split(":", 1)[-1]]
+        ids.extend(writer.model.split(":", 1)[-1] for writer in self.writers or [])
+        return ids
+
+    def writer_for(self, key: str) -> str:
+        """Return the model to use for one call, honouring the writer rotation (D-63).
+
+        Deterministic in `key`: the same key always draws the same writer, so a rerun
+        of unchanged input is idempotent, and the mix actually used is reconstructible
+        from provenance (which records the model every call resolved to) without
+        needing to replay this draw.
+
+        Args:
+            key: A stable identifier for the call — a sense id for a gloss or example
+                rendition, since that is the finest unit these two policies write at.
+
+        Returns:
+            `self.model` unmodified when no rotation is configured (`writers` is
+            `None` or empty); otherwise one writer drawn from `self.writers`, weighted.
+        """
+        if not self.writers:
+            return self.model
+        rng = random.Random(f"{self.writer_seed}:{key}")  # noqa: S311 - deterministic, not crypto
+        return rng.choices(
+            [writer.model for writer in self.writers],
+            weights=[writer.weight for writer in self.writers],
+            k=1,
+        )[0]
 
 
 def _default_policies() -> dict[StageName, ModelPolicy]:

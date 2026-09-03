@@ -6,6 +6,13 @@ without its price is a test failure rather than a silent zero.
 
 Prices verified 2026-09-02 against https://developers.openai.com/api/docs/pricing.
 Anthropic prices from the bundled ``claude-api`` reference table (cached 2026-06-24).
+
+The writer-diversity pilot's non-OpenAI, non-Anthropic rows (D-63) were verified
+2026-09-03 against the OpenRouter model catalogue, ``GET
+https://openrouter.ai/api/v1/models`` (unauthenticated; SHELF's ``pricing.py`` fetches
+the same endpoint the same way). Each row's comment below records the catalogue's
+per-token rate converted to this table's per-million convention, and a provider-page
+cross-check where the model is also reachable outside OpenRouter.
 """
 
 from __future__ import annotations
@@ -118,7 +125,27 @@ _ROWS: list[ModelPrice] = [
     # --- Anthropic, used for the QA/judge path ---
     *_flat("claude-opus-5", 5.00, 25.00, 0.50),
     *_flat("claude-sonnet-5", 2.00, 10.00, 0.20),
+    # Also a writer-diversity pilot arm (D-63), called direct (not via OpenRouter): the
+    # OpenRouter catalogue's "anthropic/claude-haiku-4.5" row (fetched 2026-09-03) prices
+    # identically ($1/$5/$0.10 per M) to this pre-existing row, so no change was needed.
     *_flat("claude-haiku-4-5", 1.00, 5.00, 0.10),
+    # --- Writer-diversity pilot arms (D-63), OpenRouter and Google, no service tiers ---
+    # OpenRouter catalogue "qwen/qwen3.5-397b-a17b", fetched 2026-09-03:
+    # prompt $0.00000055, completion $0.0000035, input_cache_read $0.000000225 per token.
+    *_flat("qwen/qwen3.5-397b-a17b", 0.55, 3.50, 0.225),
+    # OpenRouter catalogue "deepseek/deepseek-v4-pro", fetched 2026-09-03:
+    # prompt $0.000001039302, completion $0.000002078604, input_cache_read
+    # $0.0000000866085 per token.
+    *_flat("deepseek/deepseek-v4-pro", 1.039302, 2.078604, 0.0866085),
+    # Called direct via the Google API (GEMINI_API_KEY/GOOGLE_API_KEY), not OpenRouter.
+    # OpenRouter catalogue "google/gemini-3.7-flash", fetched 2026-09-03: prompt
+    # $0.00000075, completion $0.00000375, input_cache_read $0.000000075 per token.
+    # Cross-checked the same day against Google's own page,
+    # https://ai.google.dev/gemini-api/docs/pricing ("Gemini 3.7 Flash", Paid Tier,
+    # Standard): input $0.75, output (incl. thinking tokens) $3.75, context caching
+    # $0.075 per million tokens through 2026-12-31 — an exact match, so the OpenRouter
+    # rate is also this table's direct-API rate.
+    *_flat("gemini-3.7-flash", 0.75, 3.75, 0.075),
 ]
 
 PRICE_TABLE: dict[tuple[str, ServiceTier], ModelPrice] = {

@@ -670,6 +670,7 @@ async def _render(
             headword, work.field.value, work.source, work.existing, work.targets
         ),
         prompt_version=prompts.PROMPT_VERSION,
+        writer_key=work.label,
     )
     produced = _measure(
         first.output.renditions,
@@ -840,6 +841,7 @@ async def _retry_renditions(
                 feedback=feedback,
             ),
             prompt_version=prompts.PROMPT_VERSION,
+            writer_key=work.label,
         )
     except StageFailedError as exc:
         _LOG.warning(

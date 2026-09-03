@@ -659,6 +659,12 @@ class Provenance(_Base):
     model: str
     prompt_version: str
     service_tier: str | None = None
+    # The downstream provider that actually served the call, when the router's provider
+    # reports one (D-63): OpenRouter names it (e.g. "DeepInfra"), so a writer routed
+    # through OpenRouter is auditable down to which upstream served it, not only which
+    # model id was requested. `None` for every other provider and for content written
+    # before this field existed.
+    provider: str | None = None
     input_tokens: int = 0
     cached_input_tokens: int = 0
     output_tokens: int = 0

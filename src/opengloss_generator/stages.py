@@ -108,6 +108,7 @@ class StageRunner:
         instructions: str,
         prompt: str,
         prompt_version: str = "1",
+        writer_key: str | None = None,
     ) -> StageResult[T]:
         """Run a stage to a validated result.
 
@@ -118,6 +119,11 @@ class StageRunner:
                 calls so the provider's prompt cache can match on it.
             prompt: The volatile, per-call input. Always last.
             prompt_version: Version tag recorded in provenance.
+            writer_key: A stable per-call identifier — a sense id, for the rendition
+                and examples stages — used to draw a writer from the stage's policy
+                (D-63) when it configures ``writers``. ``None`` (the default) always
+                uses the policy's own ``model``, so every stage that does not opt into
+                a writer rotation is unaffected.
 
         Returns:
             A :class:`StageResult`.
@@ -127,13 +133,14 @@ class StageRunner:
             BudgetExceededError: If the run's ceiling was reached before dispatch.
         """
         policy = self._config.policy(stage)
+        model_name = policy.writer_for(writer_key) if writer_key is not None else policy.model
         # NativeOutput with strict=True asks the provider for constrained decoding against
         # the JSON schema (non-strict JSON mode still omitted required fields live),
         # so enum and shape violations cannot occur at all (verified live 2026-09-02:
         # with tool-call output, gpt-5.4-nano filled `kind` with a part of speech on
         # every attempt). Only semantic validators can still fail, and those retry here.
         agent: Agent[None, T] = Agent(
-            self._model_override or self._router.model_for(policy),
+            self._model_override or self._router.model_for(policy, model=model_name),
             output_type=NativeOutput(output_type, strict=True),
             instructions=instructions,
             retries=0,  # the retry loop lives here, so failures are priced and logged
@@ -153,6 +160,7 @@ class StageRunner:
                     tier=tier,
                     instructions=instructions,
                     body=body,
+                    model_name=model_name,
                 )
             except _RetryableAttemptError as exc:
                 last_error = str(exc)
@@ -171,12 +179,12 @@ class StageRunner:
             self._router.note_success()
             return self._finalise(
                 stage=stage,
-                policy=policy,
                 tier=tier,
                 result=result,
                 attempts=attempt,
                 duration=time.monotonic() - started,
                 prompt_version=prompt_version,
+                model_name=model_name,
             )
 
         raise StageFailedError(stage.value, policy.max_attempts, last_error)
@@ -190,6 +198,7 @@ class StageRunner:
         tier: ServiceTier,
         instructions: str,
         body: str,
+        model_name: str,
     ) -> Any:  # noqa: ANN401 - AgentRunResult is generic over the caller's output type
         """Make one governed model call.
 
@@ -212,19 +221,19 @@ class StageRunner:
         # roughly 30x their true cost and starved dispatch far below the budget).
         estimated_tokens = estimate_tokens(body, instructions, policy.max_tokens)
         estimated_usd = estimate_cost(
-            policy.model,
+            model_name,
             input_tokens=estimated_tokens - policy.max_tokens,
             output_tokens=policy.expected_output_tokens,
             tier=tier,
         ).total_usd
 
         reservation = await self._guard.reserve(estimated_usd)
-        limiter = self._router.limiter_for(policy)
+        limiter = self._router.limiter_for(policy, model=model_name)
         await limiter.acquire(estimated_tokens)
         try:
             result = await agent.run(
                 body,
-                model_settings=self._router.settings_for(policy, stage),
+                model_settings=self._router.settings_for(policy, stage, model=model_name),
             )
         except ModelHTTPError as exc:
             self._note_http_failure(exc, tier)
@@ -269,27 +278,33 @@ class StageRunner:
         self,
         *,
         stage: StageName,
-        policy: Any,  # noqa: ANN401 - ModelPolicy, imported only for typing
         tier: ServiceTier,
         result: Any,  # noqa: ANN401 - AgentRunResult[T]
         attempts: int,
         duration: float,
         prompt_version: str,
+        model_name: str,
     ) -> StageResult[T]:
         """Price a successful call and package it as a :class:`StageResult`."""
         usage = result.usage
         cached = getattr(usage, "cache_read_tokens", 0) or 0
         cost = self._meter.record(
             stage=stage.value,
-            model=policy.model,
+            model=model_name,
             input_tokens=usage.input_tokens,
             output_tokens=usage.output_tokens,
             cached_input_tokens=cached,
             tier=tier,
         )
+        # OpenRouter reports which upstream provider actually served the call (D-63);
+        # every other provider leaves this unset rather than reporting itself, since
+        # the model id already says which provider was asked.
+        provider_details = getattr(result.response, "provider_details", None) or {}
+        provider_served = provider_details.get("downstream_provider")
         provenance = Provenance(
             stage=stage,
             model=cost.model,
+            provider=provider_served,
             prompt_version=prompt_version,
             service_tier=tier.value,
             input_tokens=usage.input_tokens,
@@ -303,6 +318,7 @@ class StageRunner:
             "stage_complete",
             stage=stage.value,
             model=cost.model,
+            provider=provider_served,
             tier=tier.value,
             attempts=attempts,
             input_tokens=usage.input_tokens,

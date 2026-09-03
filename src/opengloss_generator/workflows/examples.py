@@ -879,6 +879,11 @@ async def _write_sentences(
                 config.targets(),
             ),
             prompt_version=prompts.PROMPT_VERSION,
+            # One call writes for every live sense at once (D-53), so the writer draw
+            # (D-63) is keyed on the same digest of the sense-id set that the entry's
+            # own completion marker uses — stable across a rerun, and independent of
+            # listing order.
+            writer_key=_digest(slot.sense_id for slot in slots),
         )
     except BudgetExceededError:
         raise
