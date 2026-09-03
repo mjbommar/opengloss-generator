@@ -2845,3 +2845,134 @@ way `audit`/`stats`/`show` already are. No model was called and no money was spe
 Nothing here touches `data/core-store` or `runs/`; `data/sample-300` was read, and
 written only by this feature's own `--out` path under `runs/`, never back into the
 store. Tests: **+24** (`tests/test_export_pretrain.py`).
+
+## D-57 (2026-09-03) — `contrasts`: one "X vs Y" paragraph per relation edge, written once per undirected pair, verdict recorded not acted on
+
+**Context.** The store asserts 8.5M typed relation edges and explains none of them. A
+`synonym` edge from *mail* to *post* says the two words mean the same thing, which is the
+one claim a reader never needs help with; what a reader wants, and what an encoder cannot
+learn from an edge list, is the sentence saying *when you would write one and not the
+other*. That sentence exists nowhere in the resource — every other prose the pipeline
+writes is about one sense in isolation. F5 of `docs/RETRIEVAL-DATA-PLAN.md` buys it, and it
+is worth buying twice over: it is discriminative prose of a shape that is rare per token
+anywhere, and it is the human-readable explanation of exactly the hard negatives F3's
+`export-triples` mines from these same edges.
+
+**Decision.** A `contrasts` stage on the luna policy. One call per **entry**, covering up to
+`MAX_EDGES_PER_CALL` (8) of its eligible pairs, each shown as `[relation, A term, A gloss, A
+example, B term, B gloss, B example]`; the answer is one 60-120-word paragraph per pair plus
+a `ContrastVerdict`. Five choices are worth recording.
+
+1. **One contrast per undirected pair, owned by the lexicographically smaller end.**
+   `graph_hygiene` reciprocates symmetric relations, so a fully resolved synonym pair is
+   visible from both ends; writing on both would double the bill for one fact and leave two
+   paragraphs free to disagree. The end whose **sense id sorts smaller** owns the pair (sense
+   ids begin with the lexeme id, so this is the plan's "lexicographically smaller lexeme id"
+   with a deterministic tie-break within one entry) and the far end counts it as deferred.
+   The test is conditional on the far side actually carrying the reciprocal: a
+   one-directional edge is owned by whichever end asserts it, however the ids sort, because
+   otherwise it would be deferred to an end that never looks at it and the pair would never
+   be explained at all. On the pilot this halved the work exactly: 85 owned-or-deferred
+   edges became **48 contrasts and 37 deferrals**.
+
+2. **The far side is read lock-free, for prompt context only.** The far sense's gloss and one
+   example come from a plain `store.read` of the target entry, memoised per sweep — the same
+   thing `relation_hygiene._target_gloss` does. It is never a read this pass writes back
+   from, so D-31's actual rule is untouched and no handler ever holds two entry locks. An
+   edge whose target is unresolved, absent from this store, or retired is skipped and counted
+   under one of two summary fields rather than guessed at from a bare surface form; on the
+   pilot that was **1,152 unresolved and 6,982 not-in-store**, which is what a 300-entry
+   slice of a 206K-entry graph looks like.
+
+3. **The verdict is recorded, never acted on.** Writing the paragraph forces the model to
+   look hard at whether the two senses really stand in the typed relation, so the verdict is
+   free. D-50 gives relation edits to `relation_hygiene`, and a stage whose job is prose has
+   no business deleting an edge on the strength of a by-product, so this pass stores the
+   verdict, counts it in the summary, and changes nothing. It earns its place: on the pilot
+   **19 of 48** came back `related_differently`, and reading them, most are the same real
+   defect — a relation resolved to a sense of the wrong part of speech (`post` the verb
+   pointed at `mail` the noun; `poorly` the adverb at `healthy` the adjective; `liverpool`
+   the club at `team` the common noun). That is a work list for relation hygiene that cost
+   nothing extra.
+
+4. **Acceptance is deterministic, per paragraph, and there is no retry.** Empty, outside the
+   45-160-word band (the asked-for 60-120 with slack), failing to name either term via
+   `spans.find_span`, or quoting either gloss verbatim (normalised containment, glosses of 6+
+   words). The naming and quoting checks are the cheap proxies for the failure this stage
+   exists to avoid — two glosses restated and joined with "whereas". A rejected paragraph is
+   counted by reason and dropped, as `examples` (D-53) argues for any stage that buys many
+   interchangeable outputs per call. **The pilot rejected none of 48**, and every paragraph
+   landed inside 90-111 words, so the band and the naming rules cost nothing and are there
+   for the tail.
+
+5. **D-47's marker, with the attempt counter reset rather than accumulated.** The sentinel is
+   `contrasts:<digest>;attempts=<n>`, the digest taken over the sorted keys of the pairs
+   **still outstanding**, each key being the edge id plus the digest of both glosses.
+   `relation_hygiene` accumulates its counter because there a changed digest means "buy a
+   second opinion" and accumulating is what bounds the spend. Here a changed digest means
+   *progress* — the outstanding set shrank because paragraphs were stored, or grew because an
+   edge resolved — so accumulating would turn the 2-attempt bound into a cap of 16 contrasts
+   per entry ever, and an entry with 30 pairs would silently stop. Resetting leaves the bound
+   doing D-47's actual job: an entry whose outstanding set is *unchanged* after a call, every
+   paragraph refused, gets one more attempt and is then left alone. The consequence, stated
+   rather than hidden: a contrast is written once per edge and is **not** refreshed when a
+   gloss is later rewritten. One contrast per edge is the schema's own uniqueness rule (D-62)
+   and a refresh pass is not in this plan.
+
+**Measured (pilot, `data/sample-300`, `--budget 0.50 --concurrency 8`, run
+`20260903T092949Z-959f9561`).** 300 entries scanned, 37 due, **37 calls, 48 contrasts
+stored, $0.005954 total — $0.000124 per contrast, $0.000161 per call**, 25.7 seconds. Per
+call: mean 1,821 input tokens of which 1,585 cached (**87.0% cache hit rate**) and mean
+**202 output tokens** (median 159, max 430) — about 156 output tokens per paragraph, with
+1-3 pairs per call on this store. Nothing was rejected; nothing stopped early. Verdicts:
+`related_as_typed` 29, `related_differently` 19, `unrelated` 0. By type, exactly 24 synonym
+and 24 antonym paragraphs and **no `confusable_with` at all**, because the 300-entry slice
+contains none — the type is exercised by the offline tests only, and its first real
+measurement will have to come from a core-store run.
+
+Two consequences of the measurement. `config.py`'s `CONTRASTS` policy replaces D-62's
+placeholder `expected_output_tokens=400` with **500**: the pilot mean is 202, but output
+scales with pairs per call at ~156 tokens each against a cap of 8, and a 300-entry slice
+under-represents pair density badly (most relation targets are simply absent from it), so
+the reservation is set at roughly a three-pair call rather than at a number a full store
+would blow past. And `cli.py` gets measured `--dry-run` constants (1,800 / 1,600 / 200),
+which price the pilot store to within a fraction of a cent of what it actually cost.
+
+**Quality, read rather than asserted.** All 48 paragraphs were read. They discriminate:
+*mail*/*post* and *extremely*/*way* on region and register, *technique*/*way* on
+specificity, *hum*/*roar* on intensity, *descending*/*descent* and *coming*/*upcoming* on
+grammatical slot, *safe*/*secure* on general danger versus a specific threat. The antonym
+paragraphs do what they were asked to: name the axis, say whether there is a middle, and say
+which member is unmarked. None restates the two glosses. The one clear verdict miss is
+`lower:verb:0-antonym->scales` — a bad edge the model gamely wrote a real paragraph about
+and then called `related_as_typed`. The one stylistic finding worth writing down is that the
+instructions' own vocabulary echoes back: **9 of 24** antonym paragraphs open on "sit/lie at
+opposite ends", 13 use the word "axis", 8 use "unmarked". That is exactly the corpus-level
+filler F8 exists to detect, and F8 should be pointed at this field once it lands rather than
+the wording being tinkered with on a hunch.
+
+**Consequence.** New `src/opengloss_generator/workflows/contrasts.py` (contract,
+instructions and prompt builder module-private, following `examples.py`'s sense-fit call:
+three sibling retrieval-data features are editing `contracts.py` and `prompts.py`
+concurrently, and an append-only module cannot conflict with them). `cli.py` gains one
+command and its dry-run estimate; `config.py` one measured number; `tests/conftest.py` one
+payload and one registry line; `README.md` one row; `docs/RETRIEVAL-DATA.md` its first
+section. **Not done, deliberately:** the sweep emits no per-item ledger records, matching
+`examples`, `relation_hygiene`, `sense_hygiene` and `content_hygiene` — every pooled sweep
+that owns its own worker pool leaves per-call accounting to the run log's `stage_complete`
+records and the cost meter, and only the CLI-driven loops (`walk`, `enrich`, `resolve`,
+`qa`, `retrofit`) emit to the ledger. Tests: **+26** (`tests/test_contrasts.py`), 843 pass.
+`data/core-store` untouched.
+
+**One operational note, recorded because it will bite the next agent.** `data/sample-300`
+is a single shared directory and four retrieval-data pilots are being run against it
+concurrently, while `tests/test_retrieval_schema.py::test_every_stored_sample_entry_still_validates`
+(D-62) asserts that **no** entry in it carries `contrasts`, `queries` or `qa`. Those two
+facts cannot both hold: any pilot that writes to the shared copy turns that test red for
+every other agent, and reverting the store to satisfy it destroys a sibling pilot's output.
+This pilot hit both halves of that — it wrote 48 contrasts, and the revert that followed
+clobbered part of a concurrent `queries` pilot that had written into the same 300 files.
+The fix used here is per-worktree isolation: point `data/sample-300` at a private copy of
+the pristine store and pilot into that. The durable fix is either a per-agent sample store
+or a `test_retrieval_schema` precondition that does not assume a pristine fixture; whoever
+lands the next feature should pick one.

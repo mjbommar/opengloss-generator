@@ -1177,3 +1177,95 @@ _PAYLOADS.update(
         "_draftsentencefits": _sentence_fits_payload,
     }
 )
+
+
+# --------------------------------------------------------------------------------------
+# workflows/contrasts.py contract (D-57)
+# --------------------------------------------------------------------------------------
+#
+# Appended and registered with ``_PAYLOADS.update`` for the reason the block above gives:
+# three sibling retrieval-data features are being built concurrently against this file, and
+# an append-only block cannot conflict with any of them.
+
+#: Parses one line of the contrast prompt's numbered pair list, which reads
+#: ``  1. synonym: abseil [verb] vs rappel [verb]``. Scripting an answer from the prompt
+#: rather than from a fixture is what makes this payload assert that the workflow still
+#: builds the prompt in the shape its own answer parser expects.
+CONTRASTS_PAIR_RE = re.compile(r"^(\w+): (.+?) \[(\w+)\] vs (.+?) \[(\w+)\]$")
+
+#: Reads back a gloss the prompt showed, so a payload can quote one verbatim on purpose.
+CONTRASTS_GLOSS_RE = re.compile(r"^ {5}(.+?) means: (.+)$", re.MULTILINE)
+
+#: The scripted acceptable paragraph: comfortably inside the enforced 45-160 word band,
+#: naming both terms several times each, quoting neither gloss.
+CONTRAST_PARAGRAPH = (
+    "{a} and {b} are not freely interchangeable, and the difference between them is one of "
+    "register rather than of meaning. A committee minute reaches for {a} where a message to "
+    "a friend would use {b}, and a reader notices the swap at once. {a} also takes a person "
+    "as its object far more readily than {b} does, so the two behave differently inside one "
+    "sentence frame. Reach for {a} when the audience is a formal one and for {b} when it is "
+    "not, and the sentence will carry the tone you meant it to carry."
+)
+
+#: A paragraph that never names the far term, so the target-absent rule refuses it.
+CONTRAST_ONE_SIDED = (
+    "{a} is the word a specialist writes and the word a specialist expects to read, and it "
+    "carries an air of the courtroom with it wherever it goes. Somebody using {a} in a note "
+    "to a friend would be heard as joking. The word takes a person as its object far more "
+    "readily than most of its neighbours do, and it sits comfortably in the passive, which "
+    "is another sign of where it belongs. Use {a} where the setting is formal enough to "
+    "carry it."
+)
+
+#: Headwords whose scripted answer carries one defect each, so a test can assert the whole
+#: ``rejected_by_reason`` map from one call.
+CONTRASTS_SHORT_HEADWORD = "shortcontrastword"
+CONTRASTS_ONE_SIDED_HEADWORD = "onesidedcontrastword"
+CONTRASTS_GLOSS_COPY_HEADWORD = "glosscopycontrastword"
+CONTRASTS_EXTRA_HEADWORD = "extracontrastword"
+
+#: A headword whose every pair comes back with an ``unrelated`` verdict, so a test can watch
+#: the verdict histogram without touching the relations themselves (D-50).
+CONTRASTS_UNRELATED_HEADWORD = "unrelatedcontrastword"
+
+
+def _contrast_text(headword: str, first: str, second: str, gloss: str) -> str:
+    """Return the scripted paragraph for one pair, defective if the headword says so."""
+    if headword == CONTRASTS_SHORT_HEADWORD:
+        return f"{first} and {second} differ."
+    if headword == CONTRASTS_ONE_SIDED_HEADWORD:
+        return CONTRAST_ONE_SIDED.format(a=first)
+    if headword == CONTRASTS_GLOSS_COPY_HEADWORD:
+        return f"{CONTRAST_PARAGRAPH.format(a=first, b=second)} {gloss}"
+    return CONTRAST_PARAGRAPH.format(a=first, b=second)
+
+
+def _contrasts_payload(prompt: str) -> dict[str, Any]:
+    """Write one paragraph and one verdict for every pair the prompt listed."""
+    headword = _headword(prompt)
+    glosses = dict(CONTRASTS_GLOSS_RE.findall(prompt))
+    verdict = "unrelated" if headword == CONTRASTS_UNRELATED_HEADWORD else "related_as_typed"
+    contrasts = []
+    for number, item in _numbered(prompt):
+        matched = CONTRASTS_PAIR_RE.match(item)
+        assert matched is not None, f"unparseable contrast pair line: {item!r}"
+        _, first, _, second, _ = matched.groups()
+        contrasts.append(
+            {
+                "pair_ref": number,
+                "text": _contrast_text(headword, first, second, glosses.get(first, "")),
+                "verdict": verdict,
+            }
+        )
+    if headword == CONTRASTS_EXTRA_HEADWORD:
+        contrasts.append(
+            {
+                "pair_ref": len(contrasts) + 1,
+                "text": CONTRAST_PARAGRAPH.format(a="one", b="another"),
+                "verdict": "related_as_typed",
+            }
+        )
+    return {"contrasts": contrasts}
+
+
+_PAYLOADS.update({"_draftcontrasts": _contrasts_payload})

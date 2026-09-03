@@ -71,6 +71,7 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Export triples | `export-triples` | MS MARCO-style `(query, positive, negative)` JSONL, one hard negative per query drawn from the resolved graph (same-headword sense, `confusable_with`, co-hyponym, synonym-of-synonym) plus configurable easy negatives. Free; deterministic for a given `--seed`. See `docs/RETRIEVAL-DATA.md`. |
 | Export qrels | `export-qrels` | TREC-style graded qrels (`qrels.trec`), a `docs.jsonl` corpus, and a listwise JSONL, graded 3 (own sense) down to 0 (unrelated) from the same graph. Free; deterministic. See `docs/RETRIEVAL-DATA.md`. |
 | Export pretraining docs | `export-pretrain` | Serialise each entry into up to four plain-prose documents (dictionary, thesaurus, encyclopedia, usage note) as JSONL; `--levels`/`--templates`/`--per-entry`/`--seed` select what to render and how the corpus mixes. Free; makes no model calls (see `docs/RETRIEVAL-DATA.md`). |
+| Contrast | `contrasts` | One "X vs Y" paragraph per synonym / antonym / confusable edge, saying how the two terms actually differ, plus a verdict on whether they are related the way the edge claims. One call per entry covers up to eight pairs; a pair whose two ends are both in the store is written once, on the smaller end; verdicts are recorded, never acted on (D-50). |
 
 ## Cost defaults
 

@@ -36,9 +36,22 @@ from opengloss_generator.pricing import (
 )
 from opengloss_generator.qc.filler import FillerConfig, analyze_filler, apply_filler_flags
 from opengloss_generator.runner import RunSession, run_pool
-from opengloss_generator.schema import LexemeKind, ReadingLevel, Register, StageName
+from opengloss_generator.schema import (
+    LexemeKind,
+    ReadingLevel,
+    Register,
+    RelationType,
+    StageName,
+)
 from opengloss_generator.store import LexemeStore
 from opengloss_generator.workflows.content_hygiene import run_content_hygiene
+from opengloss_generator.workflows.contrasts import (
+    DEFAULT_KINDS as CONTRAST_KINDS,
+)
+from opengloss_generator.workflows.contrasts import (
+    plan_contrasts,
+    run_contrasts,
+)
 from opengloss_generator.workflows.enrich import (
     EnrichmentSpec,
     RenditionField,
@@ -124,6 +137,13 @@ def _parse_fields(raw: str | None) -> list[RenditionField]:
     return [RenditionField(token) for token in tokens]
 
 
+def _parse_relation_kinds(raw: str | None) -> tuple[RelationType, ...]:
+    """Parse ``--only-kinds``; ``None`` keeps the contrast stage's three default types."""
+    if raw is None:
+        return CONTRAST_KINDS
+    return tuple(RelationType(token.strip()) for token in raw.split(",") if token.strip())
+
+
 def _parse_kinds(raw: str | None) -> set[LexemeKind] | None:
     """Parse a comma-separated lexeme-kind list; ``None`` keeps the walk's default."""
     if raw is None:
@@ -205,6 +225,19 @@ _DRY_RUN_EXAMPLES_CHECK_OUTPUT_TOKEN_ESTIMATE = 850
 #: replaced (4,000/900) under-priced a sweep by a factor of three (D-48).
 _DRY_RUN_QA_INPUT_TOKEN_ESTIMATE = 8000
 _DRY_RUN_QA_OUTPUT_TOKEN_ESTIMATE = 3300
+
+#: Per-call token estimates for ``contrasts --dry-run``. Measured, not modelled, on D-57's
+#: pilot over `data/sample-300` (2026-09-03, 37 calls covering 48 pairs): mean 1,821 input
+#: tokens of which 1,585 were served from the cached instruction prefix (87%), for a mean
+#: 202 output tokens. The prompt barely moves with the entry (1,778-1,991 input across the
+#: whole pilot) because the ~1.7K-token instruction prefix dominates it; the *output* is
+#: what scales, at roughly 156 tokens per pair against a cap of eight pairs per call. The
+#: pilot's entries carried 1-3 pairs each, so a store where more relation targets resolve
+#: will cost more per call than this prices — which is why the summary labels the number an
+#: estimate, exactly as the enrich, examples and qa estimates above do.
+_DRY_RUN_CONTRASTS_INPUT_TOKEN_ESTIMATE = 1800
+_DRY_RUN_CONTRASTS_CACHED_INPUT_TOKEN_ESTIMATE = 1600
+_DRY_RUN_CONTRASTS_OUTPUT_TOKEN_ESTIMATE = 200
 
 #: How many failure messages a batch sweep keeps for the run summary.
 _MAX_REPORTED_FAILURES = 5
@@ -712,6 +745,124 @@ def examples(
                 session.store,
                 session.stages,
                 lexeme_ids=words,
+                workers=cfg.concurrency.workers,
+                stop_event=session.stop_event,
+            )
+            if outcome.stopped_reason is not None:
+                session.stop_reason = outcome.stopped_reason
+            return session.summary(**outcome.as_dict()).as_dict()
+
+    _echo_summary(_run(_main()))
+
+
+def _contrasts_dry_run_estimate(
+    store: LexemeStore, words: Sequence[str], cfg: AppConfig, kinds: Sequence[RelationType]
+) -> dict[str, object]:
+    """Plan a ``contrasts`` sweep without calling a model, and price the plan.
+
+    The plan itself is free and exact — ``workflows.contrasts.plan_contrasts`` reads each
+    entry's edges, the far side of each pair, and the entry's own sentinel — so every count
+    below is a count rather than a guess. Only the money is estimated, from the measured
+    per-call means above.
+
+    Args:
+        store: The store to read entries from.
+        words: The ids the sweep would visit.
+        cfg: The run configuration, for the ``contrasts`` model policy.
+        kinds: The relation types in scope.
+
+    Returns:
+        Extra summary fields describing the plan and its estimated cost.
+    """
+    scanned = 0
+    due = 0
+    pairs = 0
+    outstanding = 0
+    skipped_unresolved = 0
+    skipped_no_target = 0
+    deferred = 0
+    for word in words:
+        entry = store.read(word)
+        if entry is None:
+            continue
+        scanned += 1
+        plan = plan_contrasts(entry, store, kinds)
+        skipped_unresolved += plan.skipped_unresolved
+        skipped_no_target += plan.skipped_no_target
+        deferred += plan.deferred
+        outstanding += plan.outstanding
+        if not plan.due:
+            continue
+        due += 1
+        pairs += plan.pairs
+
+    policy = cfg.policy(StageName.CONTRASTS)
+    per_call = estimate_cost(
+        policy.model,
+        input_tokens=_DRY_RUN_CONTRASTS_INPUT_TOKEN_ESTIMATE,
+        cached_input_tokens=_DRY_RUN_CONTRASTS_CACHED_INPUT_TOKEN_ESTIMATE,
+        output_tokens=_DRY_RUN_CONTRASTS_OUTPUT_TOKEN_ESTIMATE,
+        tier=policy.service_tier,
+    )
+    return {
+        "entries_scanned": scanned,
+        "entries_due": due,
+        "contrasts_planned": pairs,
+        "pairs_outstanding": outstanding,
+        "edges_skipped_unresolved": skipped_unresolved,
+        "edges_skipped_no_target": skipped_no_target,
+        "edges_deferred_to_far_side": deferred,
+        "estimated_calls": due,
+        "estimated_cost_usd": round(per_call.total_usd * due, 6),
+        "note": "estimate only; --dry-run makes no model calls",
+    }
+
+
+@app.command()
+def contrasts(
+    from_list: Annotated[
+        Path | None,
+        typer.Option("--from-list", help="Write contrasts for every headword in this file."),
+    ] = None,
+    only_kinds: Annotated[
+        str | None,
+        typer.Option(
+            "--only-kinds",
+            help="Comma list of relation types (default synonym,antonym,confusable_with).",
+        ),
+    ] = None,
+    limit: Annotated[int | None, typer.Option("--limit", help="Cap entries visited.")] = None,
+    offset: Annotated[int, typer.Option("--offset", help="Skip this many entries.")] = 0,
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+    budget: _BudgetOpt = None,
+    concurrency: _ConcurrencyOpt = None,
+    dry_run: _DryRunOpt = False,
+) -> None:
+    """Write an "X vs Y" paragraph for every synonym / antonym / confusable edge (D-57).
+
+    One call per entry covers up to eight of its pairs; each paragraph says how the two
+    terms actually differ and carries a verdict on whether they are related the way the edge
+    claims. Verdicts are recorded only — relation-hygiene owns relation edits (D-50) — and
+    the ``related_differently`` / ``unrelated`` counts appear in the run summary. A pair
+    whose two ends are both in the store is written about once, on the lexicographically
+    smaller end. Idempotent: an entry whose pairs all carry a contrast costs $0.
+    """
+    cfg = _build_config(config_path, store, budget, concurrency, dry_run)
+    kinds = _parse_relation_kinds(only_kinds)
+
+    async def _main() -> dict[str, object]:
+        async with RunSession(cfg, install_signal_handler=True) as session:
+            words = _batch_targets(session, from_list, from_list is None, limit, offset)
+            if cfg.dry_run:
+                session.stop_reason = "dry_run"
+                extra = _contrasts_dry_run_estimate(session.store, words, cfg, kinds)
+                return session.summary(**extra).as_dict()
+            outcome = await run_contrasts(
+                session.store,
+                session.stages,
+                lexeme_ids=words,
+                kinds=kinds,
                 workers=cfg.concurrency.workers,
                 stop_event=session.stop_event,
             )
