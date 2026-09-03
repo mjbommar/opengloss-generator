@@ -23,6 +23,7 @@ from opengloss_generator.export.pretrain import TEMPLATES as PRETRAIN_TEMPLATES
 from opengloss_generator.export.pretrain import export_pretrain
 from opengloss_generator.export.qrels import build_qrels, write_qrels
 from opengloss_generator.export.triples import build_triples, write_triples
+from opengloss_generator.identity import slugify
 from opengloss_generator.migrate import detect_version
 from opengloss_generator.migrate import from_v2 as migrate_from_v2
 from opengloss_generator.migrate import from_v13 as migrate_from_v13
@@ -1249,6 +1250,13 @@ def relation_hygiene(
         str | None,
         typer.Option("--only", help="Comma list of steps (inflections, meta_labels, ...)."),
     ] = None,
+    from_list: Annotated[
+        Path | None,
+        typer.Option(
+            "--from-list",
+            help="Restrict the sweep to the headwords in this list (default: whole store).",
+        ),
+    ] = None,
     config_path: _ConfigOpt = None,
     store: _StoreOpt = None,
     budget: _BudgetOpt = None,
@@ -1265,6 +1273,12 @@ def relation_hygiene(
     """
     cfg = _build_config(config_path, store, budget, concurrency, dry_run)
     steps = {s.strip() for s in only.split(",") if s.strip()} if only else None
+    # A targeted sweep: the validity step's digest-keyed markers make a whole-store rerun
+    # re-judge every entry whose far side moved, so finishing a known remainder is far
+    # cheaper by naming it than by sweeping again.
+    lexeme_ids = (
+        [slugify(word) for word in _read_word_list(from_list)] if from_list is not None else None
+    )
 
     async def _main() -> dict[str, object]:
         async with RunSession(cfg, install_signal_handler=True) as session:
@@ -1277,6 +1291,7 @@ def relation_hygiene(
                 workers=cfg.concurrency.workers,
                 stop_event=session.stop_event,
                 only=steps,
+                lexeme_ids=lexeme_ids,
             )
             if outcome.stopped_reason is not None:
                 session.stop_reason = outcome.stopped_reason
