@@ -108,14 +108,26 @@ if TYPE_CHECKING:
     from opengloss_generator.store import LexemeStore
 
 __all__ = [
+    "CalibrationPoint",
     "FillerConfig",
     "FillerFlagOutcome",
     "FillerReport",
     "analyze_filler",
     "apply_filler_flags",
+    "calibrate_thresholds",
+    "phrases_in",
 ]
 
 _LOG = get_logger(__name__)
+
+#: The three scopes ``fields`` (``analyze_filler``, ``calibrate_thresholds``, ``qc
+#: filler``'s own ``--fields``) accepts. D-66: the corpus-level detector's frequency
+#: denominator is the *whole* scan, so counting encyclopedia and example sentences
+#: together lets an encyclopedia template (92.3% of encyclopedia renditions, D-60) drown
+#: out the much rarer example-only tells this feature exists to fix; restricting the scan
+#: to one field changes which n-grams and openers clear the bar, not just which
+#: renditions get flagged.
+_VALID_FIELDS = ("examples", "encyclopedia", "all")
 
 #: A word is a run of word characters, apostrophes included, exactly as
 #: ``readability._TOKEN_RE`` defines one — duplicated rather than imported so this
@@ -152,14 +164,24 @@ def _sentence_ngrams(tokens: list[str], n: int) -> set[tuple[str, ...]]:
 
 @dataclass(slots=True, frozen=True)
 class FillerConfig:
-    """Thresholds and knobs for :func:`analyze_filler`. All defaults are the plan's.
+    """Thresholds and knobs for :func:`analyze_filler`.
+
+    The threshold defaults were the plan's own numbers (D-60) until D-66 calibrated them
+    against the full production store, scoped to ``fields="examples"`` (D-60's own
+    measurement was 92.3% of encyclopedia renditions vs. 1.2% of example renditions at
+    those numbers over the whole corpus — the two fields need different bars, and mixing
+    them into one scan's frequency denominator was hiding that). ``ngram_freq_threshold``
+    and ``opener_freq_threshold`` are now the D-66 calibration's chosen point (6.52% of
+    example renditions flagged on the full store, `docs/DECISIONS.md` D-66's table): still
+    the plan's own *shape* of rule (a document-frequency bar plus a count floor), just
+    retuned for the field this project actually rewrites off it.
 
     Attributes:
         ngram_n: N-gram length counted for the filler-phrase detector.
         opener_lengths: Sentence-opener lengths (in words) counted alongside the n-gram.
         ngram_freq_threshold: An n-gram is filler once it appears in more than this
-            share of scanned sentences (plan: "> 0.05% of sentences").
-        opener_freq_threshold: Same, for an opener (plan: "> 0.5%").
+            share of scanned sentences (D-66: 0.025%, examples-scoped).
+        opener_freq_threshold: Same, for an opener (D-66: 0.25%, examples-scoped).
         min_count: A key must also appear in at least this many sentences, whatever its
             frequency, so a small store's tiny denominator cannot turn one repeated pair
             into a "finding".
@@ -172,8 +194,8 @@ class FillerConfig:
 
     ngram_n: int = 4
     opener_lengths: tuple[int, ...] = (2, 3)
-    ngram_freq_threshold: float = 0.0005
-    opener_freq_threshold: float = 0.005
+    ngram_freq_threshold: float = 0.00025
+    opener_freq_threshold: float = 0.0025
     min_count: int = 5
     max_examples: int = 3
     ideal_sentence_words: tuple[int, int] = (10, 30)
@@ -248,6 +270,22 @@ def _collect_refs(entries: Iterable[Lexeme]) -> list[_RenditionRef]:
                 )
             )
     return refs
+
+
+def _filter_fields(refs: list[_RenditionRef], fields: str) -> list[_RenditionRef]:
+    """Restrict ``refs`` to one scan scope.
+
+    Args:
+        refs: Every collected rendition reference.
+        fields: One of :data:`_VALID_FIELDS`. ``"all"`` returns ``refs`` unchanged.
+
+    Returns:
+        The refs of the requested kind, in their original order.
+    """
+    if fields == "all":
+        return refs
+    wanted = "example" if fields == "examples" else "encyclopedia"
+    return [ref for ref in refs if ref.kind == wanted]
 
 
 @dataclass(slots=True)
@@ -449,6 +487,7 @@ class FillerReport:
     opener_findings: dict[int, list[_Finding]]
     entry_scores: dict[str, EntryScore]
     offending_refs: list[_RenditionRef]
+    fields: str = "all"
 
     @property
     def offending_rendition_ids(self) -> set[str]:
@@ -496,6 +535,7 @@ class FillerReport:
                 "units_scanned": self.units_scanned,
                 "sentences_scanned": self.sentences_scanned,
                 "renditions_flagged_candidates": len(self.offending_refs),
+                "fields": self.fields,
             },
             "config": self.config.as_dict(),
             "filler_ngrams": ngram_rows,
@@ -516,6 +556,7 @@ def analyze_filler(
     *,
     config: FillerConfig | None = None,
     core_words: set[str] | None = None,
+    fields: str = "all",
 ) -> FillerReport:
     """Measure corpus-level filler and per-entry diagnostic scores. Reads only.
 
@@ -524,11 +565,24 @@ def analyze_filler(
         config: Thresholds; defaults to :class:`FillerConfig`'s plan defaults.
         core_words: When given, restrict the scan to these headwords (as
             ``audit_store``'s ``core_words`` does), rather than the whole store.
+        fields: Which renditions to scan — ``"examples"``, ``"encyclopedia"``, or
+            ``"all"`` (the default, D-60's original behaviour). This is not just a filter
+            on what gets reported: it changes the sentence-count denominator every
+            frequency is measured against, and therefore which n-grams and openers clear
+            the bar at all (D-66) — restricting to ``"examples"`` is how the encyclopedia's
+            own template filler (92.3% of encyclopedia renditions, D-60) is kept from
+            swamping the much rarer example-only tells this option exists to isolate.
 
     Returns:
         The full :class:`FillerReport`.
+
+    Raises:
+        ValueError: If ``fields`` is not one of :data:`_VALID_FIELDS`.
     """
     config = config or FillerConfig()
+    if fields not in _VALID_FIELDS:
+        message = f"unknown fields option {fields!r}; choose from {_VALID_FIELDS}"
+        raise ValueError(message)
     if core_words is not None:
         core_ids = sorted({slugify(word) for word in core_words})
         entries: list[Lexeme] = [
@@ -540,7 +594,7 @@ def analyze_filler(
     senses_live = sum(
         1 for entry in entries for _, sense, _ in entry.iter_senses() if not sense.retired
     )
-    refs = _collect_refs(entries)
+    refs = _filter_fields(_collect_refs(entries), fields)
 
     counts = _count_corpus(refs, config)
     over_ngrams = _over_threshold(
@@ -575,6 +629,7 @@ def analyze_filler(
         },
         entry_scores=_score_entries(refs, config),
         offending_refs=offenders,
+        fields=fields,
     )
     _LOG.info(
         "qc_filler_analyzed",
@@ -582,8 +637,222 @@ def analyze_filler(
         sentences_scanned=report.sentences_scanned,
         filler_ngrams=len(report.ngram_findings),
         offending_renditions=len(report.offending_refs),
+        fields=fields,
     )
     return report
+
+
+def phrases_in(text: str, report: FillerReport) -> list[str]:
+    """Return every over-threshold phrase from ``report`` that appears in ``text``.
+
+    A rewrite pass that reads :data:`~opengloss_generator.schema.QAFlag.OG_FILLER` off a
+    stored rendition knows *that* it was flagged but not, from the flag alone, *which*
+    corpus-level tell earned it — the flag carries no phrase. This re-walks ``text`` the
+    same way :func:`analyze_filler`'s own passes do (sentence split, n-gram and opener
+    extraction) and checks the result against the findings ``report`` already computed;
+    it does not recompute what counts as filler, only where it shows up in one piece of
+    text, so a rewrite prompt can name the specific phrase to avoid rather than say
+    "this is filler" in the abstract.
+
+    Args:
+        text: The rendition text to check, exactly as stored.
+        report: A :class:`FillerReport`, typically :func:`analyze_filler`'s own output
+            against the same store the text was read from.
+
+    Returns:
+        The matching phrases, longest n-gram/opener first and, within a length, most
+        frequent first, deduplicated. Empty when nothing in ``report`` matches ``text`` —
+        which is not an error: it happens whenever the flag was set under a different
+        config, or the store has moved on since ``report`` was built, and a caller should
+        treat it as "no specific phrase to name" rather than a bug.
+    """
+    ngram_by_key = {finding.key: finding for finding in report.ngram_findings}
+    opener_by_length = {
+        length: {finding.key: finding for finding in findings}
+        for length, findings in report.opener_findings.items()
+    }
+    matched: dict[tuple[str, ...], _Finding] = {}
+    for sentence in _split_sentences(text):
+        tokens = _words(sentence)
+        if not tokens:
+            continue
+        for gram in _sentence_ngrams(tokens, report.config.ngram_n):
+            finding = ngram_by_key.get(gram)
+            if finding is not None:
+                matched[gram] = finding
+        for length, keys in opener_by_length.items():
+            if len(tokens) < length or not keys:
+                continue
+            opener = tuple(tokens[:length])
+            finding = keys.get(opener)
+            if finding is not None:
+                matched[opener] = finding
+    ordered = sorted(matched.items(), key=lambda item: (-len(item[0]), -item[1].count))
+    return [" ".join(key) for key, _ in ordered]
+
+
+@dataclass(slots=True, frozen=True)
+class CalibrationPoint:
+    """One threshold combination's measured effect, from :func:`calibrate_thresholds`.
+
+    Attributes:
+        ngram_freq_threshold: The 4-gram frequency bar this point measured.
+        opener_freq_threshold: The opener frequency bar this point measured.
+        min_count: The floor count this point measured.
+        units_scanned: Renditions in scope (after ``fields`` filtering).
+        sentences_scanned: Sentences counted, the shared denominator every frequency in
+            this point was measured against.
+        renditions_flagged: How many of ``units_scanned`` would be ``--flag`` candidates
+            at this threshold combination.
+        flag_rate: ``renditions_flagged / units_scanned``, ``0.0`` if nothing was scanned.
+        top_phrases: Up to ``top_n`` findings, by sentence count descending, each
+            ``{"phrase", "n", "count", "frequency"}`` — the same shape
+            :meth:`FillerReport.as_dict`'s finding rows use.
+    """
+
+    ngram_freq_threshold: float
+    opener_freq_threshold: float
+    min_count: int
+    units_scanned: int
+    sentences_scanned: int
+    renditions_flagged: int
+    flag_rate: float
+    top_phrases: list[dict[str, object]]
+
+    def as_dict(self) -> dict[str, object]:
+        """Return a JSON-able view, for the D-66 calibration table."""
+        return {
+            "ngram_freq_threshold": self.ngram_freq_threshold,
+            "opener_freq_threshold": self.opener_freq_threshold,
+            "min_count": self.min_count,
+            "units_scanned": self.units_scanned,
+            "sentences_scanned": self.sentences_scanned,
+            "renditions_flagged": self.renditions_flagged,
+            "flag_rate": round(self.flag_rate, 4),
+            "top_phrases": self.top_phrases,
+        }
+
+
+def calibrate_thresholds(
+    store: LexemeStore,
+    *,
+    thresholds: Iterable[tuple[float, float, int]],
+    fields: str = "examples",
+    core_words: set[str] | None = None,
+    top_n: int = 25,
+    ngram_n: int = 4,
+    opener_lengths: tuple[int, ...] = (2, 3),
+) -> list[CalibrationPoint]:
+    """Measure the flag rate at several thresholds in one read-only pass over the store.
+
+    D-66: the plan's own thresholds (D-60) were never tuned against a judged sample, and
+    flagging at them scoped to ``fields="examples"`` needs its own number, not the
+    all-fields one. Pass 1 (sentence-level n-gram/opener counting) does not depend on the
+    threshold at all, so it runs exactly once here regardless of how many
+    ``(ngram_freq_threshold, opener_freq_threshold, min_count)`` triples are given — the
+    only thing that differs per triple is which counted keys clear the bar (pass 2,
+    :func:`_over_threshold`/:func:`_locate_offenders`), which is cheap, in-memory work.
+    Calling :func:`analyze_filler` once per triple instead would re-read and re-tokenise
+    the whole store every time, which is the difference that matters at production-store
+    scale (tens of thousands of entries).
+
+    Args:
+        store: The store to read. Never written.
+        thresholds: The ``(ngram_freq_threshold, opener_freq_threshold, min_count)``
+            triples to measure, in the order given.
+        fields: Scan scope, as :func:`analyze_filler`'s own parameter — defaults to
+            ``"examples"`` here (unlike :func:`analyze_filler`'s ``"all"``) since D-66's
+            whole point is calibrating the example-only number.
+        core_words: When given, restrict the scan to these headwords.
+        top_n: Findings kept per point's ``top_phrases``, by sentence count descending.
+        ngram_n: N-gram length counted, shared by every threshold triple.
+        opener_lengths: Sentence-opener lengths counted, shared by every triple.
+
+    Returns:
+        One :class:`CalibrationPoint` per triple in ``thresholds``, in the order given.
+
+    Raises:
+        ValueError: If ``fields`` is not one of :data:`_VALID_FIELDS`.
+    """
+    if fields not in _VALID_FIELDS:
+        message = f"unknown fields option {fields!r}; choose from {_VALID_FIELDS}"
+        raise ValueError(message)
+    if core_words is not None:
+        core_ids = sorted({slugify(word) for word in core_words})
+        entries: list[Lexeme] = [
+            entry for lexeme_id in core_ids if (entry := store.read(lexeme_id)) is not None
+        ]
+    else:
+        entries = list(store.iter_entries())
+
+    refs = _filter_fields(_collect_refs(entries), fields)
+    counting_config = FillerConfig(ngram_n=ngram_n, opener_lengths=opener_lengths)
+    counts = _count_corpus(refs, counting_config)
+
+    points: list[CalibrationPoint] = []
+    for ngram_threshold, opener_threshold, min_count in thresholds:
+        point_config = FillerConfig(
+            ngram_n=ngram_n,
+            opener_lengths=opener_lengths,
+            ngram_freq_threshold=ngram_threshold,
+            opener_freq_threshold=opener_threshold,
+            min_count=min_count,
+        )
+        over_ngrams = _over_threshold(
+            counts.ngram_counts,
+            total_sentences=counts.total_sentences,
+            threshold=ngram_threshold,
+            min_count=min_count,
+        )
+        over_openers = {
+            length: _over_threshold(
+                counter,
+                total_sentences=counts.total_sentences,
+                threshold=opener_threshold,
+                min_count=min_count,
+            )
+            for length, counter in counts.opener_counts.items()
+        }
+        ngram_findings, opener_findings, offenders = _locate_offenders(
+            refs, over_ngrams=over_ngrams, over_openers=over_openers, config=point_config
+        )
+        all_findings = [(finding, n) for finding in ngram_findings.values() for n in (ngram_n,)] + [
+            (finding, length)
+            for length, findings in opener_findings.items()
+            for finding in findings.values()
+        ]
+        top = sorted(all_findings, key=lambda pair: -pair[0].count)[:top_n]
+        top_phrases: list[dict[str, object]] = [
+            {
+                "phrase": " ".join(finding.key),
+                "n": n,
+                "count": finding.count,
+                "frequency": round(finding.count / counts.total_sentences, 6)
+                if counts.total_sentences
+                else 0.0,
+            }
+            for finding, n in top
+        ]
+        points.append(
+            CalibrationPoint(
+                ngram_freq_threshold=ngram_threshold,
+                opener_freq_threshold=opener_threshold,
+                min_count=min_count,
+                units_scanned=len(refs),
+                sentences_scanned=counts.total_sentences,
+                renditions_flagged=len(offenders),
+                flag_rate=len(offenders) / len(refs) if refs else 0.0,
+                top_phrases=top_phrases,
+            )
+        )
+    _LOG.info(
+        "qc_filler_calibrated",
+        fields=fields,
+        units_scanned=len(refs),
+        sentences_scanned=counts.total_sentences,
+        points=len(points),
+    )
+    return points
 
 
 def _locate_rendition(entry: Lexeme, ref: _RenditionRef) -> Any:  # noqa: ANN401 - Rendition[str|Example]

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from opengloss_generator.config import StoreConfig
 from opengloss_generator.qc.filler import (
     FillerConfig,
@@ -16,6 +18,8 @@ from opengloss_generator.qc.filler import (
     _score_entries,
     analyze_filler,
     apply_filler_flags,
+    calibrate_thresholds,
+    phrases_in,
 )
 from opengloss_generator.schema import (
     Example,
@@ -254,3 +258,127 @@ async def test_unflag_reverses_flagging_and_is_itself_idempotent(tmp_path: Path)
     assert reverse_again.renditions_unflagged == 0
     assert reverse_again.renditions_already == len(offending)
     assert reverse_again.entries_changed == 0
+
+
+# --------------------------------------------------------------------------------------
+# --fields (D-66)
+# --------------------------------------------------------------------------------------
+
+
+#: One unrelated, mutually distinct example sentence per filler headword — no shared
+#: 4-gram or opener among them, mirroring ``_VARIED_EXAMPLES``' own shape but kept
+#: separate from it so no text is ever written twice under two different headwords.
+_UNRELATED_EXAMPLES = [
+    "Someone painted the old fence a bright shade of blue.",
+    "The children built a sandcastle near the tide line.",
+    "A gentle breeze moved through the open window.",
+    "The baker pulled a fresh loaf from the oven.",
+    "Two cats napped together on the warm windowsill.",
+    "The hikers paused to admire the distant peaks.",
+]
+
+
+def _entries_with_filler_encyclopedia_only() -> list[Lexeme]:
+    """Six entries carrying the filler tell in their encyclopedia text, not their example.
+
+    Each example is its own distinct, unrepeated sentence, so it does not itself become a
+    corpus-level finding — the point of this fixture is that "examples" and "encyclopedia"
+    scopes must disagree about which entries offend.
+    """
+    entries = []
+    for (word, tail), unrelated_text in zip(
+        _FILLER_HEADWORDS_AND_TAILS, _UNRELATED_EXAMPLES, strict=True
+    ):
+        entry = _entry(word, unrelated_text)
+        entry.encyclopedia.add(canonical_rendition(f"The researchers found that {tail}."))
+        entries.append(entry)
+    return entries
+
+
+async def test_fields_restricts_the_scan_to_one_kind_of_rendition(tmp_path: Path):
+    store = _store(tmp_path)
+    _write(store, *_entries_with_filler_encyclopedia_only(), *_varied_entries())
+
+    examples_report = analyze_filler(store, fields="examples")
+    encyclopedia_report = analyze_filler(store, fields="encyclopedia")
+
+    assert examples_report.units_scanned == len(_FILLER_HEADWORDS_AND_TAILS) + len(_VARIED_EXAMPLES)
+    assert examples_report.offending_refs == []
+
+    assert encyclopedia_report.units_scanned == len(_FILLER_HEADWORDS_AND_TAILS)
+    assert {ref.lexeme_id for ref in encyclopedia_report.offending_refs} == {
+        word for word, _ in _FILLER_HEADWORDS_AND_TAILS
+    }
+
+
+async def test_fields_all_is_the_union_of_examples_and_encyclopedia(tmp_path: Path):
+    store = _store(tmp_path)
+    _write(store, *_entries_with_filler_encyclopedia_only(), *_varied_entries())
+
+    all_report = analyze_filler(store, fields="all")
+
+    # Each of the six filler entries contributes both an example and an encyclopedia
+    # rendition; the ten varied entries contribute only an example.
+    assert all_report.units_scanned == 2 * len(_FILLER_HEADWORDS_AND_TAILS) + len(_VARIED_EXAMPLES)
+    assert {ref.lexeme_id for ref in all_report.offending_refs} == {
+        word for word, _ in _FILLER_HEADWORDS_AND_TAILS
+    }
+
+
+def test_fields_rejects_an_unknown_value(tmp_path: Path):
+    store = _store(tmp_path)
+    with pytest.raises(ValueError, match="fields"):
+        analyze_filler(store, fields="bogus")
+
+
+# --------------------------------------------------------------------------------------
+# phrases_in
+# --------------------------------------------------------------------------------------
+
+
+async def test_phrases_in_names_the_matching_finding(tmp_path: Path):
+    store = _store(tmp_path)
+    _write(store, *_filler_entries(), *_varied_entries())
+    report = analyze_filler(store)
+
+    matches = phrases_in(
+        "The researchers found that a counting device used since antiquity.", report
+    )
+    assert "the researchers found that" in matches
+
+    assert phrases_in("Nothing here matches any of the findings at all.", report) == []
+
+
+# --------------------------------------------------------------------------------------
+# calibrate_thresholds (D-66)
+# --------------------------------------------------------------------------------------
+
+
+async def test_calibrate_thresholds_measures_flag_rate_at_each_point(tmp_path: Path):
+    store = _store(tmp_path)
+    _write(store, *_filler_entries(), *_varied_entries())
+    total_units = len(_FILLER_HEADWORDS_AND_TAILS) + len(_VARIED_EXAMPLES)
+
+    points = calibrate_thresholds(
+        store,
+        thresholds=[(0.5, 0.5, 100), (0.00025, 0.0025, 5)],
+        fields="examples",
+    )
+
+    assert len(points) == 2
+    # An impossibly high bar (and floor) flags nothing.
+    assert points[0].renditions_flagged == 0
+    assert points[0].flag_rate == 0.0
+    assert points[0].units_scanned == total_units
+
+    # The calibrated default catches exactly the six stilted renditions.
+    assert points[1].renditions_flagged == len(_FILLER_HEADWORDS_AND_TAILS)
+    assert points[1].units_scanned == total_units
+    assert points[1].flag_rate == pytest.approx(len(_FILLER_HEADWORDS_AND_TAILS) / total_units)
+    assert any(row["phrase"] == "the researchers found that" for row in points[1].top_phrases)
+
+
+def test_calibrate_thresholds_rejects_an_unknown_fields_value(tmp_path: Path):
+    store = _store(tmp_path)
+    with pytest.raises(ValueError, match="fields"):
+        calibrate_thresholds(store, thresholds=[(0.1, 0.1, 5)], fields="bogus")

@@ -8,17 +8,23 @@ call per entry): a ``qc`` pass only measures and, optionally, flags. See
 from __future__ import annotations
 
 from opengloss_generator.qc.filler import (
+    CalibrationPoint,
     FillerConfig,
     FillerFlagOutcome,
     FillerReport,
     analyze_filler,
     apply_filler_flags,
+    calibrate_thresholds,
+    phrases_in,
 )
 
 __all__ = [
+    "CalibrationPoint",
     "FillerConfig",
     "FillerFlagOutcome",
     "FillerReport",
     "analyze_filler",
     "apply_filler_flags",
+    "calibrate_thresholds",
+    "phrases_in",
 ]
