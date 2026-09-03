@@ -62,6 +62,20 @@ from tests.conftest import (
 )
 
 
+def _entry_with_sense_examples(headword: str, renditions: list[Rendition[Example]]) -> Lexeme:
+    """Build a one-sense noun entry holding exactly the given example renditions."""
+    sense = Sense(
+        index=0,
+        gloss=Renditions[str](root=[canonical_rendition("A finishing process for paper.")]),
+        examples=Renditions[Example](root=list(renditions)),
+    )
+    return Lexeme.empty(
+        headword,
+        kind=LexemeKind.SIMPLEX,
+        pos_entries=[POSEntry(pos=PartOfSpeech.NOUN, senses=[sense], morphology=Morphology())],
+    )
+
+
 def _entry_with_examples(headword: str, texts: list[str]) -> Lexeme:
     """Build an entry whose examples have no spans yet."""
     sense = Sense(
@@ -2003,3 +2017,50 @@ async def test_repair_revisits_an_entry_when_a_different_sense_later_loses_its_e
 
         third = await run_retrofit(s.store, s.stages, only={RetrofitPass.REPAIR}, workers=2)
         assert third.passes["repair"].calls == 0
+
+
+def test_a_readability_rewrite_that_duplicates_a_sibling_example_is_refused():
+    from opengloss_generator.schema import (
+        Example,
+        Provenance,
+        ReadingLevel,
+        Register,
+        Rendition,
+        StageName,
+    )
+    from opengloss_generator.workflows import retrofit as retrofit_module
+
+    twin = Rendition[Example](
+        reading_level=ReadingLevel.GRADE_1,
+        style=Register.PLAIN,
+        content=Example(text="Calendaring makes paper smooth.", span=(0, 11)),
+    )
+    offender_rendition = Rendition[Example](
+        reading_level=ReadingLevel.GRADE_1,
+        style=Register.PLAIN,
+        content=Example(
+            text="Calendaring is a finishing process that compresses paper between rollers "
+            "to produce a smooth surface.",
+            span=(0, 11),
+        ),
+    )
+    entry = _entry_with_sense_examples("calendaring", [twin, offender_rendition])
+    pos_entry = entry.pos_entries[0]
+    sense = pos_entry.senses[0]
+    offender = retrofit_module._ReadabilityOffender(
+        rendition=offender_rendition,
+        field_name="examples",
+        pos_entry=pos_entry,
+        rendition_id="calendaring:noun:0#grade_1/plain[1]",
+        sense=sense,
+    )
+    provenance = Provenance(
+        stage=StageName.RENDITIONS, model="test", prompt_version="1", cost_usd=0.0
+    )
+    adopted = retrofit_module._apply_readability_rewrite(
+        entry, offender, "Calendaring makes paper smooth.", 1.0, provenance
+    )
+    assert adopted is False
+    assert offender_rendition.content.text.startswith("Calendaring is a finishing")
+    # The entry must still round-trip: no two renditions share a key.
+    type(entry).model_validate(entry.model_dump(mode="json"))

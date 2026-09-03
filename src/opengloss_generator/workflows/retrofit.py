@@ -2377,6 +2377,10 @@ class _ReadabilityOffender:
     field_name: str
     pos_entry: POSEntry | None
     rendition_id: str
+    #: The owning sense, for ``examples`` only: a rewrite must not land on text a sibling
+    #: rendition at the same level and register already holds, or the entry fails
+    #: validation on its next read (seen after the 2026-09-03 outage: ``calendaring``).
+    sense: Sense | None = None
 
 
 def _is_readability_miss(rendition: Rendition[Any]) -> bool:
@@ -2422,6 +2426,7 @@ def _readability_offenders(entry: Lexeme) -> list[_ReadabilityOffender]:
                 field_name="examples",
                 pos_entry=pos_entry,
                 rendition_id=rid(sid, r, f"[{index}]"),
+                sense=sense,
             )
             for index, r in enumerate(sense.examples)
             if _is_readability_miss(r)
@@ -2595,6 +2600,20 @@ def _reintroduces_headword_initial(
     return True
 
 
+def _example_collides(offender: _ReadabilityOffender, new_text: str) -> bool:
+    """Return whether ``new_text`` duplicates a sibling example's uniqueness key."""
+    if offender.sense is None:
+        return False
+    own = offender.rendition
+    return any(
+        other is not own
+        and other.reading_level is own.reading_level
+        and other.style is own.style
+        and other.content.text == new_text
+        for other in offender.sense.examples
+    )
+
+
 def _apply_readability_rewrite(
     entry: Lexeme,
     offender: _ReadabilityOffender,
@@ -2642,7 +2661,12 @@ def _apply_readability_rewrite(
             forms = _forms_for(entry, offender.pos_entry) if offender.pos_entry else []
             span = spans.find_span(new_text, headword, forms)
             content = rendition.content
-            if span is not None and new_grade < old_grade and isinstance(content, Example):
+            if (
+                span is not None
+                and new_grade < old_grade
+                and isinstance(content, Example)
+                and not _example_collides(offender, new_text)
+            ):
                 content.text = new_text
                 content.span = span
                 adopted = True
