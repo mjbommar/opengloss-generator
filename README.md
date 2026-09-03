@@ -70,6 +70,7 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Filler QC | `qc filler` | Count 4-grams and sentence openers across every example and encyclopedia rendition; report what recurs more than chance, with a per-entry uniqueness / information-density score. No model call. `--flag` sets `OG_FILLER` on the offenders; `--unflag` reverses it (D-60). |
 | Export triples | `export-triples` | MS MARCO-style `(query, positive, negative)` JSONL, one hard negative per query drawn from the resolved graph (same-headword sense, `confusable_with`, co-hyponym, synonym-of-synonym) plus configurable easy negatives. Free; deterministic for a given `--seed`. See `docs/RETRIEVAL-DATA.md`. |
 | Export qrels | `export-qrels` | TREC-style graded qrels (`qrels.trec`), a `docs.jsonl` corpus, and a listwise JSONL, graded 3 (own sense) down to 0 (unrelated) from the same graph. Free; deterministic. See `docs/RETRIEVAL-DATA.md`. |
+| Export pretraining docs | `export-pretrain` | Serialise each entry into up to four plain-prose documents (dictionary, thesaurus, encyclopedia, usage note) as JSONL; `--levels`/`--templates`/`--per-entry`/`--seed` select what to render and how the corpus mixes. Free; makes no model calls (see `docs/RETRIEVAL-DATA.md`). |
 
 ## Cost defaults
 
