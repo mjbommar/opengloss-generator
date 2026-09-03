@@ -1179,3 +1179,7 @@ rewrites that drop the headword or collide with a sibling. Pilot: 726 flagged of
 9,146, 708 rewritten, 18 refused, **$0.0000534/rewrite**; idempotent on rerun. Queued
 on the store after the retag re-judge: reconcile → graph-hygiene → re-judge → filler
 flag + rewrite (cap $6.5) → re-judge → audit.
+
+**Domain retag, whole store (18:06 → 19:37):** hygiene clear 110,870 domains ($0,
+4m); luna `tag_domain` 41,881 calls, **$3.90** (extrapolation was $4.34; cap $6.5),
+110,869 senses retagged, cache hit rate 0.94, completed. Forced re-judge running.
