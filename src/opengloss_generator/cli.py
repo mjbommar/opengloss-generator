@@ -45,6 +45,7 @@ from opengloss_generator.schema import (
     StageName,
 )
 from opengloss_generator.store import LexemeStore
+from opengloss_generator.taxonomy import TAXONOMY_VERSION
 from opengloss_generator.workflows.content_hygiene import run_content_hygiene
 from opengloss_generator.workflows.contrasts import (
     DEFAULT_KINDS as CONTRAST_KINDS,
@@ -944,6 +945,29 @@ def retrofit(
     limit: Annotated[
         int | None, typer.Option("--limit", help="Cap entries visited per pass.")
     ] = None,
+    taxonomy_version: Annotated[
+        str | None,
+        typer.Option(
+            "--taxonomy-version",
+            help=(
+                "Override the taxonomy version the hygiene/tag_domain passes compare "
+                "against and stamp (D-46); defaults to the live TAXONOMY_VERSION "
+                "constant. See D-67."
+            ),
+        ),
+    ] = None,
+    force_retag_domains: Annotated[
+        bool,
+        typer.Option(
+            "--force-retag-domains",
+            help=(
+                "Clear every live sense's domain in the hygiene pass, not only weak "
+                "'.general' ones, so the next tag_domain pass re-tags the whole "
+                "selection. Off by default; intended for a scoped pilot store, not a "
+                "whole-store sweep (D-67)."
+            ),
+        ),
+    ] = False,
     config_path: _ConfigOpt = None,
     store: _StoreOpt = None,
     budget: _BudgetOpt = None,
@@ -956,6 +980,7 @@ def retrofit(
         raise typer.BadParameter(message)
     cfg = _build_config(config_path, store, budget, concurrency, dry_run)
     passes = None if only == "all" else [only]
+    version = taxonomy_version if taxonomy_version is not None else TAXONOMY_VERSION
 
     async def _main() -> dict[str, object]:
         async with RunSession(cfg, install_signal_handler=True) as session:
@@ -968,6 +993,8 @@ def retrofit(
                 only=passes,
                 limit=limit,
                 stop_event=session.stop_event,
+                taxonomy_version=version,
+                force_retag_domains=force_retag_domains,
             )
             if outcome.stopped_reason:
                 session.stop_reason = outcome.stopped_reason

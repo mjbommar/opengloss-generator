@@ -432,6 +432,77 @@ async def test_hygiene_leaves_a_properly_verified_specific_domain_alone(session)
     assert stored.pos_entries[0].senses[0].domain is DomainTag.SPORTS_RECREATION_OUTDOOR_RECREATION
 
 
+async def test_force_retag_domains_clears_a_properly_verified_specific_domain_too(session):
+    """D-67: a pilot re-tag needs every live sense re-sent, not only weak '.general' ones."""
+    entry = make_entry("abseil")
+    sense = entry.pos_entries[0].senses[0]
+    sense.domain = DomainTag.SPORTS_RECREATION_OUTDOOR_RECREATION
+    entry.add_provenance(Provenance(stage=StageName.TAG_DOMAIN, model="m", prompt_version="1"))
+    session.store.write(entry)
+
+    outcome = await run_retrofit(
+        session.store, session.stages, only=[RetrofitPass.HYGIENE], force_retag_domains=True
+    )
+    result = outcome.passes["hygiene"]
+
+    assert result.metrics["domains_cleared"] == 1
+    assert session.store.read("abseil").pos_entries[0].senses[0].domain is None
+
+
+async def test_force_retag_domains_is_off_by_default(session):
+    """The new knob must never change an ordinary sweep's behaviour."""
+    entry = make_entry("abseil")
+    entry.pos_entries[0].senses[0].domain = DomainTag.SPORTS_RECREATION_OUTDOOR_RECREATION
+    entry.add_provenance(Provenance(stage=StageName.TAG_DOMAIN, model="m", prompt_version="1"))
+    session.store.write(entry)
+
+    outcome = await run_retrofit(session.store, session.stages, only=[RetrofitPass.HYGIENE])
+
+    assert outcome.passes["hygiene"].metrics["domains_cleared"] == 0
+    stored = session.store.read("abseil")
+    assert stored.pos_entries[0].senses[0].domain is DomainTag.SPORTS_RECREATION_OUTDOOR_RECREATION
+
+
+def test_clear_weak_domains_force_all_ignores_retired_and_untagged_senses():
+    entry = make_entry("abseil")
+    live = entry.pos_entries[0].senses[0]
+    live.domain = DomainTag.SPORTS_RECREATION_OUTDOOR_RECREATION
+    retired_sense = Sense.of(2, "A retired sense.")
+    retired_sense.domain = DomainTag.SPORTS_RECREATION_OUTDOOR_RECREATION
+    retired_sense.retired = True
+    untagged_sense = Sense.of(3, "An untagged sense.")
+    entry.pos_entries[0].senses.extend([retired_sense, untagged_sense])
+
+    cleared = retrofit._clear_weak_domains(entry, force_all=True)
+
+    assert cleared == 1
+    assert live.domain is None
+    assert retired_sense.domain is DomainTag.SPORTS_RECREATION_OUTDOOR_RECREATION
+    assert untagged_sense.domain is None
+
+
+async def test_tag_domain_pass_stamps_an_overridden_taxonomy_version(session):
+    session.store.write(make_entry("abseil"))
+
+    await run_retrofit(
+        session.store, session.stages, only=[RetrofitPass.TAG_DOMAIN], taxonomy_version="99"
+    )
+
+    stored = session.store.read("abseil")
+    notes = [p.note for p in stored.provenance.values() if p.stage is StageName.TAG_DOMAIN]
+    assert notes == ["taxonomy_version=99"]
+
+
+def test_tagged_under_current_taxonomy_checks_the_overridden_version():
+    entry = _general_sense_entry("taxonomy_version=99")
+    assert retrofit._tagged_under_current_taxonomy(entry, taxonomy_version="99")
+    assert not retrofit._tagged_under_current_taxonomy(entry)
+    # Bumping the compared-against version alone only reclaims the weak '.general' tag
+    # (D-46) — it does not force a full re-tag; that needs force_all (D-67).
+    assert retrofit._clear_weak_domains(entry, taxonomy_version="99") == 0
+    assert retrofit._clear_weak_domains(entry) == 1
+
+
 async def test_hygiene_pass_is_idempotent_and_free_on_a_second_sweep(session):
     entry = make_entry("abseil")
     entry.pos_entries[0].senses[0].gloss.root[
