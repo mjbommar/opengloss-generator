@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from opengloss_generator.config import AppConfig, ModelPolicy, WriterOption
+from opengloss_generator.contracts import MAX_EXAMPLE_SENTENCES
 from opengloss_generator.router import ModelRouter
 from opengloss_generator.schema import StageName
 
@@ -130,12 +131,19 @@ _PILOT_WRITERS = (
     "claude-haiku-4-5",
     "gemini-3.7-flash",
     "deepseek/deepseek-v4-pro",
+    # D-64 Round 2 arms. The two free OpenRouter models need the explicit
+    # "openrouter:" prefix even here, not only in WRITERS in run_writer_pilot.py: see
+    # test_bare_openrouter_free_tier_id_breaks_the_price_gate below for why the bare
+    # "org/model:free" form is unsafe with this project's current price-gate code.
+    "gemini-3.8-flash",
+    "openrouter:z-ai/glm-5.2:free",
+    "openrouter:nvidia/nemotron-3-super-120b-a12b:free",
 )
 
 
 def test_every_pilot_writer_is_priced():
-    # D-63's five arms; a missing row here would make ModelPolicy construction below
-    # raise, which is exactly the property under test.
+    # D-63's five arms plus D-64's three Round 2 arms; a missing row here would make
+    # ModelPolicy construction below raise, which is exactly the property under test.
     for writer in _PILOT_WRITERS:
         ModelPolicy(model=writer)
 
@@ -193,3 +201,53 @@ def test_writer_weights_skew_the_draw():
     for i in range(500):
         counts[policy.writer_for(f"sense-{i}")] += 1
     assert counts["gpt-5.6-luna"] > counts["claude-haiku-4-5"] * 5
+
+
+# --------------------------------------------------------------------------------------
+# D-64 Round 2: OpenRouter free-tier ids with a literal ":free" suffix, and the
+# DraftExampleBatch cap Gemini's structured-output translation forced downward.
+# --------------------------------------------------------------------------------------
+
+
+def test_openrouter_free_tier_model_routes_and_is_priced():
+    # "openrouter:z-ai/glm-5.2:free" carries an explicit `openrouter:` prefix *and* a
+    # literal ":free" suffix inside the bare id itself. `_split_model` must only act on
+    # the first colon, so the router sees kind="openrouter", bare="z-ai/glm-5.2:free" —
+    # not misread the second colon as another routing prefix.
+    policy = ModelPolicy(
+        model="openrouter:z-ai/glm-5.2:free", reasoning_effort="low", service_tier="default"
+    )
+    settings = _router().settings_for(policy, _STAGE)
+    assert "openai_service_tier" not in settings
+    assert settings["openrouter_reasoning"] == {"effort": "low"}
+
+
+def test_nemotron_free_tier_model_is_priced():
+    ModelPolicy(model="openrouter:nvidia/nemotron-3-super-120b-a12b:free")
+
+
+def test_bare_openrouter_free_tier_id_breaks_the_price_gate():
+    # Found while writing this pilot's own WRITERS entries (D-64), not fixed: the price
+    # gate (`ModelPolicy._all_model_ids`) and `pricing.price_for` both derive the "bare"
+    # model id with a naive `model.split(":", 1)[-1]`, assuming the first colon is
+    # always this project's own `prefix:model` routing separator (`router._split_model`
+    # checks the prefix is a *known* provider kind before treating it that way; these
+    # two call sites don't). An OpenRouter id that is itself bare (no explicit
+    # "openrouter:" prefix) but carries a literal ":free" suffix — the catalogue's own
+    # free-tier naming convention — gets mis-split into ("z-ai/glm-5.2", "free"), and
+    # "free" alone has no price row, so a perfectly valid, correctly-priced writer is
+    # refused. The explicit `openrouter:` prefix (used throughout this pilot's own
+    # WRITERS dict and _PILOT_WRITERS above) sidesteps it, because the naive split then
+    # only strips that recognised prefix. Left unfixed: this is a pre-existing pricing.py
+    # /config.py bug orthogonal to writer diversity, not introduced by D-64's price rows.
+    with pytest.raises(ValueError, match=r"no entry in pricing\.PRICE_TABLE"):
+        ModelPolicy(model="z-ai/glm-5.2:free")
+
+
+def test_example_batch_cap_stays_under_the_gemini_bisected_threshold():
+    # D-64: a live bisection against gemini-3.8-flash found list[DraftSenseExample]'s
+    # declared maxItems succeeds at 54 and fails (400 INVALID_ARGUMENT) at 55 and above
+    # (docs/WRITER-DIVERSITY.md Round 2). This is a regression guard, not a functional
+    # test of Gemini itself: it only protects the margin an offline change could erode
+    # without anyone re-running the live probe.
+    assert MAX_EXAMPLE_SENTENCES <= 54

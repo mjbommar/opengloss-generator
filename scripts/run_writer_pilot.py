@@ -25,15 +25,25 @@ from opengloss_generator.schema import ReadingLevel, StageName
 from opengloss_generator.workflows.enrich import EnrichmentSpec, RenditionField, RenditionRequest
 from opengloss_generator.workflows.examples import run_examples
 
-#: The pilot's five arms (D-63). Bare model ids: OpenAI and Anthropic route by their
-#: own naming convention, OpenRouter ids by their catalogue's ``org/model`` shape,
-#: Gemini by its ``gemini-`` prefix (see ``router._split_model``).
+#: The pilot's five arms (D-63), plus D-64's Round 2 arms. Bare model ids: OpenAI and
+#: Anthropic route by their own naming convention, OpenRouter ids by their catalogue's
+#: ``org/model`` shape, Gemini by its ``gemini-`` prefix (see ``router._split_model``).
+#: Round 2's two free OpenRouter models carry an explicit ``openrouter:`` prefix even
+#: though their ``org/model:free`` shape would already route there on its own — stated
+#: for clarity, since the ``:free`` suffix inside the id could otherwise be misread as
+#: this project's ``prefix:model`` routing syntax (``_split_model`` only treats the
+#: *first* colon that way, so ``openrouter:z-ai/glm-5.2:free`` correctly resolves to
+#: kind ``openrouter``, bare id ``z-ai/glm-5.2:free``).
 WRITERS: dict[str, str] = {
     "luna": "gpt-5.6-luna",
     "qwen": "qwen/qwen3.5-397b-a17b",
     "haiku": "claude-haiku-4-5",
     "gemini": "gemini-3.7-flash",
     "deepseek": "deepseek/deepseek-v4-pro",
+    # D-64 Round 2 arms.
+    "google": "gemini-3.8-flash",
+    "glm": "openrouter:z-ai/glm-5.2:free",
+    "nemotron": "openrouter:nvidia/nemotron-3-super-120b-a12b:free",
 }
 
 _GRADED_LEVELS = [
@@ -78,12 +88,36 @@ async def _run_examples(session: RunSession, words: list[str]) -> dict[str, obje
 
 
 async def _main(
-    arm: str, task: str, budget: float, concurrency: int, limit: int | None = None
+    arm: str,
+    task: str,
+    budget: float,
+    concurrency: int,
+    limit: int | None = None,
+    requests_per_minute: int | None = None,
+    max_tokens: int | None = None,
 ) -> None:
     writer = WRITERS[arm]
     cfg = load_config(budget_usd=budget)
     cfg.store.root = Path(f"data/sample-writers-{arm}")
     cfg.concurrency.workers = concurrency
+    if requests_per_minute is not None:
+        # D-64 Round 2: OpenRouter's free tier (":free" models) rate-limits well below
+        # this project's default 480/min, independently of any paid quota. Set from the
+        # CLI rather than baked into `ConcurrencyConfig`, since it is a property of the
+        # arm's provider tier, not of this pipeline.
+        cfg.concurrency.requests_per_minute = requests_per_minute
+    if max_tokens is not None:
+        # D-64 Round 2: both free arms are reasoning models that do not reliably honour
+        # `reasoning_effort="low"` (qwen's D-63 blowup was the same failure mode) —
+        # capping `max_tokens` bounds a single call's worst-case latency and cost
+        # instead of letting a hidden-reasoning blowup run for minutes. Also lowers
+        # `expected_output_tokens` proportionally so the budget reservation this policy
+        # makes per call does not itself starve dispatch (D-41's own reasoning, applied
+        # here rather than left at the much larger prose-stage default).
+        for stage in (StageName.RENDITIONS, StageName.EXAMPLES):
+            policy = cfg.policies[stage]
+            policy.max_tokens = max_tokens
+            policy.expected_output_tokens = min(policy.expected_output_tokens, max_tokens // 2)
     cfg.policies[StageName.RENDITIONS].model = writer
     cfg.policies[StageName.EXAMPLES].model = writer
     words = _headwords()
@@ -115,5 +149,27 @@ if __name__ == "__main__":
     parser.add_argument("--budget", type=float, default=0.75)
     parser.add_argument("--concurrency", type=int, default=8)
     parser.add_argument("--limit", type=int, default=None, help="Smoke-test on the first N words.")
+    parser.add_argument(
+        "--requests-per-minute",
+        type=int,
+        default=None,
+        help="Override ConcurrencyConfig.requests_per_minute (D-64: free-tier rate caps).",
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="Override RENDITIONS/EXAMPLES max_tokens (D-64: bound a reasoning blowup).",
+    )
     args = parser.parse_args()
-    asyncio.run(_main(args.arm, args.task, args.budget, args.concurrency, args.limit))
+    asyncio.run(
+        _main(
+            args.arm,
+            args.task,
+            args.budget,
+            args.concurrency,
+            args.limit,
+            args.requests_per_minute,
+            args.max_tokens,
+        )
+    )

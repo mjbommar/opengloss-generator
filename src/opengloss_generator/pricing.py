@@ -146,6 +146,27 @@ _ROWS: list[ModelPrice] = [
     # $0.075 per million tokens through 2026-12-31 — an exact match, so the OpenRouter
     # rate is also this table's direct-API rate.
     *_flat("gemini-3.7-flash", 0.75, 3.75, 0.075),
+    # --- Writer-diversity pilot Round 2 arms (D-64), Google and OpenRouter free tier ---
+    # Called direct via the Google API (GEMINI_API_KEY/GOOGLE_API_KEY), not OpenRouter.
+    # Published 2026-09-01, confirmed present on the Google API list and callable live
+    # (docs/WRITER-DIVERSITY.md Round 2). OpenRouter catalogue "google/gemini-3.8-flash",
+    # fetched 2026-09-03: prompt $0.00000075, completion $0.00000375, input_cache_read
+    # $0.000000075 per token — the same rate as gemini-3.7-flash above, so the direct
+    # Google price this project already cross-checked for that model is inferred to
+    # match here too rather than re-verified separately against ai.google.dev.
+    *_flat("gemini-3.8-flash", 0.75, 3.75, 0.075),
+    # OpenRouter catalogue "z-ai/glm-5.2:free", fetched 2026-09-03: prompt $0, completion
+    # $0 per token. Free-tier terms (OpenRouter's data-sharing/rate-cap policy for
+    # ":free" model variants, as of this fetch): prompts and completions sent to a
+    # ":free" endpoint may be logged/used by the upstream provider or OpenRouter for
+    # model improvement unless the account has opted out, and OpenRouter cross-account
+    # rate-limits ":free" models independently of any paid quota (observed cap in this
+    # pilot: see docs/WRITER-DIVERSITY.md Round 2 for the exact throttling behaviour hit).
+    *_flat("z-ai/glm-5.2:free", 0.0, 0.0, 0.0),
+    # OpenRouter catalogue "nvidia/nemotron-3-super-120b-a12b:free", fetched 2026-09-03:
+    # prompt $0, completion $0 per token. Same free-tier data-sharing/rate-cap caveat as
+    # z-ai/glm-5.2:free above.
+    *_flat("nvidia/nemotron-3-super-120b-a12b:free", 0.0, 0.0, 0.0),
 ]
 
 PRICE_TABLE: dict[tuple[str, ServiceTier], ModelPrice] = {

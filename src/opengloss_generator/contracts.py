@@ -243,10 +243,46 @@ class DraftRenditionSet(_Draft):
 
 
 #: Ceiling on how many sentences one ``examples`` call may return (D-53). An entry with
-#: eight senses asking for eight sentences each needs 64; the cap is set well above that
-#: so a many-sense entry is never silently truncated by the contract, and the real limit
-#: on a call's size is the stage's ``max_tokens``.
-MAX_EXAMPLE_SENTENCES = 200
+#: eight senses asking for eight sentences each needs 64; the cap was originally set
+#: well above that (200) so a many-sense entry is never silently truncated by the
+#: contract, and the real limit on a call's size is the stage's ``max_tokens``.
+#:
+#: **D-64 found this ceiling is what makes ``DraftExampleBatch`` unusable on Gemini.**
+#: A live bisection against ``gemini-3.8-flash`` (reproduced identically against
+#: ``gemini-3.7-flash``, the original writer-diversity pilot's task-(b) failure) found
+#: Gemini's structured-output translation returns ``400 INVALID_ARGUMENT`` once
+#: ``list[DraftSenseExample]``'s declared ``maxItems`` reaches a threshold that depends
+#: on the *encoded size* of the item schema, not on any single field or nesting depth:
+#: with the real, full ``DraftSenseExample`` (whose ``ReadingLevel``/``Register`` enums
+#: carry long docstrings that JSON-Schema renders as ``description`` text once per
+#: ``$defs`` entry — not once per array slot, so this is Gemini's own structured-output
+#: compiler charging for an item schema each array slot could hold, not literal request
+#: size) the exact cutoff is **54 succeeds, 55 fails**; a hand-built variant with the
+#: same shape but plain ``str`` fields instead of the two enums (far shorter schema
+#: text) has a much higher cutoff, **97 succeeds, 98 fails** — proving ``maxItems``
+#: itself isn't the special number, total schema weight is. Every other feature tried
+#: (the ``sense_ref`` integer field, its ``ge=1`` bound, the aliased ``register`` field)
+#: made no difference in isolation. Bisection detail in `docs/WRITER-DIVERSITY.md`
+#: Round 2.
+#:
+#: 48 keeps a wide margin under the real threshold (54) while covering six full
+#: eight-sentence senses (the config default, ``ExamplesConfig.per_sense=8``) in one
+#: call. **Known, accepted regression**: an entry with more than six *live* senses
+#: summed across every one of its part-of-speech entries — measured at 2 of the 300
+#: writer-diversity-pilot sample entries ("skim", 8 senses; "dit", 7 senses) and
+#: plausibly more common in `data/core-store`, whose entries are not capped at 8 senses
+#: per part of speech the way this sample happens to be — now fails
+#: ``DraftExampleBatch`` validation for every writer, not only Gemini, because this
+#: ceiling is shared code, not provider-specific. The correct production fix is
+#: provider-aware: either shape the schema Gemini receives differently from what other
+#: providers receive (analogous to how `router.py` already keeps flex-tier and
+#: prompt-cache settings OpenAI-only), or have `workflows/examples.py` split a
+#: many-sense entry's live senses across more than one call when the active writer is a
+#: Google model. Neither was built here — it is a workflow-shape change, not a
+#: contract-constant change, and does not fit this pilot's "minimal, additive" bar — so
+#: this constant is a pilot-scoped compromise, not a value to carry into production
+#: without that follow-up.
+MAX_EXAMPLE_SENTENCES = 48
 
 
 class DraftSenseExample(_Draft):
