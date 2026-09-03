@@ -18,6 +18,8 @@ import typer
 from opengloss_generator.audit import AuditReport, audit_store
 from opengloss_generator.config import AppConfig, load_config
 from opengloss_generator.errors import BudgetExceededError, OpenGlossError
+from opengloss_generator.export.pretrain import TEMPLATES as PRETRAIN_TEMPLATES
+from opengloss_generator.export.pretrain import export_pretrain
 from opengloss_generator.migrate import detect_version
 from opengloss_generator.migrate import from_v2 as migrate_from_v2
 from opengloss_generator.migrate import from_v13 as migrate_from_v13
@@ -1240,6 +1242,65 @@ def stats(store: _StoreOpt = None, config_path: _ConfigOpt = None) -> None:
             "renditions_by_target": by_level,
         }
     )
+
+
+@app.command("export-pretrain")
+def export_pretrain_cmd(
+    out: Annotated[Path, typer.Option("--out", help="JSONL output path.")],
+    templates: Annotated[
+        str | None,
+        typer.Option("--templates", help=f"Comma list, subset of {','.join(PRETRAIN_TEMPLATES)}."),
+    ] = None,
+    levels: Annotated[
+        str | None,
+        typer.Option("--levels", help="Comma list of reading levels (default: neutral)."),
+    ] = None,
+    per_entry: Annotated[
+        int | None,
+        typer.Option("--per-entry", help="Cap templates rendered per entry (default: all)."),
+    ] = None,
+    seed: Annotated[
+        int,
+        typer.Option("--seed", help="Seed for template mixing when --per-entry caps below all."),
+    ] = 0,
+    from_list: Annotated[
+        Path | None, typer.Option("--from-list", help="Restrict to these headwords.")
+    ] = None,
+    store: _StoreOpt = None,
+    config_path: _ConfigOpt = None,
+) -> None:
+    """Serialise entries into natural pretraining documents (F9, D-61).
+
+    Four templates -- dictionary, thesaurus, encyclopedia, usage note -- read straight
+    off an entry's existing fields into plain prose/light markdown, one JSONL row per
+    ``(template, level)`` document. Makes no model calls and never writes to the store.
+    """
+    if per_entry is not None and per_entry < 1:
+        message = "--per-entry must be at least 1"
+        raise typer.BadParameter(message)
+    selected_templates = (
+        [token.strip() for token in templates.split(",") if token.strip()]
+        if templates
+        else list(PRETRAIN_TEMPLATES)
+    )
+    unknown = sorted(set(selected_templates) - set(PRETRAIN_TEMPLATES))
+    if unknown:
+        message = f"unknown template(s) {unknown}; choose from {list(PRETRAIN_TEMPLATES)}"
+        raise typer.BadParameter(message)
+    selected_levels = _parse_levels(levels) or [ReadingLevel.NEUTRAL]
+    cfg = _build_config(config_path, store, None, None)
+    lexeme_store = LexemeStore(cfg.store)
+    lexeme_ids = _read_word_list(from_list) if from_list is not None else None
+    summary = export_pretrain(
+        lexeme_store,
+        out,
+        templates=selected_templates,
+        levels=selected_levels,
+        per_entry=per_entry,
+        seed=seed,
+        lexeme_ids=lexeme_ids,
+    )
+    _echo_summary({"out": str(out), **summary.as_dict()})
 
 
 @app.command()

@@ -66,6 +66,7 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Resolve | `resolve` | Fill in `sense_id` / `confidence` on relation targets whose lexeme already exists in the store; targets absent from the store stay unresolved at zero cost. |
 | Retrofit | `retrofit` | Run `classify_kind`, `tag_domain`, and/or `spans` over an existing store; idempotent, `--only` selects one pass. |
 | Migrate | `migrate` | Upgrade a v1.3 or v2.0 payload to schema v3 via `migrate.from_v13` / `migrate.from_v2`; never renumbers a sense. |
+| Export pretraining docs | `export-pretrain` | Serialise each entry into up to four plain-prose documents (dictionary, thesaurus, encyclopedia, usage note) as JSONL; `--levels`/`--templates`/`--per-entry`/`--seed` select what to render and how the corpus mixes. Free; makes no model calls (see `docs/RETRIEVAL-DATA.md`). |
 
 ## Cost defaults
 

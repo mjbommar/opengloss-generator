@@ -2366,3 +2366,87 @@ for a no-op change.
 No model was called and no money was spent: this branch adds storage, not a stage.
 Nothing here touches `data/core-store` or `runs/`; `data/sample-300` was read only.
 Tests: **+31** (`tests/test_retrieval_schema.py`).
+
+## D-61 (2026-09-03) — `export-pretrain`: four templates read straight off the entry, no model call
+
+**Context.** F9 in `docs/RETRIEVAL-DATA-PLAN.md` wants pretraining tokens for
+`../opengloss-embedding`, and an OpenGloss entry already holds four kinds of reference
+prose a model call would otherwise have to invent: the dictionary entry itself (POS,
+numbered senses, examples), a thesaurus entry (the sense's `synonym`/`antonym`/
+`hypernym`/`see_also` relations), an encyclopedia article (the `encyclopedia` and
+`lexical_explanation` renditions plus `etymology`), and a usage note (register variants
+of the gloss, plus D-62's `Lexeme.contrasts` when F5 has filled them). This is free
+because it is pure serialisation.
+
+**Decision.** `export/pretrain.py` renders each template as plain prose/light markdown
+(`#`/`##` headings, `-` example bullets, no JSON/YAML, no special tokens) and never
+emits a section with nothing in it.
+
+1. **Retired senses are invisible.** Every renderer that touches senses filters
+   `sense.retired` before it looks at anything else, so a retired sense contributes no
+   gloss, no example, no relation, and no register variant to any of the four
+   templates — the same rule the plan states for every retrieval-data export.
+2. **A section with nothing to say is left out, not emitted empty.** The thesaurus
+   template skips a sense with none of the four relation types; the encyclopedia
+   template's three `##` sections (`Overview`/`Etymology`/`Why This Word`) appear only
+   when the underlying field has text; the usage note's per-sense register block and
+   its `## Related Terms` block each appear only when at least one register variant or
+   contrast actually rendered. A whole template is skipped for an entry with nothing at
+   all for it to say (tested directly: a sparse entry with only a canonical gloss
+   renders `dictionary` and nothing else).
+3. **`--levels` selects reading levels; a miss falls back to neutral and says so.**
+   Every leveled lookup tries `(level, plain)` (or, for a usage-note register line,
+   `(level, register)`) first and falls back to the canonical `(neutral, plain)` (or
+   `(neutral, register)`) text when that specific rendition is absent. The returned
+   record's `level_used` is the requested level only when *every* section of that
+   document matched exactly; if any section fell back, the whole document reports
+   `level_used="neutral"` — a reader should not have to guess which paragraph of a
+   mixed document is the one that got simplified.
+4. **`--per-entry`/`--seed` mix templates across the corpus, not within one call.**
+   Which of an entry's *available* templates it gets (when `--per-entry` asks for fewer
+   than are available) is drawn once per entry from `random.Random(f"{seed}:
+   {lexeme_id}")` — the same seeding convention `workflows/qa.py`'s stratified sample
+   and `workflows/walk.py` already use — so the choice is deterministic per `(seed,
+   entry)` and independent across entries, and a corpus built with a small
+   `--per-entry` still mixes templates rather than always keeping the same subset.
+   Availability itself is checked once, at `neutral`, since every renderer's canonical
+   fallback guarantees that whatever content exists at all is visible there; this keeps
+   the template draw one decision per entry rather than one per `(entry, level)` pair.
+5. **Ids are derived, like every other id in this project (D-1):**
+   `<lexeme_id>#pretrain-<template>-<level>`. Entries are visited in `lexeme_id` order,
+   not on-disk shard order, so the JSONL is byte-identical across machines for the same
+   inputs — verified directly (`test_export_pretrain_is_deterministic_across_runs`
+   writes the same store twice and diffs the files).
+
+**Measured on `data/sample-300`** (300 entries, all four templates,
+`--levels neutral,grade_5,college`): 3,600 documents, 1,122,835 words total,
+2,392 exact-level documents and 1,208 neutral-fallback documents.
+
+| | dictionary | thesaurus | encyclopedia | usage_note |
+|---|---:|---:|---:|---:|
+| documents | 900 | 900 | 900 | 900 |
+| words | 114,226 | 130,083 | 588,513 | 290,013 |
+
+| | neutral | grade_5 | college |
+|---|---:|---:|---:|
+| documents | 1,200 | 1,200 | 1,200 |
+| words | 393,378 | 349,142 | 380,315 |
+
+Encyclopedia carries most of the corpus's words (the `encyclopedia`/`etymology`/
+`lexical_explanation` fields are already full paragraphs; the other three templates
+serialise short, structured facts). `data/sample-300` is a fixture shared across every
+retrieval-data feature's worktree in this build round; F5 (`contrasts`) was writing to
+it concurrently while this feature's own smoke run was taken, so the exact word counts
+above are a snapshot, not a value anything downstream should assume is reproducible
+bit-for-bit against a store that keeps changing underneath it -- only the *shape* of the
+numbers (encyclopedia dominant, near-even across templates otherwise, roughly a third
+of documents falling back to neutral because grade_5/college renditions are not
+universal across `data/sample-300`) is the claim.
+
+**Consequence.** `export/__init__.py` gets a two-line shared docstring only (F1/F3/F4
+add their own submodules beside `pretrain.py` there without touching this file again);
+`cli.py` gets one command, `export-pretrain`, registered the same free, no-`RunSession`
+way `audit`/`stats`/`show` already are. No model was called and no money was spent.
+Nothing here touches `data/core-store` or `runs/`; `data/sample-300` was read, and
+written only by this feature's own `--out` path under `runs/`, never back into the
+store. Tests: **+24** (`tests/test_export_pretrain.py`).
