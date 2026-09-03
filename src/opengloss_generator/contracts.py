@@ -248,6 +248,9 @@ class DraftRenditionSet(_Draft):
 #: contract, and the real limit on a call's size is the stage's ``max_tokens``.
 #:
 #: **D-64 found this ceiling is what makes ``DraftExampleBatch`` unusable on Gemini.**
+#: The cap stays at 200 on the integration branch: lowering it to 32 (the pilot's
+#: workaround) made 7.3% of sample entries fail for *every* writer. A Gemini writer
+#: needs a provider-aware split of the batch instead (open item in D-64).
 #: A live bisection against ``gemini-3.8-flash`` (reproduced identically against
 #: ``gemini-3.7-flash``, the original writer-diversity pilot's task-(b) failure) found
 #: Gemini's structured-output translation returns ``400 INVALID_ARGUMENT`` once
@@ -292,7 +295,7 @@ class DraftRenditionSet(_Draft):
 #: call when the active writer is a Google model. Neither was built here — it is a
 #: workflow-shape change, not a contract-constant change, and does not fit this
 #: pilot's "minimal, additive" bar.
-MAX_EXAMPLE_SENTENCES = 32
+MAX_EXAMPLE_SENTENCES = 200
 
 
 class DraftSenseExample(_Draft):

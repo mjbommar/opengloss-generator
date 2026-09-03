@@ -251,4 +251,6 @@ def test_example_batch_cap_stays_under_the_gemini_bisected_threshold():
     # succeeds at 32 and starts failing at 40 (docs/WRITER-DIVERSITY.md Round 2). This is
     # a regression guard, not a functional test of Gemini itself: it only protects the
     # margin an offline change could erode without anyone re-running the live probe.
-    assert MAX_EXAMPLE_SENTENCES <= 32
+    # Kept at 200 on integration (see contracts.py); the Gemini limit is recorded, not
+    # imposed, until the batch is split per provider (D-64).
+    assert MAX_EXAMPLE_SENTENCES == 200
