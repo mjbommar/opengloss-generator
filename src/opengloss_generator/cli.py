@@ -18,6 +18,7 @@ import typer
 from opengloss_generator.audit import AuditReport, audit_store
 from opengloss_generator.config import AppConfig, load_config
 from opengloss_generator.errors import BudgetExceededError, OpenGlossError
+from opengloss_generator.export.pairs import export_pairs as _export_pairs
 from opengloss_generator.migrate import detect_version
 from opengloss_generator.migrate import from_v2 as migrate_from_v2
 from opengloss_generator.migrate import from_v13 as migrate_from_v13
@@ -1238,6 +1239,50 @@ def stats(store: _StoreOpt = None, config_path: _ConfigOpt = None) -> None:
             "edges": edges,
             "senses_per_entry": round(senses / entries, 3) if entries else 0.0,
             "renditions_by_target": by_level,
+        }
+    )
+
+
+@app.command("export-pairs")
+def export_pairs_cmd(
+    out: Annotated[Path, typer.Option("--out", help="JSONL output path.")],
+    from_list: Annotated[
+        Path | None,
+        typer.Option("--from-list", help="Restrict the export to these headwords."),
+    ] = None,
+    easy_negatives: Annotated[
+        int,
+        typer.Option(
+            "--easy-negatives",
+            help="Sampled cross-headword, same-domain negatives per live sense (0 disables).",
+        ),
+    ] = 0,
+    seed: Annotated[int, typer.Option("--seed", help="Seed for easy-negative sampling only.")] = 0,
+    store: _StoreOpt = None,
+    config_path: _ConfigOpt = None,
+) -> None:
+    """Export WiC-style and positive pairs mined from stored senses and examples (F1).
+
+    Free: makes no model call. For each live sense, every pair of its own example
+    renditions is a same-sense positive; one representative example from each pair of a
+    headword's live senses is a hard negative; a representative example paired with its
+    sense's canonical gloss, or with the entry's canonical encyclopedia rendition, is
+    also a positive. ``--easy-negatives`` additionally samples cross-headword,
+    same-domain negatives. Deterministic; ``--seed`` governs only that sampling.
+    """
+    cfg = _build_config(config_path, store, None, None)
+    lexeme_store = LexemeStore(cfg.store)
+    lexeme_ids = _read_word_list(from_list) if from_list is not None else None
+    outcome = _export_pairs(
+        lexeme_store, out, lexeme_ids=lexeme_ids, easy_negatives=easy_negatives, seed=seed
+    )
+    _echo_summary(
+        {
+            "store": str(lexeme_store.root),
+            "out": str(out),
+            "seed": seed,
+            "easy_negatives": easy_negatives,
+            **outcome.as_dict(),
         }
     )
 
