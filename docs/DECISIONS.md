@@ -2366,3 +2366,90 @@ for a no-op change.
 No model was called and no money was spent: this branch adds storage, not a stage.
 Nothing here touches `data/core-store` or `runs/`; `data/sample-300` was read only.
 Tests: **+31** (`tests/test_retrieval_schema.py`).
+
+## D-54 (2026-09-03) — `export-pairs`: WiC pairs and doc2query-shaped positives, free
+
+**Context.** `docs/RETRIEVAL-DATA-PLAN.md` (F1) names the target consumer as
+`../opengloss-embedding`, and observes that OpenGloss's sense-tagged, graph-linked entries make the
+expensive part of embedding/reranker training data — hard negatives, paired positives — free:
+every live sense already carries example renditions written *against that sense specifically*
+(D-53), a gloss, and often an encyclopedia article, which is exactly the supervision a WiC
+(word-in-context) task or an MS MARCO-style positive pair is normally paid an annotator or another
+model to produce.
+
+**Decision.** `src/opengloss_generator/export/pairs.py` (new `export/` package;
+`export/__init__.py` is a bare docstring, kept minimal so sibling exporters — F3/F4's triples and
+qrels, F9's pretrain serialiser — add modules rather than edit this one) reads a store and writes
+one JSONL record per pair, five `PairKind`s:
+
+* `wic_positive` (label 1) — every pairing of one live sense's own example renditions (not just
+  the canonical one; a sense with `k` examples gives `C(k, 2)` pairs).
+* `wic_hard_negative` (label 0) — one representative example from each pair of an entry's own live
+  senses: same surface form, different meaning.
+* `wic_easy_negative` (label 0, opt-in via `--easy-negatives N`, default 0) — one representative
+  example from each of two live senses sharing a domain leaf but belonging to different headwords.
+  The only sampled part of the export: each source sense seeds its own `random.Random(f"{seed}:
+  {domain}:{sense_id}")`, so a draw never depends on iteration order, and the whole file is
+  reproducible byte-for-byte for a fixed `--seed` (verified: two runs over `data/sample-300`
+  diffed identical).
+* `example_gloss` / `example_encyclopedia` (label 1) — a sense's representative example paired
+  with its own canonical gloss, or with its entry's canonical encyclopedia rendition when one
+  exists.
+
+"Representative example" is a sense's canonical (neutral, plain) example if it has one, else its
+first example in stored order. Only live senses of a non-retired entry ever appear in a pair —
+retired senses, and entries whose own `status` is `retired`, contribute nothing on either side,
+per the plan's non-negotiable. Output is sorted by `lexeme_id`, never by filesystem/store
+iteration order, so the file is deterministic independent of `--seed` except for the easy-negative
+rows. The record schema is the plan's ten named fields (`headword, sense_a, sense_b, text_a,
+text_b, span_a, span_b, label, level_a, level_b`) plus two additive fields the plan's prose
+requires but its field list didn't have room for: `headword_b` (differs from `headword` only for
+`wic_easy_negative`) and `kind` (the `PairKind`, i.e. the "negative kind" the CLI summary reports
+by). Full schema and one real record are in `docs/RETRIEVAL-DATA.md`.
+
+CLI: `opengloss export-pairs --store S --out pairs.jsonl [--from-list L] [--easy-negatives N]
+[--seed N]`, modeled on the free, no-`RunSession` shape of `audit`/`stats` rather than the
+budget/ledger machinery every model-calling command carries, since this makes no model call at
+all. Prints a JSON summary of `entries_scanned`, `entries_with_pairs`, `pairs_written`, and counts
+`by_label` and `by_kind`.
+
+**Measured, `data/sample-300` (300 entries, real run, no model call, `data/core-store` never
+touched):**
+
+Without `--easy-negatives` (default 0):
+
+```json
+{
+  "entries_scanned": 300, "entries_with_pairs": 300, "pairs_written": 22684,
+  "by_label": {"0": 1836, "1": 20848},
+  "by_kind": {
+    "example_encyclopedia": 1040, "example_gloss": 1040,
+    "wic_hard_negative": 1836, "wic_positive": 18768
+  }
+}
+```
+
+With `--easy-negatives 3 --seed 0`:
+
+```json
+{
+  "entries_scanned": 300, "entries_with_pairs": 300, "pairs_written": 25586,
+  "by_label": {"0": 4738, "1": 20848},
+  "by_kind": {
+    "example_encyclopedia": 1040, "example_gloss": 1040, "wic_easy_negative": 2902,
+    "wic_hard_negative": 1836, "wic_positive": 18768
+  }
+}
+```
+
+All 300 sample entries (285 of them multi-sense) contributed at least one pair; the mean is ~75-85
+pairs per entry, dominated by `wic_positive` because sample-300 entries typically carry 5-9 example
+renditions per sense across reading levels.
+
+**Consequence.** Tests: **+21** (`tests/test_export_pairs.py`), fully offline like `test_audit.py`
+— no `tests/conftest.py` change, since there is no model call and therefore no payload to script.
+One additive import and one command registration in `cli.py`; no other shared file touched. Open
+question left for the embedding project, not this feature: whether `wic_hard_negative` should be
+capped per entry (an entry with many live senses gives `C(k, 2)` hard negatives, which can
+outweigh its `wic_positive` count for a highly polysemous headword) — not capped here, since the
+plan asks for "all pairs" and a downstream consumer can always subsample a JSONL file for free.
