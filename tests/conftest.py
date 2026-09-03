@@ -1269,3 +1269,105 @@ def _contrasts_payload(prompt: str) -> dict[str, Any]:
 
 
 _PAYLOADS.update({"_draftcontrasts": _contrasts_payload})
+
+# workflows/queries.py contracts (D-55)
+# --------------------------------------------------------------------------------------
+#
+# Appended after every earlier block for the reason each of them gives: several modules are
+# being edited concurrently on this branch, and an append-only block at the end of this file
+# cannot conflict with any of that. ``_payload_for`` looks its builder up at call time, so
+# registering here works exactly as an inline entry would.
+#
+# The payload is a function of the *count the prompt asks for* and of the headword, because
+# that is the shape the stage's one-call-per-sense design needs: the count varies with
+# ``--per-sense`` and a test has to be able to script an acceptable set, an exact repeat, an
+# over-length query, a blank one and a surplus one, all inside a single answer.
+
+#: The scripted acceptable query. Deliberately does **not** contain the headword or any form
+#: ``spans.generate_forms`` would produce from one, so the stage's headword-free measurement
+#: has a known answer, and ``index`` keeps every query in one answer distinct.
+QUERY_TEXT = "how to reach the {index} idea without naming it"
+
+#: The scripted query that *does* name the headword, used for slot 0 of every answer (so
+#: every sense stores exactly one lexical query) and for every slot of
+#: :data:`QUERIES_LEXICAL_HEADWORD`.
+QUERY_LEXICAL = "what {headword} means in case {index}"
+
+#: Over the stage's 200-character ceiling but inside the contract's own 400, which is what
+#: makes the length check a free post-check rather than a validation failure.
+QUERY_TOO_LONG = (
+    "a query about the thing that goes on and on and on well past the point where anyone "
+    "would have stopped typing it into a search box and yet it keeps going for a while "
+    "longer still because that is the entire point of this particular test case here"
+)
+
+#: A headword whose scripted answer carries one of each defect: slot 1 repeats slot 0
+#: verbatim, slot 2 is over the character ceiling, slot 3 is whitespace only, and every
+#: other slot is acceptable.
+QUERIES_MIXED_HEADWORD = "mixedqueryword"
+
+#: A headword every one of whose scripted queries names it, so a test can watch the
+#: headword-free measurement bottom out.
+QUERIES_LEXICAL_HEADWORD = "lexicalqueryword"
+
+#: A headword whose scripted answer returns two more queries than were asked for.
+QUERIES_SURPLUS_HEADWORD = "surplusqueryword"
+
+_QUERY_COUNT_RE = re.compile(r"Write exactly (\d+) queries")
+_QUERY_STYLES = (
+    "keyword",
+    "question",
+    "conversational",
+    "constraint",
+    "role",
+    "example_based",
+    "step_by_step",
+    "directive",
+)
+
+
+def _query_text(headword: str, index: int) -> str:
+    """Return the scripted query for one slot of one answer.
+
+    Args:
+        headword: The sense's headword, which drives which defects are scripted.
+        index: The query's position in the answer.
+
+    Returns:
+        One query, acceptable unless a marker headword scripts otherwise.
+    """
+    if headword == QUERIES_MIXED_HEADWORD:
+        if index == 1:  # an exact repeat of slot 0, which is already accepted
+            return QUERY_LEXICAL.format(headword=headword, index=0)
+        if index == 2:
+            return QUERY_TOO_LONG
+        if index == 3:
+            return "   "
+    if headword == QUERIES_LEXICAL_HEADWORD or index == 0:
+        return QUERY_LEXICAL.format(headword=headword, index=index)
+    return QUERY_TEXT.format(index=index)
+
+
+def _query_set_payload(prompt: str) -> dict[str, Any]:
+    """Write the number of queries the prompt asked for, one per style in turn.
+
+    The count comes out of the prompt rather than being fixed here, so this payload asserts
+    the stage still states its own ``per_sense`` in the volatile half where a cache-safe
+    prompt has to keep it.
+    """
+    headword = _headword(prompt)
+    match = _QUERY_COUNT_RE.search(prompt)
+    wanted = int(match.group(1)) if match else 12
+    count = wanted + 2 if headword == QUERIES_SURPLUS_HEADWORD else wanted
+    return {
+        "queries": [
+            {
+                "text": _query_text(headword, index),
+                "style": _QUERY_STYLES[index % len(_QUERY_STYLES)],
+            }
+            for index in range(count)
+        ]
+    }
+
+
+_PAYLOADS.update({"_draftqueryset": _query_set_payload})

@@ -72,6 +72,7 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Export qrels | `export-qrels` | TREC-style graded qrels (`qrels.trec`), a `docs.jsonl` corpus, and a listwise JSONL, graded 3 (own sense) down to 0 (unrelated) from the same graph. Free; deterministic. See `docs/RETRIEVAL-DATA.md`. |
 | Export pretraining docs | `export-pretrain` | Serialise each entry into up to four plain-prose documents (dictionary, thesaurus, encyclopedia, usage note) as JSONL; `--levels`/`--templates`/`--per-entry`/`--seed` select what to render and how the corpus mixes. Free; makes no model calls (see `docs/RETRIEVAL-DATA.md`). |
 | Contrast | `contrasts` | One "X vs Y" paragraph per synonym / antonym / confusable edge, saying how the two terms actually differ, plus a verdict on whether they are related the way the edge claims. One call per entry covers up to eight pairs; a pair whose two ends are both in the store is written once, on the smaller end; verdicts are recorded, never acted on (D-50). |
+| Queries (doc2query) | `queries` | One call per live sense writes N synthetic search queries across the eight `QueryStyle` registers, with the entry's other senses in the prompt so the queries discriminate between them and at least half of them asked to describe the meaning without naming the headword. Duplicates and over-long queries are dropped for free; the achieved headword-free share is reported. Idempotent per sense (D-55). |
 
 ## Cost defaults
 

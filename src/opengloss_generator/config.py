@@ -204,14 +204,21 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
         ),
         # The three retrieval-data stages (D-62). Registered here because
         # `_every_stage_has_a_policy` requires one per `StageName` member and the members
-        # land with the schema, ahead of the stages themselves; the models follow the
-        # plan's table (nano for the short, structural query list; luna for the two prose
-        # stages) and every `expected_output_tokens` below is an **estimate**, not a
-        # measurement. D-41 wants the reservation set from measured output, so F2, F5 and
-        # F6 each replace their own number from their pilot run and own the policy from
-        # then on.
+        # land with the schema, ahead of the stages themselves; `contrasts` and `qa_pairs`
+        # follow the plan's table and their `expected_output_tokens` are still
+        # **estimates**, which F5 and F6 replace from their own pilots.
+        #
+        # `queries` is measured (D-55). Both candidates were piloted over 60 real entries
+        # of `data/sample-300` at 12 queries per sense, and luna won on both axes at once:
+        # $0.000245 per sense against nano's $0.000408, because nano spent 544 output
+        # tokens per call to luna's 330 and reasoning tokens are billed as output; and on
+        # quality, 78.2% of luna's stored queries avoided naming their own headword
+        # against nano's 58.5%, with nano additionally leaking its own style label into
+        # 8.1% of query texts. So this is the one nano stage the plan proposed that ships
+        # on luna. `expected_output_tokens` is the measured mean of 330 rounded up (D-41);
+        # the largest single answer measured 602.
         StageName.QUERIES: ModelPolicy(
-            model=nano, reasoning_effort="low", max_tokens=4096, expected_output_tokens=500
+            model=luna, reasoning_effort="low", max_tokens=4096, expected_output_tokens=400
         ),
         # `expected_output_tokens` here is now **measured**, replacing D-62's placeholder
         # (D-57's pilot, 2026-09-03: 37 calls over `data/sample-300`, mean 202 output

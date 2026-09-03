@@ -64,6 +64,8 @@ from opengloss_generator.workflows.examples import plan_examples, run_examples
 from opengloss_generator.workflows.generate import EntrySpec, generate_entry
 from opengloss_generator.workflows.graph_hygiene import run_graph_hygiene
 from opengloss_generator.workflows.qa import QAOutcome, run_qa, stratified_sample
+from opengloss_generator.workflows.queries import DEFAULT_PER_SENSE as QUERIES_DEFAULT_PER_SENSE
+from opengloss_generator.workflows.queries import SenseReport, plan_queries, run_queries
 from opengloss_generator.workflows.relation_hygiene import run_relation_hygiene
 from opengloss_generator.workflows.resolve import resolve_entry, resolve_store
 from opengloss_generator.workflows.retrofit import RetrofitPass, run_retrofit
@@ -1705,6 +1707,150 @@ def _run(coro: Coroutine[Any, Any, dict[str, object]]) -> dict[str, object]:
     except OpenGlossError as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
+
+
+_DRY_RUN_QUERIES_INPUT_TOKEN_ESTIMATE = 2270
+
+
+_DRY_RUN_QUERIES_CACHED_INPUT_TOKEN_ESTIMATE = 2000
+
+
+_DRY_RUN_QUERIES_OUTPUT_TOKEN_ESTIMATE = 330
+
+
+def _queries_dry_run_estimate(
+    store: LexemeStore, words: Sequence[str], per_sense: int, cfg: AppConfig
+) -> dict[str, object]:
+    """Plan a ``queries`` sweep without calling a model, and price the plan.
+
+    The plan itself is free and exact — ``workflows.queries.plan_queries`` reads each
+    entry's live senses and their D-47 markers — so ``senses_due`` and ``queries_planned``
+    are counts, not guesses. Only the money is estimated, from the measured per-call means
+    above.
+
+    Args:
+        store: The store to read entries from.
+        words: The ids the sweep would visit.
+        per_sense: How many queries each due sense would be asked for.
+        cfg: The run configuration, for the ``queries`` model policy.
+
+    Returns:
+        Extra summary fields describing the plan and its estimated cost.
+    """
+    scanned = 0
+    entries_due = 0
+    senses = 0
+    for word in words:
+        entry = store.read(word)
+        if entry is None:
+            continue
+        scanned += 1
+        plan = plan_queries(entry, per_sense)
+        if not plan.due:
+            continue
+        entries_due += 1
+        senses += plan.senses
+
+    policy = cfg.policy(StageName.QUERIES)
+    per_call = estimate_cost(
+        policy.model,
+        input_tokens=_DRY_RUN_QUERIES_INPUT_TOKEN_ESTIMATE,
+        cached_input_tokens=_DRY_RUN_QUERIES_CACHED_INPUT_TOKEN_ESTIMATE,
+        output_tokens=_DRY_RUN_QUERIES_OUTPUT_TOKEN_ESTIMATE,
+        tier=policy.service_tier,
+    )
+    return {
+        "entries_scanned": scanned,
+        "entries_due": entries_due,
+        "senses_due": senses,
+        "queries_planned": senses * per_sense,
+        "estimated_calls": senses,
+        "estimated_cost_usd": round(per_call.total_usd * senses, 6),
+        "note": "estimate only; --dry-run makes no model calls",
+    }
+
+
+@app.command()
+def queries(
+    from_list: Annotated[
+        Path | None,
+        typer.Option("--from-list", help="Write queries for every headword in this file."),
+    ] = None,
+    all_entries: Annotated[
+        bool, typer.Option("--all", help="Write queries for every entry in the store.")
+    ] = False,
+    limit: Annotated[int | None, typer.Option("--limit", help="Cap entries visited.")] = None,
+    offset: Annotated[int, typer.Option("--offset", help="Skip this many entries.")] = 0,
+    per_sense: Annotated[
+        int | None,
+        typer.Option("--per-sense", help="Queries per sense (default 12). Changing it re-runs."),
+    ] = None,
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+    budget: _BudgetOpt = None,
+    concurrency: _ConcurrencyOpt = None,
+    dry_run: _DryRunOpt = False,
+) -> None:
+    """Write synthetic retrieval queries for every live sense (D-55).
+
+    One call per sense produces N queries spanning the eight `QueryStyle` registers — the
+    search a real user would type that this sense's gloss answers — with the entry's other
+    senses in the prompt so the queries discriminate between them, and with at least half
+    of them asked to describe the meaning without naming the headword. Duplicate and
+    over-long queries are dropped and counted; the achieved headword-free share and the
+    style histogram are reported. Idempotent per sense: an unchanged gloss costs $0, and a
+    rewritten one earns exactly one more call, bounded at two (D-47).
+    """
+    if (from_list is not None) == all_entries:
+        message = "pass exactly one of --from-list or --all"
+        raise typer.BadParameter(message)
+    cfg = _build_config(config_path, store, budget, concurrency, dry_run)
+    wanted = QUERIES_DEFAULT_PER_SENSE if per_sense is None else per_sense
+
+    async def _main() -> dict[str, object]:
+        async with RunSession(cfg, install_signal_handler=True) as session:
+            words = _batch_targets(session, from_list, all_entries, limit, offset)
+            if cfg.dry_run:
+                session.stop_reason = "dry_run"
+                extra = _queries_dry_run_estimate(session.store, words, wanted, cfg)
+                return session.summary(**extra).as_dict()
+
+            async def emit(report: SenseReport) -> None:
+                # One ledger record per model call, which is one per sense: the sweep's
+                # own handler owns its ledger emission (``runner.run_pool``), and this is
+                # the record a later run reads back to set `expected_output_tokens` from
+                # measured output rather than a guess (D-41).
+                await session.emit(
+                    session.record_for(
+                        "queries",
+                        report.sense_id,
+                        report.outcome,
+                        cost_usd=report.cost_usd,
+                        input_tokens=report.input_tokens,
+                        cached_input_tokens=report.cached_input_tokens,
+                        output_tokens=report.output_tokens,
+                        detail={
+                            "stored": report.stored,
+                            "rejected": report.rejected,
+                            "with_headword": report.with_headword,
+                        },
+                    )
+                )
+
+            outcome = await run_queries(
+                session.store,
+                session.stages,
+                lexeme_ids=words,
+                per_sense=wanted,
+                workers=cfg.concurrency.workers,
+                stop_event=session.stop_event,
+                on_sense=emit,
+            )
+            if outcome.stopped_reason is not None:
+                session.stop_reason = outcome.stopped_reason
+            return session.summary(**outcome.as_dict()).as_dict()
+
+    _echo_summary(_run(_main()))
 
 
 if __name__ == "__main__":  # pragma: no cover
