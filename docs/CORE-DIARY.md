@@ -1168,3 +1168,14 @@ records `p100` precedes `p2` and the wrong record was taken as latest. Effect: e
 with 100+ provenance records were re-judged on every sweep (part of why validity pass
 2 spent $8 re-judging). New `Lexeme.provenance_in_order()`; eight lookups switched;
 regression test.
+
+**18:20 — filler rewrite (D-66, merged):** `qc filler --fields examples` calibrated
+read-only on the full store (1,228,673 example renditions): the plan's thresholds flag
+3.7%, the chosen defaults (4-gram 0.025%, opener 0.25%, min count 5) flag **6.5%**,
+with a legible top-25 ("the museum displayed a", "as a hereditary surname"; opener
+"after the" on 0.9% of all example sentences). New content-hygiene step
+`filler_examples` rewrites flagged examples naming the phrase to avoid; refuses
+rewrites that drop the headword or collide with a sibling. Pilot: 726 flagged of
+9,146, 708 rewritten, 18 refused, **$0.0000534/rewrite**; idempotent on rerun. Queued
+on the store after the retag re-judge: reconcile → graph-hygiene → re-judge → filler
+flag + rewrite (cap $6.5) → re-judge → audit.
