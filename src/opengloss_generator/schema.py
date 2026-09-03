@@ -555,6 +555,11 @@ class QAFlag(StrEnum):
     # A grade_1 or grade_5 rendition too many of whose words are not on the familiar-word
     # list, whatever its Flesch-Kincaid grade says (D-51).
     OG_HARD_VOCABULARY = "og.hard_vocabulary"
+    # An example or encyclopedia rendition sharing an over-threshold 4-gram or sentence
+    # opener with too much of the rest of the corpus — `qc filler`'s corpus-level filler
+    # detector (D-60). Value has no `og.` prefix so it matches the member landing on
+    # `retrieval/schema` byte for byte and the merge is trivial.
+    OG_FILLER = "og_filler"
 
 
 class _Base(BaseModel):

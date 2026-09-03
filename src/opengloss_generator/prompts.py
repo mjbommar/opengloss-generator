@@ -72,7 +72,7 @@ __all__ = [
     "build_vocabulary_feedback",
 ]
 
-PROMPT_VERSION = "7"
+PROMPT_VERSION = "8"
 
 # ``(sense_ref, part of speech, canonical gloss, one existing example)`` for one live
 # sense shown to the example-writing stage. ``sense_ref`` is the number the sense is
@@ -742,9 +742,9 @@ with, or requiring cultural knowledge it never supplies.
   * `off_topic` — content that is not about this headword.
   * `other` — a real defect none of the above names; say what it was in `notes`.
   * `og.headword_initial`, `og.artifact_relation`, `og.readability_miss`, \
-`og.duplicate_gloss`, `og.headword_absent`, `og.hard_vocabulary` — project-specific \
-conditions this pipeline detects deterministically. Do not use them; they are listed \
-only so you recognise them where they are already present.
+`og.duplicate_gloss`, `og.headword_absent`, `og.hard_vocabulary`, `og_filler` — \
+project-specific conditions this pipeline detects deterministically. Do not use them; \
+they are listed only so you recognise them where they are already present.
 
 `notes` — at most one or two sentences, and only when something needed saying that no \
 field above could carry. An empty string is the normal answer.
