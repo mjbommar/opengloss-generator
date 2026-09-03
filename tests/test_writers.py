@@ -245,9 +245,10 @@ def test_bare_openrouter_free_tier_id_breaks_the_price_gate():
 
 
 def test_example_batch_cap_stays_under_the_gemini_bisected_threshold():
-    # D-64: a live bisection against gemini-3.8-flash found list[DraftSenseExample]'s
-    # declared maxItems succeeds at 54 and fails (400 INVALID_ARGUMENT) at 55 and above
-    # (docs/WRITER-DIVERSITY.md Round 2). This is a regression guard, not a functional
-    # test of Gemini itself: it only protects the margin an offline change could erode
-    # without anyone re-running the live probe.
-    assert MAX_EXAMPLE_SENTENCES <= 54
+    # D-64: a live bisection against gemini-3.8-flash, using the real DraftExampleBatch
+    # contract and the real D-53 prompt through the real NativeOutput(strict=True) call
+    # shape stages.py actually uses, found list[DraftSenseExample]'s declared maxItems
+    # succeeds at 32 and starts failing at 40 (docs/WRITER-DIVERSITY.md Round 2). This is
+    # a regression guard, not a functional test of Gemini itself: it only protects the
+    # margin an offline change could erode without anyone re-running the live probe.
+    assert MAX_EXAMPLE_SENTENCES <= 32
