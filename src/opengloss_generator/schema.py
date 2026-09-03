@@ -1487,6 +1487,22 @@ class Lexeme(_Base):
         """
         return cls(lexeme_id=slugify(headword), headword=headword, kind=kind, **kwargs)
 
+    def provenance_in_order(self) -> list[Provenance]:
+        """Return the provenance records in insertion order.
+
+        The table's keys are ``p1``, ``p2``, … but the store writes JSON with sorted
+        keys, so a re-read entry iterates ``p1, p10, p100, p101, p11, …``. Every
+        "most recent marker" lookup must use this, not ``provenance.values()``: past 99
+        records the last value in table order is not the last one written (D-65 found
+        entries being re-judged on every sweep for exactly this reason).
+        """
+
+        def _index(key: str) -> int:
+            digits = key[1:]
+            return int(digits) if digits.isdigit() else 0
+
+        return [self.provenance[key] for key in sorted(self.provenance, key=_index)]
+
     def add_provenance(self, provenance: Provenance) -> str:
         """Add a provenance record to the entry's table and return its id.
 

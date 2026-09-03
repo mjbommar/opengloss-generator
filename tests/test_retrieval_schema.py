@@ -29,6 +29,7 @@ from opengloss_generator.schema import (
     Morphology,
     PartOfSpeech,
     POSEntry,
+    Provenance,
     QAFlag,
     QAPair,
     Query,
@@ -405,3 +406,18 @@ def test_the_new_enums_cover_the_documented_vocabularies():
         "related_differently",
         "unrelated",
     ]
+
+
+def test_provenance_in_order_survives_sorted_json_keys():
+    entry = make_entry()
+    for i in range(1, 121):
+        entry.add_provenance(
+            Provenance(stage=StageName.HYGIENE, model="rule", prompt_version="1", note=f"n{i}")
+        )
+    # Round-trip through sorted-key JSON, the way the store writes it.
+    raw = json.loads(json.dumps(entry.model_dump(mode="json"), sort_keys=True))
+    reloaded = type(entry).model_validate(raw)
+    assert list(reloaded.provenance)[:3] == ["p1", "p10", "p100"]  # table order is lexical
+    notes = [r.note for r in reloaded.provenance_in_order()]
+    assert notes[:3] == ["n1", "n2", "n3"]
+    assert notes[-1] == "n120"

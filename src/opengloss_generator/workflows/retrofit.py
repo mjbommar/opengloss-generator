@@ -453,7 +453,7 @@ def _latest_hygiene_marker(entry: Lexeme, prefix: str) -> _HygieneMarker | None:
         matching record in the table is the most recently written one.
     """
     latest: _HygieneMarker | None = None
-    for record in entry.provenance.values():
+    for record in entry.provenance_in_order():
         note = record.note or ""
         if not note.startswith(f"{prefix}:"):
             continue

@@ -732,7 +732,7 @@ def _latest_marker(entry: Lexeme, owner_sense_id: str) -> _Marker | None:
     """
     prefix = _marker_prefix(owner_sense_id)
     latest: _Marker | None = None
-    for record in entry.provenance.values():
+    for record in entry.provenance_in_order():
         note = record.note or ""
         if not note.startswith(prefix):
             continue

@@ -523,7 +523,7 @@ def _attempt_due(entry: Lexeme, rendition_ids: Sequence[str]) -> str | None:
     digest = _digest(rendition_ids)
     previous_digest: str | None = None
     attempts = 0
-    for record in entry.provenance.values():
+    for record in entry.provenance_in_order():
         note = record.note or ""
         if not note.startswith(f"{_MARKER_PREFIX}:"):
             continue
