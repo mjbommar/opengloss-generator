@@ -360,3 +360,295 @@ fingerprint) — the trade this pilot was built to price out.
   the final word on how detectable a production writer rotation's style actually is.
 * `qc filler` was not restricted to only this pilot's generated content, so its
   per-writer numbers are diluted by each store's much larger luna-authored baseline.
+
+## Round 2 (D-64): gemini-3.8-flash, two free OpenRouter models, and the D-53 schema fix
+
+**Question.** Does `gemini-3.8-flash` (published 2026-09-01) clear the D-53 schema
+failure that blocked `gemini-3.7-flash` from task (b) in Round 1, and do either of two
+free OpenRouter reasoning models (`z-ai/glm-5.2:free`, `nvidia/nemotron-3-super-120b-
+a12b:free`) earn a place in the writer rotation at $0 marginal cost? Same frozen
+300-entry sample (`data/sample-writers/`, seed 11), same two tasks, run from a fresh
+worktree (`retrieval/writers2`) off `retrieval/integration` at the commit that already
+carries Round 1's own follow-up fix (`stages.py`'s `_RETRYABLE_STATUS` now includes
+Anthropic's `529 Overloaded`, landed since Round 1 — this run's QA judge call had zero
+529-related failures, versus Round 1's 5-7/40 per arm).
+
+### Diagnosing the Gemini D-53 schema failure
+
+Round 1 recorded the failure (`400 INVALID_ARGUMENT`, no further detail from Google)
+but did not investigate it, per its own instruction to record and move on. Round 2
+investigated it directly, live against `gemini-3.8-flash` (the same failure reproduces
+identically on `gemini-3.7-flash`), before spending on task (b):
+
+1. **Dumped both schemas** (`DraftRenditionSet.model_json_schema()` vs
+   `DraftExampleBatch.model_json_schema()`). The two are structurally almost identical —
+   one top-level object with one array field of small objects carrying two shared enums
+   (`ReadingLevel`, `Register`) and a string field — differing mainly in the array's
+   declared bound: `renditions` (`DraftRenditionSet`) caps at `maxItems: 25`;
+   `examples` (`DraftExampleBatch`) capped at `maxItems: 200` (`MAX_EXAMPLE_SENTENCES`).
+2. **Isolated the feature** with a live bisection: holding the real `DraftSenseExample`
+   item schema fixed and varying only the wrapping array's `max_length`, `gemini-3.8-
+   flash` accepts a bare `output_type=` request up to **`maxItems=54`** and rejects
+   `55+` with the exact `400 INVALID_ARGUMENT` Round 1 saw. A hand-built variant with
+   the same shape but plain `str` fields instead of the two enums (far shorter schema
+   text, since `Register`'s docstring alone is roughly 1,300 characters and JSON Schema
+   renders it as the `description` of a `$defs` entry) tolerates up to **`maxItems=97`**
+   before failing at 98. Every other feature tried in isolation — the `sense_ref`
+   integer field, its `ge=1` bound, the `register` field alias — made no difference:
+   **`maxItems` is not itself a special number Gemini checks; total encoded schema
+   weight is**, and Gemini's structured-output compiler appears to budget for one copy
+   of the item schema per array slot the bound could hold, not per slot actually used.
+3. **The real code path has an even lower threshold, and it took a second bisection to
+   find that out.** `stages.py` never calls a model with a bare `output_type=`; every
+   stage uses `NativeOutput(output_type, strict=True)` (`stages.py:146`), which routes
+   through a different schema-emission path from the tool-call path the first
+   bisection above exercised. Confirmed by running task (b) against `gemini-3.8-flash`
+   at `MAX_EXAMPLE_SENTENCES=48` (chosen from the *first*, wrong-mode bisection): it
+   still failed 100%, including on real entries like "truss" (5 live senses, 40
+   sentences needed — comfortably under 48) — the exact discrepancy that revealed the
+   first bisection had measured the wrong mode. Re-bisecting with the real
+   `NativeOutput(strict=True)` call, the real `DraftExampleBatch` contract, and the
+   real D-53 prompt/instructions against the entry "truss": **`maxItems=32` succeeds**,
+   `40` fails a content-validation retry (`UnexpectedModelBehavior: Exceeded maximum
+   output retries`, a different failure mode — the model's own JSON was malformed, not
+   schema-rejected), and `48` reproduces the hard `400`.
+
+**Fix applied**: `MAX_EXAMPLE_SENTENCES` lowered from 200 to **32**
+(`src/opengloss_generator/contracts.py`), confirmed with a direct call before task (b)
+was run at scale, and covered by an offline regression-guard test
+(`tests/test_writers.py::test_example_batch_cap_stays_under_the_gemini_bisected_threshold`).
+**This is a pilot-scoped compromise, not a value to carry into production as-is**: an
+entry needs at most four full eight-sentence senses (`ExamplesConfig.per_sense=8`) to
+fit under 32, and **22 of the 300 sample entries (7.3%) have more than four live senses
+summed across every part of speech** — "skim" (8), "dit" (7), "wraps"/"phosphate"/
+"neapolitan"/"bollywood"/"bbq" (6 each), and 16 more at 5. Every one of those now fails
+`DraftExampleBatch` validation for *every* writer, not only Gemini, because this
+ceiling is shared code. `data/core-store`'s real entries are not capped at 8 senses per
+part of speech the way this frozen sample happens to be, so the true production
+regression rate is unmeasured here and plausibly higher. The correct fix is
+provider-aware — shape the schema Gemini receives differently from what other
+providers receive (the same pattern `router.py` already uses to keep flex-tier and
+prompt-cache settings OpenAI-only), or have `workflows/examples.py` split a many-sense
+entry's live senses across more than one call when the active writer is a Google
+model — and was not built here because it is a workflow-shape change, not a
+minimal/additive contract-constant change.
+
+### Arms
+
+1. **`gemini-3.8-flash`** (Google, direct). Price row added: $0.75 in / $3.75 out per
+   million tokens, matching the OpenRouter catalogue's `google/gemini-3.8-flash` row
+   (`GET https://openrouter.ai/api/v1/models`, fetched 2026-09-03) exactly — the same
+   rate as `gemini-3.7-flash`'s existing row.
+2. **`openrouter:z-ai/glm-5.2:free`**. $0 price row added (OpenRouter catalogue,
+   fetched 2026-09-03: `{"prompt": "0", "completion": "0"}`). The catalogue's own
+   `reasoning` block for this model reports `supported_efforts: ["xhigh", "high"]`,
+   `default_effort: "high"` — **it does not support `"low"`**, the effort this
+   project's default `ModelPolicy.reasoning_effort` requests, meaning even a working
+   call would ignore the low-effort request and reason harder than asked, worsening
+   exactly the blowup risk this arm was capped against.
+3. **`openrouter:nvidia/nemotron-3-super-120b-a12b:free`**. $0 price row added
+   (OpenRouter catalogue, fetched 2026-09-03: `{"prompt": "0", "completion": "0"}`).
+   This one's `reasoning` block reports `supported_efforts: ["medium", "low"]` — `"low"`
+   is legitimately supported here, unlike GLM 5.2.
+
+Both free models' price-row comments note the caveat plainly: a `":free"` OpenRouter
+endpoint's prompts/completions may be logged or used for model improvement by the
+upstream provider or OpenRouter unless the account has opted out, and OpenRouter
+rate-limits `":free"` models independently of any paid quota.
+
+`scripts/run_writer_pilot.py` gained `--requests-per-minute` (maps to
+`ConcurrencyConfig.requests_per_minute`, checked in `config.py`) and `--max-tokens`
+(caps `RENDITIONS`/`EXAMPLES` `max_tokens`, halving `expected_output_tokens` to match)
+for the two free arms: `--concurrency 2 --requests-per-minute 20 --max-tokens 4096`.
+Neither cap was exercised, for the reason below.
+
+**A pre-existing price-gate bug surfaced while wiring these arms up (found, not
+fixed).** `ModelPolicy._all_model_ids` and `pricing.price_for` both derive a model's
+"bare" id with a naive `model.split(":", 1)[-1]`, assuming the *first* colon is always
+this project's own `prefix:model` routing separator. `router._split_model` checks the
+prefix is a *recognised* provider kind before treating it that way; these two call
+sites don't. A bare OpenRouter id that is itself unprefixed but carries the
+catalogue's own `":free"` suffix — e.g. `"z-ai/glm-5.2:free"` passed as `model=`
+without an explicit `"openrouter:"` prefix — gets mis-split into `("z-ai/glm-5.2",
+"free")`, and `"free"` has no price row, so a correctly-priced writer is refused at
+construction. The explicit `openrouter:` prefix used throughout this round's own
+`WRITERS` dict and tests sidesteps it. Recorded as
+`tests/test_writers.py::test_bare_openrouter_free_tier_id_breaks_the_price_gate`, not
+fixed: orthogonal to writer diversity, same standard Round 1 held the 529-retry gap to.
+
+### Results
+
+**`z-ai/glm-5.2:free` and `nvidia/nemotron-3-super-120b-a12b:free`: 100% failure on
+every stage, both tasks, before any HTTP request — $0 spent, exactly like Round 1's
+`deepseek/deepseek-v4-pro`.** Exact error, on every attempted call for both models:
+`pydantic_ai.exceptions.UserError: Native structured output is not supported by this
+model.` This is pydantic-ai's own OpenRouter model-profile registry refusing
+`NativeOutput(strict=True)` for these two model ids client-side, before any network
+call — not a rate limit, not a schema problem, and not something either arm's
+`--requests-per-minute 20` cap ever had a chance to matter for, since no request was
+ever sent. Both runs were stopped manually after this was confirmed (a few seconds
+in, well under a minute of wall time, well before the 20-req/min limiter would have
+throttled anything) rather than left to grind through the full 300-word list
+producing 300 identical client-side refusals. **No OpenRouter daily-cap error was
+ever seen**, because no call ever reached OpenRouter's servers.
+
+**`gemini-3.8-flash` cleared both tasks, at a real cost profile that is worse, not
+better, than `gemini-3.7-flash`'s Round 1 verbosity problem:**
+
+| task | calls | cost | mean output tok/call | median | max |
+|---|---|---|---|---|---|
+| (a) renditions | 133 | $0.803830 | 1,221.4 | 1,108 | 4,672 |
+| (b) examples (gemini calls only; +35 nano `sense_check` calls, $0.012579) | 50 | $0.774438 | 3,714.0 | 3,564.5 | 6,830 |
+
+(ledger-sourced: `runs/20260903T171108Z-0f04b095.log.jsonl` for task (a),
+`runs/20260903T172457Z-a51364e1.log.jsonl` for task (b) — the first task-(b) attempt,
+`runs/20260903T171209Z-c602837a.log.jsonl`, ran before the schema fix and is the 100%
+`400 INVALID_ARGUMENT` failure the diagnosis above describes, $0 spent, 0 calls
+completed). Task (a) stopped at budget after 41 of 300 entries (38 changed, 412
+renditions added); task (b) stopped at budget after 50 of 300 entries (45 changed,
+1,024 sentences generated, 754 accepted / 73.6%, 76 rejected — `readability` 59,
+`hard_vocabulary` 10, `headword_absent` 6, `too_short` 1 — and 70 dropped by the
+sense-fit check). **Task (b) additionally hard-failed 5 of 50 entries outright (10%)**
+even after the schema fix — `bailed`, `babel`, `bbq`, `bollywood`, `bombarded`, every
+one `stage 'examples' failed after 3 attempt(s): invalid output: ... Invalid JSON: EOF
+while parsing ...` — truncated mid-sentence. This is `gemini-3.8-flash`'s extreme
+per-call verbosity (mean 3,714 output tokens, several calls past 6,000) running into
+the `EXAMPLES` stage's `max_tokens=8192` ceiling on its most sense-dense entries
+(`bollywood` has 6 live senses); it is a distinct failure mode from the schema issue
+above, still open, and would recur in production at whatever rate multi-sense entries
+occur. **`gemini-3.8-flash` is even more verbose than `gemini-3.7-flash` was**
+(Round 1: mean 763.5 output tok/call on the same task-(a) shape) at the same
+`reasoning_effort="low"` policy setting — the newer model reasons harder by default,
+not less, despite the identical request.
+
+**Judge (`opengloss qa --sample 40 --seed 42 --budget 4`, store
+`data/sample-writers-google`).** 40/40 entries judged, 0 failed — the Round-1-to-Round-2
+gap between "5-7/40 failed on Anthropic 529s" and "0/40 failed" is exactly the
+`_RETRYABLE_STATUS` fix that landed on `retrieval/integration` between the two pilots,
+not anything about this arm. **Mean score 64.92** (`cost_usd=3.093587`, 107 senses
+judged), the highest of any writer measured across both rounds, and — like every other
+writer — within noise of Round 1's 62.8-64.6 band, not a distinguishable improvement.
+`sense_defect_rates.relations_valid` measured 93.46% (100/107) — far higher than any
+other category and almost certainly a pre-existing defect in luna's own canonical
+relations data (RENDITIONS/EXAMPLES, the only stages this pilot's writer touches,
+never write relations), not something attributable to `gemini-3.8-flash`; not
+investigated further, per this pilot's own standard of not debugging orthogonal
+quality issues mid-pilot.
+
+**Attribution, re-run across every writer with attributable text now available**
+(`scripts/writer_diversity_report.py`, extended with `google`/`glm`/`nemotron` in its
+`_ARMS` tuple — `glm` and `nemotron` produced nothing and are absent from the counts
+below):
+
+| | unmatched (full 300-entry coverage) | matched subset (27 headwords every arm covered) |
+|---|---|---|
+| accuracy | **52.73%** | **38.64%** |
+| chance (5 writers) | 20.0% | 20.0% |
+| n per writer (balanced) | 517 | 280 |
+
+Round 1 flagged its own attribution number as confounded by uneven, non-overlapping
+per-arm topic coverage and said a production comparison should draw every arm from the
+same fixed subset — done here. Intersecting the headwords each of the five
+attributable arms (`luna`, `haiku`, `gemini-3.7-flash`, `qwen`, `gemini-3.8-flash`)
+actually produced non-canonical content for yields exactly 27 headwords (bounded by
+`qwen`'s task-(a) coverage, the smallest of the five). Restricting to that matched
+subset **drops accuracy from 52.73% to 38.64%** — still well above the 20% chance floor
+(style is genuinely detectable), but a large fraction of the unmatched number's
+apparent attributability was topic leakage from each arm's own uneven alphabetic
+slice, exactly the confound Round 1 suspected. The confusion matrix on the matched
+subset shows `gemini-3.7-flash` and `gemini-3.8-flash` are the two hardest writers to
+tell apart from each other (84 of 280 `gemini-3.7` items misclassified as `gemini-3.8`;
+80 of 280 the reverse) — consistent with them being the same model family and prompt
+style one generation apart — while `gemini-3.8-flash`'s own top discriminating
+features (`aground`, `morning`, `municipal`, `revealed`, `rode`, `pizza`) are still
+mostly topical rather than stylistic, the residue of the matched subset still not
+being large enough to fully separate topic from style at this sample size.
+
+**Lexical diversity, anchoring, and gate breakdown** (`writer_diversity_report.py`,
+full 300-entry-coverage numbers, not the matched subset):
+
+| writer | n items | type-token ratio | distinct-4-gram rate | opener entropy (bits) | headword-present rate | any-flag rate |
+|---|---|---|---|---|---|---|
+| gpt-5.6-luna | 15,518 | 0.0680 | 0.8895 | 13.30 | 99.27% | 1.92% |
+| claude-haiku-4-5 | 3,073 | 0.1943 | 0.9912 | 11.50 | 98.21% | 0.72% |
+| gemini-3.7-flash | 554 | 0.3667 | 0.9790 | 8.96 | 99.64% | 1.62% |
+| qwen/qwen3.5-397b-a17b | 517 | 0.3026 | 0.9839 | 8.91 | 100.0% | 1.16% |
+| **gemini-3.8-flash** | **1,164** | **0.3302** | **0.9922** | **10.14** | **100.0%** | **0.09%** |
+| pooled, all six writers | 20,863 | 0.0630 | 0.9092 | — | — | — |
+| pooled, luna only | 15,518 | 0.0680 | 0.8895 | — | — | — |
+
+`gemini-3.8-flash` measures the highest distinct-4-gram rate of any writer in either
+round (0.9922) and the lowest any-flag rate of any writer in either round (0.09%,
+1/1,164 items — a single `og.readability_miss`), at a larger sample than Round 1's
+`gemini-3.7-flash` (1,164 items vs. 554) because task (b) worked this round. Its
+headword-present rate (example renditions) is a perfect 100.0%, matching `qwen`'s.
+Read with the same sample-size caveat Round 1 gave: `gemini-3.8-flash`'s 1,164 items
+is still under a tenth of `luna`'s 15,518, so its much higher TTR is not on equal
+footing with `luna`'s; the pooled-vs-luna-only comparison (TTR 0.0680 -> 0.0630,
+distinct-4-gram 0.8895 -> 0.9092) is the more trustworthy number, and — as in Round
+1 — it moves only slightly because `luna`'s volume still dominates the pooled mix.
+
+**Corpus-level filler** (`qc filler`, no model calls, whole-store scan,
+`data/sample-writers-google`): 16,676 sentences scanned, 755 flagged candidates,
+**4.53%** — in the same 3.80-4.73% band Round 1 measured for `luna`/`haiku`/
+`gemini-3.7-flash`, and just as diluted by the store's much larger pre-existing
+`luna`-authored content (task (a)/(b) together touched only 41-50 of 300 entries).
+
+### Three real sentences for `accuser:noun:0`, `gemini-3.8-flash` added
+
+| level | gemini-3.8-flash |
+|---|---|
+| grade_1 | "His accuser said he hid the red truck." |
+| grade_5 | "When the window broke, Leo faced his accuser and insisted he was inside all afternoon." |
+| college | "Whistleblower statutes typically protect an accuser from corporate reprisal while internal auditors verify the financial irregularities." |
+
+At `college`, `gemini-3.8-flash` reaches for the same legal-register vocabulary
+(`statutes`, `protect ... from`, formal Latinate diction) that all four Round 1 writers
+converged on independently, extending Round 1's observation that this convergence is
+robust across writer families rather than an artifact of any one model.
+
+### Updated recommendation
+
+**`gemini-3.8-flash` does not earn a rotation share.** It clears the schema failure
+that blocked its predecessor, and its measured quality (mean judge score 64.92, lowest
+any-flag rate of any writer measured, perfect headword anchoring) is at least as good
+as every other writer in either round. But its cost and reliability profile are worse
+than `gemini-3.7-flash`'s already-flagged verbosity problem, not better: mean output
+tokens per call roughly **4.7x haiku's on task (a)** (1,221 vs. Round 1's 260-ish
+per-rendition share) and **far higher again on task (b)** (3,714 mean, up to 6,830),
+producing a **10% hard-failure rate on task (b)** from `max_tokens` truncation on nothing
+more demanding than a 6-sense entry — a failure mode Round 1's Gemini arm never got far
+enough to hit. Shipping this writer into the `RENDITIONS`/`EXAMPLES` rotation today
+would mean either accepting a measurable non-canonical-content failure rate on
+multi-sense entries, or first doing the provider-aware schema-splitting work this pilot
+identified but did not build. Round 1's recommendation stands unchanged: **ship the
+80/20 `gpt-5.6-luna`/`claude-haiku-4-5` rotation**; treat `gemini-3.8-flash` as a
+research-only data point on Gemini's D-53 schema limit, not a production candidate,
+until both the `max_tokens` truncation and the `MAX_EXAMPLE_SENTENCES` regression are
+addressed with provider-aware code.
+
+**Neither free OpenRouter model earns a rotation share, or any further pilot time, at
+weight 0.** `z-ai/glm-5.2:free` and `nvidia/nemotron-3-super-120b-a12b:free` are not
+viable with this pipeline's structured-output requirement at all, for the same
+client-side reason Round 1's `deepseek/deepseek-v4-pro` was not: pydantic-ai's
+OpenRouter model-profile registry does not mark them as supporting
+`NativeOutput(strict=True)`. This is a pydantic-ai/provider-integration gap, not a
+quality or cost finding about either model, and would need the same tool-call-based
+output-constraint mode Round 1 flagged as out of scope for deepseek to even attempt a
+real measurement.
+
+### What Round 2 did not do
+
+* Did not build the provider-aware schema-splitting or per-provider schema-shaping fix
+  the Gemini diagnosis calls for; `MAX_EXAMPLE_SENTENCES=32` is a pilot-scoped
+  compromise on this branch, not a value this pilot recommends carrying into
+  production.
+* Did not attempt a tool-call-based (`ToolOutput`) integration for `z-ai/glm-5.2:free`
+  or `nvidia/nemotron-3-super-120b-a12b:free` — out of scope for the same reason Round
+  1 gave for `deepseek/deepseek-v4-pro`.
+* Did not fix the pre-existing `ModelPolicy._all_model_ids`/`pricing.price_for`
+  first-colon-splitting bug found while wiring up the two free arms' ids — recorded as
+  a regression-guard test, orthogonal to writer diversity.
+* Did not re-measure `qc filler` restricted to only this pilot's generated content
+  (same limitation Round 1 named), and did not re-measure gloss-level anchoring for any
+  arm, since neither task in either round touches the `GLOSS` field.

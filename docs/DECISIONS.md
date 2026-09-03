@@ -3363,3 +3363,107 @@ pilot report. No local vLLM writer was attempted (see `docs/WRITER-DIVERSITY.md`
 arm's much larger pre-existing luna-authored content, since the detector scans a whole
 store rather than only this pilot's additions. `data/core-store` and the main
 checkout's `runs/` were never touched.
+
+## D-64 (2026-09-03) — Writer rotation Round 2: gemini-3.8-flash, two free OpenRouter models, and the D-53 schema fix diagnosed
+
+**Context.** D-63 shipped a five-writer pilot and an 80/20 `gpt-5.6-luna`/
+`claude-haiku-4-5` rotation recommendation, but recorded two open items without
+investigating them: `gemini-3.7-flash` failed 100% of task (b) (D-53 per-sense
+examples) on an unexplained `400 INVALID_ARGUMENT`, and the pilot's own attribution
+number was confounded by uneven per-arm topic coverage. Google published
+`gemini-3.8-flash` 2026-09-01; this round tests whether it (and two free OpenRouter
+reasoning models new to the catalogue, `z-ai/glm-5.2:free` and
+`nvidia/nemotron-3-super-120b-a12b:free`) change the rotation recommendation, and
+closes both open items.
+
+**Decision.**
+
+1. **Diagnosed the D-63 Gemini schema failure precisely, live.** Bisecting
+   `list[DraftSenseExample]`'s declared `maxItems` against `gemini-3.8-flash`
+   (reproduces identically on `gemini-3.7-flash`) found Gemini's structured-output
+   compiler rejects the schema once its *encoded weight* (item schema size times
+   declared array bound) crosses an internal budget, not any single field or nesting
+   depth: a bare `output_type=` request tolerates up to 54 (real contract) or 97 (a
+   `str`-only reconstruction of the same shape); the real call shape,
+   `NativeOutput(strict=True)` (what `stages.py` actually sends, confirmed by a second,
+   corrective bisection after the first one's chosen fix still failed against real
+   entries), tolerates only up to **32**. `contracts.MAX_EXAMPLE_SENTENCES` lowered
+   200 -> 32 to make the D-53 schema callable on Gemini at all. **This is a
+   pilot-scoped compromise, stated as such in the constant's own docstring, not a value
+   recommended for production**: entries needing more than four live senses (22 of the
+   300 pilot sample entries, 7.3%) now fail `DraftExampleBatch` validation for every
+   writer, not only Gemini, since the ceiling is shared, non-provider-specific code.
+   The correct fix — schema reshaping or call-splitting keyed on the active provider —
+   was scoped but not built.
+2. **Three price rows added** (`pricing.py`): `gemini-3.8-flash` ($0.75 in / $3.75 out
+   per M, matching `gemini-3.7-flash`'s existing rate, cross-checked against the
+   OpenRouter catalogue fetched 2026-09-03), `z-ai/glm-5.2:free` and
+   `nvidia/nemotron-3-super-120b-a12b:free` (both $0, same catalogue fetch), each row
+   commented with the free tier's data-sharing/rate-cap caveat.
+3. **`scripts/run_writer_pilot.py` gained `--requests-per-minute` and `--max-tokens`**
+   for the two free arms' rate caps and reasoning-blowup protection (neither was
+   exercised — see below), and its `WRITERS` dict gained the three new arms.
+4. **Found, and recorded rather than fixed, a pre-existing price-gate bug**:
+   `ModelPolicy._all_model_ids`/`pricing.price_for` both naively split a model id on
+   its first colon, assuming that colon is always this project's own routing-prefix
+   separator; `router._split_model` already guards this correctly (checks the prefix
+   is a recognised provider kind) but the price-gate call sites don't, so a bare
+   OpenRouter id carrying the catalogue's own `":free"` suffix without an explicit
+   `openrouter:` prefix is mis-split and wrongly refused. Orthogonal to writer
+   diversity; covered by a regression test, not fixed, matching D-63's own standard for
+   the Anthropic-529-retry gap it found and left (since fixed independently, see below).
+
+**Pilot (`data/sample-writers/`, same 300 entries/seed 11, never `data/core-store`,
+run from worktree `retrieval/writers2` off `retrieval/integration`).** Full tables,
+the exact bisection numbers, and the recommendation are appended to
+`docs/WRITER-DIVERSITY.md` as "Round 2". Summary here:
+
+* **`z-ai/glm-5.2:free` and `nvidia/nemotron-3-super-120b-a12b:free`: 100% failure,
+  both tasks, $0 spent, before any HTTP request** —
+  `pydantic_ai.exceptions.UserError: Native structured output is not supported by this
+  model.`, pydantic-ai's OpenRouter model-profile registry refusing
+  `NativeOutput(strict=True)` for both ids, exactly like D-63's
+  `deepseek/deepseek-v4-pro`. Neither arm's rate cap was ever exercised, since no
+  request reached OpenRouter's servers; no daily-cap error was seen.
+* **`gemini-3.8-flash` clears the D-53 schema failure (with the fix above) but is
+  costlier and less reliable than `gemini-3.7-flash`'s already-flagged verbosity
+  problem**: task (a) mean 1,221 output tokens/call (vs. D-63's 763.5 for
+  `gemini-3.7-flash`); task (b) mean 3,714, up to 6,830, causing a **10% hard-failure
+  rate** (5/50 entries) from `max_tokens` truncation on nothing more demanding than a
+  6-sense entry. Judge mean score 64.92 (107 senses, $3.093587, 0/40 entries failed —
+  the zero-529-failures gap from D-63's 5-7/40 is the `_RETRYABLE_STATUS` fix below,
+  not this arm), the highest of any writer in either round but within the same
+  62.8-64.6 noise band. Lowest any-flag rate of any writer measured (0.09%, 1/1,164)
+  and perfect headword anchoring (100.0%).
+* **Attribution re-measured on a topic-matched subset, closing D-63's confound**:
+  intersecting the headwords every attributable arm (`luna`, `haiku`,
+  `gemini-3.7-flash`, `qwen`, `gemini-3.8-flash`) actually covered yields 27 headwords;
+  restricting to that subset drops accuracy from 52.73% (unmatched, full coverage,
+  n=517/writer) to **38.64%** (matched, n=280/writer) against 20% chance for 5 writers —
+  still well above chance, but confirming a large share of the unmatched number was
+  topic leakage from uneven per-arm alphabetic coverage, as D-63 suspected but did not
+  check.
+* **Recommendation unchanged from D-63**: ship the 80/20 `gpt-5.6-luna`/
+  `claude-haiku-4-5` rotation. `gemini-3.8-flash` is a research data point, not a
+  production candidate, until its `max_tokens` truncation and the
+  `MAX_EXAMPLE_SENTENCES` regression get a provider-aware fix. Neither free OpenRouter
+  model is usable with this pipeline at all without a tool-call-based output-constraint
+  mode, out of scope here as it was for `deepseek` in D-63.
+
+**Consequence.** New: none (Round 2 reuses every D-63 script; `writer_diversity_report.py`'s
+`_ARMS` tuple extended with `google`/`glm`/`nemotron`, not otherwise changed).
+Modified: `contracts.py` (`MAX_EXAMPLE_SENTENCES` 200 -> 32, with the full diagnosis in
+its docstring), `pricing.py` (three rows), `scripts/run_writer_pilot.py` (`WRITERS`
+dict, `--requests-per-minute`/`--max-tokens` flags), `tests/test_writers.py` (+5:
+three new price-gate coverage tests, the `MAX_EXAMPLE_SENTENCES` regression guard, and
+the bare-`:free`-id price-gate-bug regression test).
+
+**Left undone.** The provider-aware schema fix (split a many-sense entry's D-53 call,
+or reshape the schema, per active writer) that would let `MAX_EXAMPLE_SENTENCES`
+return to a value that does not regress non-Gemini writers on high-sense entries. A
+tool-call-based (`ToolOutput`) integration for either free OpenRouter model, which
+would be needed even to attempt measuring them. The `ModelPolicy._all_model_ids`/
+`pricing.price_for` first-colon-splitting bug (found this round, recorded as a test,
+not fixed — orthogonal to writer diversity). `data/core-store` and the main checkout's
+`runs/` were never touched; this round's own worktree (`opengloss-wt-writers2`) is
+separate from D-63's (`opengloss-wt-writers`).

@@ -39,7 +39,7 @@ from opengloss_generator.hygiene import content_words, is_headword_initial, is_n
 from opengloss_generator.schema import CANONICAL_KEY, Example
 from opengloss_generator.store import LexemeStore
 
-_ARMS = ("luna", "qwen", "haiku", "gemini", "deepseek")
+_ARMS = ("luna", "qwen", "haiku", "gemini", "deepseek", "google", "glm", "nemotron")
 _STORE_ROOT = Path("data")
 _WORD_RE = re.compile(r"[A-Za-z']+")
 _OPENING_WORDS = 3
