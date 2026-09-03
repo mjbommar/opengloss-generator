@@ -233,7 +233,15 @@ def _default_policies() -> dict[StageName, ModelPolicy]:
             model=luna, reasoning_effort="low", max_tokens=4096, expected_output_tokens=500
         ),
         StageName.QA_PAIRS: ModelPolicy(
-            model=luna, reasoning_effort="low", max_tokens=8192, expected_output_tokens=900
+            # ``expected_output_tokens`` is D-58's measured mean over the 1,034-call
+            # sample-300 pilot (median 496, p90 585, max 959), replacing the schema
+            # branch's 900-token placeholder. Seven pairs plus luna's ``low`` reasoning,
+            # which is billed as output, come in well under half the old reservation, so
+            # the guard no longer holds twice the budget a call actually spends (D-41).
+            model=luna,
+            reasoning_effort="low",
+            max_tokens=8192,
+            expected_output_tokens=510,
         ),
         StageName.QA: ModelPolicy(
             model="claude-opus-5",

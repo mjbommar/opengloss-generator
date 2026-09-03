@@ -1271,6 +1271,8 @@ def _contrasts_payload(prompt: str) -> dict[str, Any]:
 _PAYLOADS.update({"_draftcontrasts": _contrasts_payload})
 
 # workflows/queries.py contracts (D-55)
+
+# workflows/qa_pairs.py contracts (D-58)
 # --------------------------------------------------------------------------------------
 #
 # Appended after every earlier block for the reason each of them gives: several modules are
@@ -1371,3 +1373,90 @@ def _query_set_payload(prompt: str) -> dict[str, Any]:
 
 
 _PAYLOADS.update({"_draftqueryset": _query_set_payload})
+
+# The payload is a function of the *sources the prompt listed*, which is what makes it a
+# test of the prompt builder as well as of the sieve: it reads the ``  [<id>] <label>:
+# <text>`` lines back out of the prompt and writes one pair per question type, citing and
+# quoting real source text -- so a change to the prompt builder that stopped labelling
+# sources with their ids would fail here rather than in production.
+
+#: Matches one source line of a ``qa_pairs`` prompt: id, label, text.
+_QA_SOURCE_RE = re.compile(r"^ {2}\[([^\]]+)\] ([^:]+): (.*)$", re.MULTILINE)
+
+#: The seven question types, in the order the scripted answer produces them. Written out
+#: rather than imported from ``schema`` so this file states what it expects the stage to
+#: ask for, and a silent change to the enum shows up as a failing test.
+QA_QUESTION_TYPES = (
+    "factual",
+    "definition",
+    "reasoning",
+    "comparison",
+    "procedural",
+    "causal",
+    "hypothetical",
+)
+
+#: Cycled across the seven pairs, so a scripted answer always spans more than one level.
+QA_DIFFICULTIES = ("easy", "medium", "hard")
+
+#: An answer with no content word in common with anything the prompt supplied, so the
+#: overlap floor refuses it. Scripted for the *third* pair (``reasoning``) of
+#: :data:`QA_UNGROUNDED_HEADWORD`.
+QA_UNGROUNDED_ANSWER = "Zzyzx qwertyuiop fjordbank gjuxwv plombir."
+
+#: A headword whose scripted answer carries one pair of each defect the sieve refuses:
+#: pair 2 cites an id that was never supplied, pair 3 is ungrounded prose, pair 4 cites
+#: nothing at all, and pair 5 repeats pair 1's question verbatim. Pairs 1, 6 and 7 are
+#: clean, so exactly three of the seven survive.
+QA_MIXED_HEADWORD = "mixedqaword"
+
+#: A headword whose every scripted answer is the untethered string above, so a test can
+#: watch a whole call be dropped and the sense still carry its marker.
+QA_UNGROUNDED_HEADWORD = "ungroundedqaword"
+
+
+def _qa_sources(prompt: str) -> list[tuple[str, str, str]]:
+    """Return the ``(id, label, text)`` of every source line a qa_pairs prompt listed."""
+    return [(sid, label, text.strip()) for sid, label, text in _QA_SOURCE_RE.findall(prompt)]
+
+
+def _qa_pair_set_payload(prompt: str) -> dict[str, Any]:
+    """Write one grounded question/answer pair per question type for one sense.
+
+    Each answer quotes the first ten words of the source it cites, which is the cheapest
+    possible way to be genuinely grounded: the overlap floor sees a large intersection and
+    the pair survives, unless the headword scripts otherwise.
+    """
+    headword = _headword(prompt)
+    sources = _qa_sources(prompt)
+    assert sources, "the qa_pairs prompt must label every source with its id"
+    pairs = []
+    for index, question_type in enumerate(QA_QUESTION_TYPES):
+        source_id, _, text = sources[index % len(sources)]
+        question = f"What does {headword} mean, asked the {question_type} way?"
+        answer = " ".join(text.split()[:10])
+        grounded_in = [source_id]
+        if headword == QA_UNGROUNDED_HEADWORD:
+            answer = QA_UNGROUNDED_ANSWER
+        elif headword == QA_MIXED_HEADWORD:
+            if index == 1:
+                grounded_in = ["not_a_supplied_id:noun:9#neutral/plain"]
+            elif index == 2:
+                answer = QA_UNGROUNDED_ANSWER
+            elif index == 3:
+                grounded_in = []
+            elif index == 4:
+                question = f"What does {headword} mean, asked the factual way?"
+        pairs.append(
+            {
+                "question": question,
+                "answer": answer,
+                "question_type": question_type,
+                "difficulty": QA_DIFFICULTIES[index % len(QA_DIFFICULTIES)],
+                "grounded_in": grounded_in,
+            }
+        )
+    return {"pairs": pairs}
+
+
+_PAYLOADS.update({"_draftqaset": _qa_pair_set_payload})
