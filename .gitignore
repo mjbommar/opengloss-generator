@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.env
+data/
+# ...but the familiar-word list is package data, not a data directory (D-51).
+!src/opengloss_generator/data/
+runs/
