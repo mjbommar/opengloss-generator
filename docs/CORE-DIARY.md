@@ -1131,3 +1131,17 @@ rejected (surplus). Rotation drew haiku for 19% of senses. **Cost is 4.0× luna-
 minimum exceeds our ~2K instruction blocks) and lists at 5× luna's flex price. See
 `docs/WRITER-DIVERSITY.md` "Cost correction" — the earlier "few percent" claim was
 wrong. Contrasts pilot running (haiku $0.0068/call vs luna $0.00054 so far).
+
+**17:59 — pair-stage pilots complete (300 entries, rotation live):**
+
+| stage | calls | cost | per sense | haiku share of cost | output |
+|---|---|---|---|---|---|
+| queries | 890 | $0.88 | $0.00098 | 80% | 10,679 queries, 79% headword-free |
+| contrasts | 271 | $0.47 | — ($0.00032/contrast) | 75% | 1,458 contrasts; verdicts 1,013 typed / 428 differently / 17 unrelated |
+| qa-pairs | 890 | $1.46 | $0.00164 | 78% | 6,090 pairs (7 types evenly), 140 dropped (116 not grounded) |
+
+Whole-store extrapolation (110,869 live senses; contrasts by entry ratio): queries
+≈ $109, contrasts ≈ $66, qa-pairs ≈ $181 → **≈ $356 with the 80/20 rotation** vs
+≈ $95 luna-only. Whole-store run held pending the user's choice (options in
+WRITER-DIVERSITY.md "Cost correction"); default if unanswered when the quality passes
+finish: luna-only on these three stages, rotation kept on renditions/examples.
