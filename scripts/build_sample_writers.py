@@ -55,9 +55,11 @@ def main() -> None:
         copied.append(headword)
 
     _HEADWORD_LIST.write_text("\n".join(sorted(copied)) + "\n", encoding="utf-8")
-    print(f"sampled {len(chosen)} headwords, copied {len(copied)}, missing {len(missing)}")
+    print(  # noqa: T201 - this script's whole job is to report to stdout
+        f"sampled {len(chosen)} headwords, copied {len(copied)}, missing {len(missing)}"
+    )
     if missing:
-        print("missing:", missing)
+        print("missing:", missing)  # noqa: T201 - this script's whole job is to report to stdout
 
 
 if __name__ == "__main__":

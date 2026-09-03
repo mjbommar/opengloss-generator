@@ -3242,3 +3242,124 @@ stashed, so they are not this stage's regression, and they are not this stage's 
 edit either; the assertion they need is "loads and round-trips", not "is empty". Recorded
 here so the next agent to see red knows what it is. Without the link, `uv run pytest` is
 829 passed, 2 skipped.
+
+## D-63 (2026-09-03) — Writer rotation: multi-provider routing, and a five-writer pilot that clears two of five for production
+
+**Context.** Every prose rendition in `data/core-store` has been written by one model,
+`gpt-5.6-luna`. `docs/RETRIEVAL-DATA-PLAN.md`'s consumer (`../opengloss-embedding`) wants
+diverse, high-quality tokens anchored to the ontology; a single writer's fixed style is
+the opposite of diverse, whatever its quality. `shelf-benchmark`'s own generator-balanced
+factorial design (its `docs/data_plan_v0.4.md` § 1) measured 93.1% attribution accuracy
+across four balanced OpenAI generators — a single writer's fingerprint is large and
+detectable — which is the direct motivation for testing whether this pipeline's writer
+could rotate too, and at what cost.
+
+**Decision.**
+
+1. **The router (`router.py`) gained four provider shapes beyond OpenAI**: Anthropic
+   (already supported), Google Gemini, OpenRouter, and a local OpenAI-compatible
+   endpoint by base URL (for a future vLLM writer). `_split_model` replaces the old
+   `_provider_prefix`: a model may carry an explicit routing prefix
+   (`openai:`/`anthropic:`/`google:`/`openrouter:`/`local:`) or be routed by its own
+   id's shape (`claude-` -> Anthropic, `gemini-` -> Google, a literal `/` -> OpenRouter's
+   `org/model` catalogue convention, everything else -> OpenAI) — the same convention
+   this project already used for Anthropic, extended rather than replaced. `model_for`
+   and `settings_for` both take an optional `model` override so one call can use a
+   different model than the rest of its stage's policy without touching the policy
+   itself. Flex-tier and prompt-cache-key settings are built only in the OpenAI branch,
+   so they can never reach a provider that would reject them. Google's lazy import
+   (`_import_google_model_settings`) and `_infer_model`'s warning suppression exist
+   because `pydantic_ai.models.google` imports `google-genai`, which raises a
+   `DeprecationWarning` on this project's Python 3.14 interpreter — an upstream problem
+   this project's own `filterwarnings = ["error"]` would otherwise turn into a test
+   failure for every Google-touching test.
+2. **`ModelPolicy` gained `writers: list[WriterOption] | None` and `writer_seed: int`.**
+   `WriterOption` is `{model, weight}`; `ModelPolicy.writer_for(key)` draws one
+   deterministically via `random.Random(f"{writer_seed}:{key}")` — the same key always
+   draws the same writer, so a rerun of unchanged input is idempotent and the mix is
+   auditable from provenance without replaying the draw. The price gate
+   (`_model_must_be_priced`) now validates every writer's model, not only the policy's
+   own `model`, so a misconfigured writer list is refused at construction, before any
+   spend. `StageRunner.run()` takes an optional `writer_key`; the rendition and examples
+   call sites pass a sense id (or, for the one-call-per-entry D-53 workflow, the same
+   digest of the entry's live sense-id set its own completion marker already uses) —
+   nowhere else needed to change.
+3. **`Provenance` gained `provider: str | None`**, populated from
+   `ModelResponse.provider_details["downstream_provider"]` when the router used
+   OpenRouter, which reports which upstream actually served a call (observed in the
+   pilot: `Phala`, `StreamLake`, `Venice`, `Parasail`, all serving the same nominal
+   `qwen/qwen3.5-397b-a17b`). `None` for every other provider and for content written
+   before this field existed.
+4. **Price rows added for the pilot's non-OpenAI, non-Anthropic writers**
+   (`qwen/qwen3.5-397b-a17b`, `deepseek/deepseek-v4-pro`, `gemini-3.7-flash`), verified
+   2026-09-03 against the OpenRouter catalogue (`GET
+   https://openrouter.ai/api/v1/models`, unauthenticated, the same way SHELF's
+   `pricing.py` does) and, for `gemini-3.7-flash` (also reachable direct), cross-checked
+   the same day against `https://ai.google.dev/gemini-api/docs/pricing` — an exact
+   match, so the OpenRouter rate is also this table's direct-API rate.
+   `claude-haiku-4-5`'s existing row already matched the catalogue; no change needed.
+   The "no price row, no run" gate (D-6's ancestor pattern, `pricing.price_for`)
+   continues to cover every writer, old and new.
+
+**Pilot (`data/sample-writers/`, 300 entries, seed 11, never `data/core-store`).**
+Full design, every measured number, provider failure modes with exact error strings,
+the attribution/lexical-diversity/anchoring/gate-breakdown tables, three real sentences
+per writer for one shared sense, and the recommendation are in
+`docs/WRITER-DIVERSITY.md`. Summary here:
+
+* **Two of five candidate writers are not viable with this pipeline as shipped.**
+  `deepseek/deepseek-v4-pro` (OpenRouter): 100% failure, both tasks —
+  `pydantic_ai.exceptions.UserError: Native structured output is not supported by this
+  model`, raised client-side before any request is sent. `gemini-3.7-flash` (direct
+  Google): graded-rendition task succeeded (176 calls, $0.76), but the D-53 multi-sense
+  example-batch task failed 100% — `400 INVALID_ARGUMENT: Request contains an invalid
+  argument`, with no further detail from Google's error body.
+* **`claude-haiku-4-5` cleared both tasks cleanly**: $0.00373/rendition, $0.000585 per
+  accepted D-53 sentence, no judge-score regression from luna (62.83 vs. 64.21 on
+  Opus's 0-100 scale, both well inside this sample's noise band), and its
+  attribution-model style tell is ordinary function words rather than a detectable
+  fingerprint.
+* **`qwen/qwen3.5-397b-a17b` (OpenRouter) works but is cost/latency-unpredictable**:
+  normal calls run 200-350 output tokens; a recurring fraction blow up to
+  5,500-8,186 output tokens (a reasoning MoE not fully respecting
+  `reasoning_effort="low"`, billed as output like any reasoning model's hidden tokens),
+  and one call failed outright on `max_tokens` before recovering on retry at 6,495
+  output tokens. Its generated text also leaks literal prompt labels
+  (`grade_10`, `college`, the sense's own headword) into sentence text — a real,
+  visible style defect distinct from the cost problem.
+* **Attribution (TF-IDF + logistic regression, balanced, 5-fold, SHELF's method)**:
+  66.0% accuracy across the four writers that produced attributable text, against 25%
+  chance — style is detectable well above chance, which is the point, but the number is
+  confounded by uneven per-arm entry coverage (each arm's budget stopped at a different
+  point in the alphabetically-ordered sample) and should be re-measured on a
+  topic-matched subset before being trusted as a target metric.
+* **Recommendation**: ship an 80/20 `gpt-5.6-luna`/`claude-haiku-4-5` rotation on the
+  `RENDITIONS` and `EXAMPLES` stages via the new `writers` mechanism; treat `gemini-3.7-
+  flash` as a task-(a)-only candidate pending its D-53 schema failure being understood;
+  do not rotate in `qwen` or `deepseek` yet.
+
+**Consequence.** New: `scripts/build_sample_writers.py`,
+`scripts/reset_writer_arm.py`, `scripts/run_writer_pilot.py`,
+`scripts/writer_diversity_report.py` (one-off pilot tooling; the last needs
+`scikit-learn`, run via `uv run --with scikit-learn` rather than added as a package
+dependency); `tests/test_writers.py` (+18, offline); `docs/WRITER-DIVERSITY.md`.
+Minimal additive edits to `router.py` (multi-provider dispatch), `config.py`
+(`WriterOption`, `ModelPolicy.writers`/`writer_seed`/`writer_for`), `schema.py`
+(`Provenance.provider`), `stages.py` (`writer_key` threading and provider capture),
+`pricing.py` (four new/verified rows), `workflows/enrich.py` and
+`workflows/examples.py` (one `writer_key=` argument each at their existing
+`runner.run()` call sites).
+
+**Left undone, and one caveat about the pilot run.** Five to seven of the forty
+sampled entries per judged arm failed to judge on `HTTP/1.1 529 Overloaded` from the
+Anthropic API during this run; `stages.py`'s `_RETRYABLE_STATUS` does not include 529,
+so the stage runner did not retry past the SDK client's own few automatic retries. This
+is a real, small gap between this pipeline's actual retry coverage and a reasonable
+assumption that the judge already retries provider overload — worth a one-line fix
+(add 529 to `_RETRYABLE_STATUS`) but not made here, since a judge-reliability fix is
+orthogonal to writer diversity and an untested change should not ride along with a
+pilot report. No local vLLM writer was attempted (see `docs/WRITER-DIVERSITY.md`'s
+"What was not done" for why); `qc filler`'s per-writer numbers are diluted by each
+arm's much larger pre-existing luna-authored content, since the detector scans a whole
+store rather than only this pilot's additions. `data/core-store` and the main
+checkout's `runs/` were never touched.

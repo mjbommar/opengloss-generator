@@ -1,0 +1,85 @@
+{
+  "calls": 37,
+  "cost_usd": 2.692443,
+  "cost_usd_per_entry": 0.072769,
+  "encyclopedia_defects": 2,
+  "encyclopedia_judged": 37,
+  "entries_failed": 3,
+  "entries_judged": 37,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "audience_inappropriate": 1,
+    "awkward_style": 25,
+    "factual_error": 6,
+    "grammar_error": 3,
+    "hallucination": 9,
+    "inconsistent_style": 1,
+    "missing_content": 6,
+    "other": 2,
+    "punctuation_error": 1,
+    "scope_mismatch": 2,
+    "spelling_error": 1,
+    "terminology_error": 35
+  },
+  "mean_score": 64.62,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0345,
+    "example grade_1/plain": 0.0556,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.0722,
+    "gloss neutral/technical": 0.0309
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 29,
+    "example grade_1/plain": 18,
+    "gloss college/plain": 97,
+    "gloss grade_1/plain": 97,
+    "gloss neutral/technical": 97
+  },
+  "score_buckets": {
+    "60-79": 28,
+    "80-89": 1,
+    "90+": 0,
+    "<60": 8
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 8,
+    "domain_fits": 21,
+    "examples_fit_sense": 17,
+    "examples_natural": 49,
+    "gloss_accurate": 14,
+    "relations_valid": 87
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.0825,
+    "domain_fits": 0.2165,
+    "examples_fit_sense": 0.1753,
+    "examples_natural": 0.5052,
+    "gloss_accurate": 0.1443,
+    "relations_valid": 0.8969
+  },
+  "senses_judged": 97,
+  "stopped_reason": null,
+  "top_issues": [
+    "noun 0 relations: bare chest, no bra, bras",
+    "notes: First two examples read as corpus/report filler rather than natural usage; three see_also targets are a plural inflection and non-lexical phrases.",
+    "noun 0 relations: last name, Bassett family, Bassett lineage",
+    "noun 1 relations: pet bassett, show bassett",
+    "notes: Both senses carry self-referential or generic relation targets (\"last name\", \"Bassett lineage\", \"pet bassett\", \"show bassett\"); sense 1 also lists see_also->surname twice.",
+    "noun 0 relations: paper clipboard, presentation clipboard, folding clipboard, document holder",
+    "noun 1 relations: data buffer, permanent storage, persistent memory, clipboard memory, text clipboard, image clipboard",
+    "noun 2 gloss: no such established sense; 'clipboard' does not mean a task list or workflow queue",
+    "noun 2 relations: todo list, task list, checklist, completed tasks, finished items",
+    "noun 2 domain: suggested business and project management",
+    "notes: Sense 3 is an invented metaphorical sense with no basis in usage; its relation list also lists the same terms as both synonyms and hyponyms.",
+    "noun 0 relations: island of Crete, Cretan island, mainland",
+    "notes: Two see_also targets ('island of Crete', 'Cretan island') are self-referential paraphrases rather than distinct terms, and 'mainland' is not an antonym of a place name.",
+    "noun 0 relations: Alexa smart-home controller",
+    "noun 2 relations: Alexa Smith, Alexa Johnson",
+    "notes: Sense 2 (the device sense) is illustrated by several examples that use Alexa as the assistant itself, including one sentence duplicated verbatim from sense 1, blurring the two senses in practice. Some see_also targets are invented placeholder names rather than terms.",
+    "noun 0 relations: private residence, solitary household",
+    "verb 0 relations: confabulate",
+    "verb 1 relations: share, cooperate, hoard, cohabitation",
+    "verb 1 domain: suggested community living"
+  ]
+}

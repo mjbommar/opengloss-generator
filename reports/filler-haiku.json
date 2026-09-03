@@ -1,0 +1,1472 @@
+{
+  "config": {
+    "acceptable_sentence_words": [
+      5,
+      40
+    ],
+    "ideal_sentence_words": [
+      10,
+      30
+    ],
+    "max_examples": 3,
+    "min_count": 5,
+    "ngram_freq_threshold": 0.0005,
+    "ngram_n": 4,
+    "opener_freq_threshold": 0.005,
+    "opener_lengths": [
+      2,
+      3
+    ]
+  },
+  "entry_scores": {
+    "distribution": {
+      "avg_sentence_words": {
+        "count": 300,
+        "max": 25.4167,
+        "mean": 15.9795,
+        "median": 15.5538,
+        "min": 12.1136,
+        "p10": 13.9523,
+        "p90": 18.442
+      },
+      "information_density": {
+        "count": 300,
+        "max": 0.8,
+        "mean": 0.8,
+        "median": 0.8,
+        "min": 0.8,
+        "p10": 0.8,
+        "p90": 0.8
+      },
+      "uniqueness": {
+        "count": 300,
+        "max": 0.6705,
+        "mean": 0.4371,
+        "median": 0.4017,
+        "min": 0.2928,
+        "p10": 0.3462,
+        "p90": 0.5782
+      }
+    },
+    "worst_by_uniqueness": [
+      {
+        "avg_sentence_words": 15.531,
+        "information_density": 0.8,
+        "lexeme_id": "thea",
+        "sentence_count": 64,
+        "uniqueness": 0.2928,
+        "word_count": 994
+      },
+      {
+        "avg_sentence_words": 14.333,
+        "information_density": 0.8,
+        "lexeme_id": "benito",
+        "sentence_count": 84,
+        "uniqueness": 0.2949,
+        "word_count": 1204
+      },
+      {
+        "avg_sentence_words": 16.485,
+        "information_density": 0.8,
+        "lexeme_id": "salim",
+        "sentence_count": 66,
+        "uniqueness": 0.3006,
+        "word_count": 1088
+      },
+      {
+        "avg_sentence_words": 14.661,
+        "information_density": 0.8,
+        "lexeme_id": "directories",
+        "sentence_count": 115,
+        "uniqueness": 0.312,
+        "word_count": 1686
+      },
+      {
+        "avg_sentence_words": 15.727,
+        "information_density": 0.8,
+        "lexeme_id": "whirl",
+        "sentence_count": 66,
+        "uniqueness": 0.315,
+        "word_count": 1038
+      },
+      {
+        "avg_sentence_words": 13.838,
+        "information_density": 0.8,
+        "lexeme_id": "nanjing",
+        "sentence_count": 68,
+        "uniqueness": 0.3177,
+        "word_count": 941
+      },
+      {
+        "avg_sentence_words": 14.858,
+        "information_density": 0.8,
+        "lexeme_id": "ashton",
+        "sentence_count": 106,
+        "uniqueness": 0.3187,
+        "word_count": 1575
+      },
+      {
+        "avg_sentence_words": 15.956,
+        "information_density": 0.8,
+        "lexeme_id": "grady",
+        "sentence_count": 68,
+        "uniqueness": 0.3217,
+        "word_count": 1085
+      },
+      {
+        "avg_sentence_words": 13.898,
+        "information_density": 0.8,
+        "lexeme_id": "fissure",
+        "sentence_count": 98,
+        "uniqueness": 0.3245,
+        "word_count": 1362
+      },
+      {
+        "avg_sentence_words": 14.582,
+        "information_density": 0.8,
+        "lexeme_id": "accuser",
+        "sentence_count": 98,
+        "uniqueness": 0.3268,
+        "word_count": 1429
+      },
+      {
+        "avg_sentence_words": 15.478,
+        "information_density": 0.8,
+        "lexeme_id": "soundly",
+        "sentence_count": 69,
+        "uniqueness": 0.3287,
+        "word_count": 1068
+      },
+      {
+        "avg_sentence_words": 15.145,
+        "information_density": 0.8,
+        "lexeme_id": "lizzie",
+        "sentence_count": 62,
+        "uniqueness": 0.3291,
+        "word_count": 939
+      },
+      {
+        "avg_sentence_words": 12.244,
+        "information_density": 0.8,
+        "lexeme_id": "reverend",
+        "sentence_count": 86,
+        "uniqueness": 0.3305,
+        "word_count": 1053
+      },
+      {
+        "avg_sentence_words": 15.964,
+        "information_density": 0.8,
+        "lexeme_id": "virgo",
+        "sentence_count": 56,
+        "uniqueness": 0.3345,
+        "word_count": 894
+      },
+      {
+        "avg_sentence_words": 14.547,
+        "information_density": 0.8,
+        "lexeme_id": "spiked",
+        "sentence_count": 75,
+        "uniqueness": 0.3346,
+        "word_count": 1091
+      },
+      {
+        "avg_sentence_words": 14.719,
+        "information_density": 0.8,
+        "lexeme_id": "propane",
+        "sentence_count": 57,
+        "uniqueness": 0.3349,
+        "word_count": 839
+      },
+      {
+        "avg_sentence_words": 15.443,
+        "information_density": 0.8,
+        "lexeme_id": "gist",
+        "sentence_count": 70,
+        "uniqueness": 0.3367,
+        "word_count": 1081
+      },
+      {
+        "avg_sentence_words": 14.086,
+        "information_density": 0.8,
+        "lexeme_id": "johannes",
+        "sentence_count": 70,
+        "uniqueness": 0.3377,
+        "word_count": 986
+      },
+      {
+        "avg_sentence_words": 14.563,
+        "information_density": 0.8,
+        "lexeme_id": "unhelpful",
+        "sentence_count": 71,
+        "uniqueness": 0.3385,
+        "word_count": 1034
+      },
+      {
+        "avg_sentence_words": 13.628,
+        "information_density": 0.8,
+        "lexeme_id": "munro",
+        "sentence_count": 86,
+        "uniqueness": 0.3387,
+        "word_count": 1172
+      }
+    ]
+  },
+  "filler_ngrams": [
+    {
+      "count": 66,
+      "example_rendition_ids": [
+        "peking:encyclopedia#neutral/plain",
+        "atonement:encyclopedia#neutral/plain",
+        "bbq:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.003504,
+      "n": 4,
+      "phrase": "key aspects and interpretations"
+    },
+    {
+      "count": 63,
+      "example_rendition_ids": [
+        "angolan:encyclopedia#neutral/plain",
+        "atonement:encyclopedia#neutral/plain",
+        "wicker:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.003345,
+      "n": 4,
+      "phrase": "contemporary usage and relevance"
+    },
+    {
+      "count": 52,
+      "example_rendition_ids": [
+        "amity:encyclopedia#neutral/plain",
+        "conversational:encyclopedia#neutral/plain",
+        "accuser:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.002761,
+      "n": 4,
+      "phrase": "within broader frameworks of"
+    },
+    {
+      "count": 47,
+      "example_rendition_ids": [
+        "peking:encyclopedia#grade_5/plain",
+        "peking:encyclopedia#college/plain",
+        "bbq:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.002495,
+      "n": 4,
+      "phrase": "nineteenth and twentieth centuries"
+    },
+    {
+      "count": 45,
+      "example_rendition_ids": [
+        "mccormick:encyclopedia#college/plain",
+        "angolan:encyclopedia#neutral/plain",
+        "wicker:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.002389,
+      "n": 4,
+      "phrase": "in academic and professional"
+    },
+    {
+      "count": 44,
+      "example_rendition_ids": [
+        "angolan:encyclopedia#neutral/plain",
+        "wicker:encyclopedia#neutral/plain",
+        "guerrero:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.002336,
+      "n": 4,
+      "phrase": "academic and professional contexts"
+    },
+    {
+      "count": 42,
+      "example_rendition_ids": [
+        "guerrero:encyclopedia#neutral/plain",
+        "guerrero:encyclopedia#college/plain",
+        "postmark:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.00223,
+      "n": 4,
+      "phrase": "related concepts include the"
+    },
+    {
+      "count": 41,
+      "example_rendition_ids": [
+        "peking:encyclopedia#grade_5/plain",
+        "peking:encyclopedia#college/plain",
+        "bbq:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.002177,
+      "n": 4,
+      "phrase": "the nineteenth and twentieth"
+    },
+    {
+      "count": 39,
+      "example_rendition_ids": [
+        "reverend:encyclopedia#neutral/plain",
+        "postmark:encyclopedia#neutral/plain",
+        "amity:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.002071,
+      "n": 4,
+      "phrase": "aspects and interpretations include"
+    },
+    {
+      "count": 39,
+      "example_rendition_ids": [
+        "amity:encyclopedia#neutral/plain",
+        "handmaiden:encyclopedia#neutral/plain",
+        "rivas:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.002071,
+      "n": 4,
+      "phrase": "medieval and early modern"
+    },
+    {
+      "count": 38,
+      "example_rendition_ids": [
+        "reverend:encyclopedia#neutral/plain",
+        "amuse:encyclopedia#neutral/plain",
+        "conversational:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.002018,
+      "n": 4,
+      "phrase": "at the intersection of"
+    },
+    {
+      "count": 33,
+      "example_rendition_ids": [
+        "bbq:encyclopedia#neutral/plain",
+        "reverend:encyclopedia#neutral/plain",
+        "amity:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001752,
+      "n": 4,
+      "phrase": "the term derives from"
+    },
+    {
+      "count": 32,
+      "example_rendition_ids": [
+        "egoism:encyclopedia#neutral/plain",
+        "handmaiden:encyclopedia#neutral/plain",
+        "amuse:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001699,
+      "n": 4,
+      "phrase": "contemporary usage and related"
+    },
+    {
+      "count": 32,
+      "example_rendition_ids": [
+        "bbq:encyclopedia#grade_5/plain",
+        "bbq:encyclopedia#college/plain",
+        "terrier:encyclopedia#college/plain"
+      ],
+      "frequency": 0.001699,
+      "n": 4,
+      "phrase": "during the nineteenth and"
+    },
+    {
+      "count": 31,
+      "example_rendition_ids": [
+        "terrier:encyclopedia#college/plain",
+        "amuse:encyclopedia#grade_5/plain",
+        "amuse:encyclopedia#college/plain"
+      ],
+      "frequency": 0.001646,
+      "n": 4,
+      "phrase": "eighteenth and nineteenth centuries"
+    },
+    {
+      "count": 31,
+      "example_rendition_ids": [
+        "bbq:encyclopedia#neutral/plain",
+        "bbq:encyclopedia#grade_5/plain",
+        "bbq:encyclopedia#college/plain"
+      ],
+      "frequency": 0.001646,
+      "n": 4,
+      "phrase": "in the united states"
+    },
+    {
+      "count": 31,
+      "example_rendition_ids": [
+        "abigail:encyclopedia#neutral/plain",
+        "abigail:encyclopedia#grade_5/plain",
+        "abigail:encyclopedia#college/plain"
+      ],
+      "frequency": 0.001646,
+      "n": 4,
+      "phrase": "the early modern period"
+    },
+    {
+      "count": 31,
+      "example_rendition_ids": [
+        "terrier:encyclopedia#college/plain",
+        "amuse:encyclopedia#grade_5/plain",
+        "amuse:encyclopedia#college/plain"
+      ],
+      "frequency": 0.001646,
+      "n": 4,
+      "phrase": "the eighteenth and nineteenth"
+    },
+    {
+      "count": 30,
+      "example_rendition_ids": [
+        "egoism:encyclopedia#neutral/plain",
+        "peking:encyclopedia#neutral/plain",
+        "wicker:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001593,
+      "n": 4,
+      "phrase": "19th and 20th centuries"
+    },
+    {
+      "count": 30,
+      "example_rendition_ids": [
+        "abigail:noun:0#grade_10/plain#4",
+        "giordano:noun:1#neutral/technical#7",
+        "giordano:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001593,
+      "n": 4,
+      "phrase": "as a given name"
+    },
+    {
+      "count": 27,
+      "example_rendition_ids": [
+        "biff:encyclopedia#neutral/plain",
+        "nanjing:encyclopedia#neutral/plain",
+        "nanjing:encyclopedia#college/plain"
+      ],
+      "frequency": 0.001434,
+      "n": 4,
+      "phrase": "a case study in"
+    },
+    {
+      "count": 26,
+      "example_rendition_ids": [
+        "wicker:encyclopedia#neutral/plain",
+        "digress:encyclopedia#neutral/plain",
+        "consummation:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.00138,
+      "n": 4,
+      "phrase": "key aspects and applications"
+    },
+    {
+      "count": 26,
+      "example_rendition_ids": [
+        "egoism:encyclopedia#neutral/plain",
+        "peking:encyclopedia#neutral/plain",
+        "bbq:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.00138,
+      "n": 4,
+      "phrase": "the 19th and 20th"
+    },
+    {
+      "count": 26,
+      "example_rendition_ids": [
+        "angolan:encyclopedia#neutral/plain",
+        "wicker:encyclopedia#neutral/plain",
+        "amity:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.00138,
+      "n": 4,
+      "phrase": "usage and relevance in"
+    },
+    {
+      "count": 25,
+      "example_rendition_ids": [
+        "terrier:encyclopedia#college/plain",
+        "amuse:encyclopedia#grade_5/plain",
+        "amuse:encyclopedia#college/plain"
+      ],
+      "frequency": 0.001327,
+      "n": 4,
+      "phrase": "during the eighteenth and"
+    },
+    {
+      "count": 25,
+      "example_rendition_ids": [
+        "hypnotize:encyclopedia#college/plain",
+        "vectors:encyclopedia#grade_5/plain",
+        "vectors:encyclopedia#college/plain"
+      ],
+      "frequency": 0.001327,
+      "n": 4,
+      "phrase": "during the twentieth century"
+    },
+    {
+      "count": 25,
+      "example_rendition_ids": [
+        "egoism:encyclopedia#neutral/plain",
+        "handmaiden:encyclopedia#neutral/plain",
+        "amuse:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001327,
+      "n": 4,
+      "phrase": "usage and related concepts"
+    },
+    {
+      "count": 24,
+      "example_rendition_ids": [
+        "biff:encyclopedia#neutral/plain",
+        "nanjing:encyclopedia#neutral/plain",
+        "dutton:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001274,
+      "n": 4,
+      "phrase": "as a case study"
+    },
+    {
+      "count": 24,
+      "example_rendition_ids": [
+        "hypnotize:encyclopedia#grade_5/plain",
+        "unstoppable:encyclopedia#grade_5/plain",
+        "consummation:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.001274,
+      "n": 4,
+      "phrase": "the word comes from"
+    },
+    {
+      "count": 21,
+      "example_rendition_ids": [
+        "reverend:encyclopedia#neutral/plain",
+        "chloride:encyclopedia#neutral/plain",
+        "sounder:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001115,
+      "n": 4,
+      "phrase": "sits at the intersection"
+    },
+    {
+      "count": 21,
+      "example_rendition_ids": [
+        "bbq:encyclopedia#neutral/plain",
+        "reverend:encyclopedia#neutral/plain",
+        "hypnotize:encyclopedia#college/plain"
+      ],
+      "frequency": 0.001115,
+      "n": 4,
+      "phrase": "term derives from the"
+    },
+    {
+      "count": 20,
+      "example_rendition_ids": [
+        "wicker:encyclopedia#neutral/plain",
+        "digress:encyclopedia#neutral/plain",
+        "consummation:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001062,
+      "n": 4,
+      "phrase": "aspects and applications include"
+    },
+    {
+      "count": 20,
+      "example_rendition_ids": [
+        "incongruous:encyclopedia#neutral/plain",
+        "humphrey:noun:1#neutral/technical#7",
+        "ascendancy:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001062,
+      "n": 4,
+      "phrase": "in early modern english"
+    },
+    {
+      "count": 19,
+      "example_rendition_ids": [
+        "reverend:encyclopedia#neutral/plain",
+        "reverend:encyclopedia#college/plain",
+        "incongruous:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.001009,
+      "n": 4,
+      "phrase": "derives from the latin"
+    },
+    {
+      "count": 19,
+      "example_rendition_ids": [
+        "handmaiden:encyclopedia#neutral/plain",
+        "humphrey:encyclopedia#neutral/plain",
+        "humphrey:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.001009,
+      "n": 4,
+      "phrase": "in medieval and early"
+    },
+    {
+      "count": 19,
+      "example_rendition_ids": [
+        "deafness:encyclopedia#grade_5/plain",
+        "alexa:encyclopedia#neutral/plain",
+        "alexa:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.001009,
+      "n": 4,
+      "phrase": "the late twentieth century"
+    },
+    {
+      "count": 18,
+      "example_rendition_ids": [
+        "clipboard:encyclopedia#neutral/plain",
+        "streamers:encyclopedia#neutral/plain",
+        "dinky:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000956,
+      "n": 4,
+      "phrase": "concepts and broader frameworks"
+    },
+    {
+      "count": 18,
+      "example_rendition_ids": [
+        "conductors:encyclopedia#grade_5/plain",
+        "ascendancy:noun:0#college/plain#10",
+        "matlock:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000956,
+      "n": 4,
+      "phrase": "in the nineteenth century"
+    },
+    {
+      "count": 18,
+      "example_rendition_ids": [
+        "muerte:encyclopedia#grade_5/plain",
+        "flay:encyclopedia#grade_5/plain",
+        "consummation:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000956,
+      "n": 4,
+      "phrase": "it can also mean"
+    },
+    {
+      "count": 18,
+      "example_rendition_ids": [
+        "clipboard:encyclopedia#neutral/plain",
+        "streamers:encyclopedia#neutral/plain",
+        "dinky:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000956,
+      "n": 4,
+      "phrase": "related concepts and broader"
+    },
+    {
+      "count": 17,
+      "example_rendition_ids": [
+        "mccormick:encyclopedia#grade_5/plain",
+        "abigail:encyclopedia#neutral/plain",
+        "abigail:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000903,
+      "n": 4,
+      "phrase": "and the study of"
+    },
+    {
+      "count": 17,
+      "example_rendition_ids": [
+        "salim:encyclopedia#neutral/plain",
+        "salim:encyclopedia#college/plain",
+        "conversational:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000903,
+      "n": 4,
+      "phrase": "in contemporary scholarship and"
+    },
+    {
+      "count": 17,
+      "example_rendition_ids": [
+        "abigail:encyclopedia#grade_5/plain",
+        "salim:encyclopedia#college/plain",
+        "cecil:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000903,
+      "n": 4,
+      "phrase": "onomastics the study of"
+    },
+    {
+      "count": 17,
+      "example_rendition_ids": [
+        "biff:encyclopedia#grade_5/plain",
+        "biff:encyclopedia#college/plain",
+        "espresso:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000903,
+      "n": 4,
+      "phrase": "the early twentieth century"
+    },
+    {
+      "count": 17,
+      "example_rendition_ids": [
+        "mccormick:encyclopedia#grade_5/plain",
+        "abigail:encyclopedia#grade_5/plain",
+        "abigail:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000903,
+      "n": 4,
+      "phrase": "the study of names"
+    },
+    {
+      "count": 17,
+      "example_rendition_ids": [
+        "incongruous:encyclopedia#neutral/plain",
+        "handmaiden:encyclopedia#neutral/plain",
+        "concordance:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000903,
+      "n": 4,
+      "phrase": "the word derives from"
+    },
+    {
+      "count": 16,
+      "example_rendition_ids": [
+        "salim:encyclopedia#neutral/plain",
+        "salim:encyclopedia#college/plain",
+        "humphrey:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000849,
+      "n": 4,
+      "phrase": "a masculine given name"
+    },
+    {
+      "count": 16,
+      "example_rendition_ids": [
+        "incongruous:encyclopedia#neutral/plain",
+        "handmaiden:encyclopedia#neutral/plain",
+        "accuser:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000849,
+      "n": 4,
+      "phrase": "in contemporary academic and"
+    },
+    {
+      "count": 16,
+      "example_rendition_ids": [
+        "terrier:encyclopedia#neutral/plain",
+        "humphrey:encyclopedia#neutral/plain",
+        "coveted:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000849,
+      "n": 4,
+      "phrase": "related concepts and frameworks"
+    },
+    {
+      "count": 16,
+      "example_rendition_ids": [
+        "atonement:encyclopedia#neutral/plain",
+        "vectors:encyclopedia#neutral/plain",
+        "salim:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000849,
+      "n": 4,
+      "phrase": "related concepts such as"
+    },
+    {
+      "count": 16,
+      "example_rendition_ids": [
+        "salim:encyclopedia#college/plain",
+        "humphrey:encyclopedia#neutral/plain",
+        "cecil:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000849,
+      "n": 4,
+      "phrase": "study of personal names"
+    },
+    {
+      "count": 16,
+      "example_rendition_ids": [
+        "mccormick:encyclopedia#neutral/plain",
+        "postmark:encyclopedia#neutral/plain",
+        "biff:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000849,
+      "n": 4,
+      "phrase": "the broader framework of"
+    },
+    {
+      "count": 16,
+      "example_rendition_ids": [
+        "abigail:encyclopedia#grade_5/plain",
+        "salim:encyclopedia#grade_5/plain",
+        "terrier:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000849,
+      "n": 4,
+      "phrase": "the name comes from"
+    },
+    {
+      "count": 15,
+      "example_rendition_ids": [
+        "peking:encyclopedia#neutral/plain",
+        "bbq:encyclopedia#neutral/plain",
+        "slaver:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000796,
+      "n": 4,
+      "phrase": "aspects and interpretations of"
+    },
+    {
+      "count": 15,
+      "example_rendition_ids": [
+        "incongruous:encyclopedia#neutral/plain",
+        "handmaiden:encyclopedia#neutral/plain",
+        "accuser:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000796,
+      "n": 4,
+      "phrase": "contemporary academic and professional"
+    },
+    {
+      "count": 15,
+      "example_rendition_ids": [
+        "conductors:encyclopedia#college/plain",
+        "caustic:encyclopedia#college/plain",
+        "lipid:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000796,
+      "n": 4,
+      "phrase": "during the nineteenth century"
+    },
+    {
+      "count": 15,
+      "example_rendition_ids": [
+        "clipboard:encyclopedia#neutral/plain",
+        "salim:encyclopedia#neutral/plain",
+        "accuser:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000796,
+      "n": 4,
+      "phrase": "key aspects of the"
+    },
+    {
+      "count": 15,
+      "example_rendition_ids": [
+        "biff:encyclopedia#neutral/plain",
+        "nanjing:encyclopedia#neutral/plain",
+        "dutton:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000796,
+      "n": 4,
+      "phrase": "serves as a case"
+    },
+    {
+      "count": 15,
+      "example_rendition_ids": [
+        "salim:encyclopedia#college/plain",
+        "cecil:encyclopedia#college/plain",
+        "rollins:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000796,
+      "n": 4,
+      "phrase": "the study of personal"
+    },
+    {
+      "count": 14,
+      "example_rendition_ids": [
+        "amity:encyclopedia#neutral/plain",
+        "amuse:encyclopedia#neutral/plain",
+        "rivas:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000743,
+      "n": 4,
+      "phrase": "and early modern periods"
+    },
+    {
+      "count": 14,
+      "example_rendition_ids": [
+        "abigail:noun:2#grade_5/plain#3",
+        "biff:encyclopedia#college/plain",
+        "camden:noun:0#neutral/plain#1"
+      ],
+      "frequency": 0.000743,
+      "n": 4,
+      "phrase": "as an example of"
+    },
+    {
+      "count": 14,
+      "example_rendition_ids": [
+        "abigail:encyclopedia#grade_5/plain",
+        "muerte:encyclopedia#grade_5/plain",
+        "guerrero:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000743,
+      "n": 4,
+      "phrase": "people use it in"
+    },
+    {
+      "count": 13,
+      "example_rendition_ids": [
+        "rivas:encyclopedia#neutral/plain",
+        "humphrey:encyclopedia#neutral/plain",
+        "consummation:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.00069,
+      "n": 4,
+      "phrase": "as a marker of"
+    },
+    {
+      "count": 13,
+      "example_rendition_ids": [
+        "sounder:encyclopedia#neutral/plain",
+        "babel:encyclopedia#neutral/plain",
+        "skim:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.00069,
+      "n": 4,
+      "phrase": "in the 20th century"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "hypnotize:encyclopedia#neutral/plain",
+        "amuse:encyclopedia#neutral/plain",
+        "nanjing:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "a focal point for"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "clipboard:encyclopedia#neutral/plain",
+        "guerrero:encyclopedia#neutral/plain",
+        "incongruous:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "and professional contexts the"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "angolan:encyclopedia#neutral/plain",
+        "wicker:encyclopedia#neutral/plain",
+        "iliad:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "and relevance in academic"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "abigail:encyclopedia#grade_5/plain",
+        "cecil:encyclopedia#college/plain",
+        "rollins:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "anthroponymy the study of"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "salim:encyclopedia#neutral/plain",
+        "salim:encyclopedia#college/plain",
+        "conversational:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "contemporary scholarship and practice"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "abigail:encyclopedia#neutral/plain",
+        "abigail:encyclopedia#college/plain",
+        "flay:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "from the early modern"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "maha:encyclopedia#neutral/plain",
+        "proactive:encyclopedia#neutral/plain",
+        "apathetic:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "historical development and evolution"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "imitations:encyclopedia#grade_5/plain",
+        "childlike:encyclopedia#neutral/plain",
+        "childlike:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "in the twentieth century"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "wicker:encyclopedia#neutral/plain",
+        "conductors:encyclopedia#neutral/plain",
+        "aground:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "into broader frameworks of"
+    },
+    {
+      "count": 12,
+      "example_rendition_ids": [
+        "incongruous:encyclopedia#neutral/plain",
+        "handmaiden:encyclopedia#neutral/plain",
+        "concordance:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000637,
+      "n": 4,
+      "phrase": "word derives from the"
+    },
+    {
+      "count": 11,
+      "example_rendition_ids": [
+        "handmaiden:encyclopedia#neutral/plain",
+        "amuse:encyclopedia#neutral/plain",
+        "soundly:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000584,
+      "n": 4,
+      "phrase": "and related concepts in"
+    },
+    {
+      "count": 11,
+      "example_rendition_ids": [
+        "ascendancy:noun:0#grade_5/plain#8",
+        "horticulture:encyclopedia#grade_5/plain",
+        "truss:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000584,
+      "n": 4,
+      "phrase": "during the middle ages"
+    },
+    {
+      "count": 11,
+      "example_rendition_ids": [
+        "wicker:encyclopedia#neutral/plain",
+        "bbq:encyclopedia#neutral/plain",
+        "amuse:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000584,
+      "n": 4,
+      "phrase": "fits into broader frameworks"
+    },
+    {
+      "count": 11,
+      "example_rendition_ids": [
+        "mccormick:encyclopedia#neutral/plain",
+        "terrier:encyclopedia#neutral/plain",
+        "flay:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000584,
+      "n": 4,
+      "phrase": "illustrating how a single"
+    },
+    {
+      "count": 11,
+      "example_rendition_ids": [
+        "undisciplined:encyclopedia#neutral/plain",
+        "headmistress:encyclopedia#neutral/plain",
+        "apathetic:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000584,
+      "n": 4,
+      "phrase": "in the 19th and"
+    },
+    {
+      "count": 11,
+      "example_rendition_ids": [
+        "conductors:encyclopedia#neutral/plain",
+        "scrapbook:encyclopedia#neutral/plain",
+        "nursemaid:noun:0#neutral/plain#1"
+      ],
+      "frequency": 0.000584,
+      "n": 4,
+      "phrase": "in the 19th century"
+    },
+    {
+      "count": 11,
+      "example_rendition_ids": [
+        "biff:encyclopedia#grade_5/plain",
+        "espresso:encyclopedia#college/plain",
+        "bollywood:noun:0#neutral/plain#0"
+      ],
+      "frequency": 0.000584,
+      "n": 4,
+      "phrase": "in the early twentieth"
+    },
+    {
+      "count": 11,
+      "example_rendition_ids": [
+        "clot:encyclopedia#grade_5/plain",
+        "clot:encyclopedia#college/plain",
+        "carmine:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000584,
+      "n": 4,
+      "phrase": "in the late nineteenth"
+    },
+    {
+      "count": 11,
+      "example_rendition_ids": [
+        "humphrey:encyclopedia#neutral/plain",
+        "humphrey:encyclopedia#college/plain",
+        "benito:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000584,
+      "n": 4,
+      "phrase": "is a masculine given"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "terrier:encyclopedia#neutral/plain",
+        "slaver:encyclopedia#neutral/plain",
+        "scrapbook:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "18th and 19th centuries"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "camden:encyclopedia#neutral/plain",
+        "neville:encyclopedia#neutral/plain",
+        "neville:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "a given name in"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "dutton:encyclopedia#grade_5/plain",
+        "cecil:encyclopedia#grade_5/plain",
+        "camden:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "as a first name"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "amuse:encyclopedia#neutral/plain",
+        "brassiere:encyclopedia#neutral/plain",
+        "showpiece:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "as a focal point"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "berenice:encyclopedia#neutral/plain",
+        "imitations:encyclopedia#college/plain",
+        "duster:noun:0#neutral/formal#6"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "as part of the"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "angolan:encyclopedia#neutral/plain",
+        "artichoke:encyclopedia#neutral/plain",
+        "artichoke:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "europe and the americas"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "biff:encyclopedia#neutral/plain",
+        "accuser:encyclopedia#neutral/plain",
+        "matlock:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "in contemporary usage the"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "headmistress:encyclopedia#college/plain",
+        "cecil:noun:0#neutral/formal#4",
+        "camden:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "in the united kingdom"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "sounder:encyclopedia#neutral/plain",
+        "grizzly:encyclopedia#neutral/plain",
+        "grizzly:encyclopedia#college/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "is a polysemous term"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "abigail:encyclopedia#grade_5/plain",
+        "guerrero:encyclopedia#grade_5/plain",
+        "conversational:encyclopedia#grade_5/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "it also shows how"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "terrier:encyclopedia#neutral/plain",
+        "slaver:encyclopedia#neutral/plain",
+        "scrapbook:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "the 18th and 19th"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "biff:encyclopedia#neutral/plain",
+        "jerseys:encyclopedia#neutral/plain",
+        "brassiere:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "the early 20th century"
+    },
+    {
+      "count": 10,
+      "example_rendition_ids": [
+        "atonement:encyclopedia#neutral/plain",
+        "bbq:encyclopedia#neutral/plain",
+        "postmark:encyclopedia#neutral/plain"
+      ],
+      "frequency": 0.000531,
+      "n": 4,
+      "phrase": "usage and relevance span"
+    }
+  ],
+  "filler_openers": {
+    "2": [
+      {
+        "count": 293,
+        "example_rendition_ids": [
+          "clipboard:encyclopedia#neutral/plain",
+          "clipboard:encyclopedia#college/plain",
+          "egoism:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.015556,
+        "n": 2,
+        "phrase": "related concepts"
+      },
+      {
+        "count": 177,
+        "example_rendition_ids": [
+          "peking:encyclopedia#neutral/plain",
+          "angolan:encyclopedia#neutral/plain",
+          "angolan:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.009397,
+        "n": 2,
+        "phrase": "the term"
+      },
+      {
+        "count": 168,
+        "example_rendition_ids": [
+          "clipboard:encyclopedia#neutral/plain",
+          "deafness:encyclopedia#neutral/plain",
+          "peking:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.00892,
+        "n": 2,
+        "phrase": "in contemporary"
+      },
+      {
+        "count": 166,
+        "example_rendition_ids": [
+          "angolan:encyclopedia#neutral/plain",
+          "muerte:encyclopedia#grade_5/plain",
+          "guerrero:encyclopedia#grade_5/plain"
+        ],
+        "frequency": 0.008813,
+        "n": 2,
+        "phrase": "the word"
+      },
+      {
+        "count": 165,
+        "example_rendition_ids": [
+          "clipboard:encyclopedia#neutral/plain",
+          "deafness:encyclopedia#neutral/plain",
+          "peking:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.00876,
+        "n": 2,
+        "phrase": "key aspects"
+      },
+      {
+        "count": 153,
+        "example_rendition_ids": [
+          "egoism:encyclopedia#neutral/plain",
+          "peking:encyclopedia#grade_5/plain",
+          "abigail:noun:2#grade_1/plain#2"
+        ],
+        "frequency": 0.008123,
+        "n": 2,
+        "phrase": "in the"
+      },
+      {
+        "count": 150,
+        "example_rendition_ids": [
+          "peking:encyclopedia#grade_5/plain",
+          "peking:encyclopedia#college/plain",
+          "mccormick:encyclopedia#grade_5/plain"
+        ],
+        "frequency": 0.007964,
+        "n": 2,
+        "phrase": "the name"
+      },
+      {
+        "count": 147,
+        "example_rendition_ids": [
+          "egoism:encyclopedia#neutral/plain",
+          "mccormick:encyclopedia#neutral/plain",
+          "mccormick:encyclopedia#college/plain"
+        ],
+        "frequency": 0.007805,
+        "n": 2,
+        "phrase": "contemporary usage"
+      },
+      {
+        "count": 134,
+        "example_rendition_ids": [
+          "clipboard:encyclopedia#neutral/plain",
+          "clipboard:encyclopedia#college/plain",
+          "mccormick:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.007114,
+        "n": 2,
+        "phrase": "as a"
+      },
+      {
+        "count": 125,
+        "example_rendition_ids": [
+          "deafness:encyclopedia#grade_5/plain",
+          "peking:encyclopedia#college/plain",
+          "guerrero:encyclopedia#grade_5/plain"
+        ],
+        "frequency": 0.006637,
+        "n": 2,
+        "phrase": "during the"
+      },
+      {
+        "count": 109,
+        "example_rendition_ids": [
+          "clipboard:encyclopedia#neutral/plain",
+          "deafness:encyclopedia#neutral/plain",
+          "peking:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.005787,
+        "n": 2,
+        "phrase": "historically the"
+      },
+      {
+        "count": 108,
+        "example_rendition_ids": [
+          "deafness:encyclopedia#grade_5/plain",
+          "atonement:encyclopedia#grade_5/plain",
+          "abigail:encyclopedia#grade_5/plain"
+        ],
+        "frequency": 0.005734,
+        "n": 2,
+        "phrase": "it can"
+      },
+      {
+        "count": 105,
+        "example_rendition_ids": [
+          "deafness:encyclopedia#college/plain",
+          "atonement:encyclopedia#grade_5/plain",
+          "wicker:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.005575,
+        "n": 2,
+        "phrase": "it is"
+      },
+      {
+        "count": 99,
+        "example_rendition_ids": [
+          "atonement:encyclopedia#grade_5/plain",
+          "abigail:encyclopedia#grade_5/plain",
+          "bbq:encyclopedia#college/plain"
+        ],
+        "frequency": 0.005256,
+        "n": 2,
+        "phrase": "it also"
+      }
+    ],
+    "3": [
+      {
+        "count": 225,
+        "example_rendition_ids": [
+          "clipboard:encyclopedia#college/plain",
+          "egoism:encyclopedia#neutral/plain",
+          "deafness:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.011946,
+        "n": 3,
+        "phrase": "related concepts include"
+      },
+      {
+        "count": 107,
+        "example_rendition_ids": [
+          "egoism:encyclopedia#neutral/plain",
+          "angolan:encyclopedia#neutral/plain",
+          "atonement:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.005681,
+        "n": 3,
+        "phrase": "contemporary usage and"
+      },
+      {
+        "count": 97,
+        "example_rendition_ids": [
+          "peking:encyclopedia#neutral/plain",
+          "atonement:encyclopedia#neutral/plain",
+          "wicker:encyclopedia#neutral/plain"
+        ],
+        "frequency": 0.00515,
+        "n": 3,
+        "phrase": "key aspects and"
+      }
+    ]
+  },
+  "totals": {
+    "entries_scanned": 300,
+    "renditions_flagged_candidates": 790,
+    "senses_live": 731,
+    "sentences_scanned": 18835,
+    "units_scanned": 5519
+  }
+}

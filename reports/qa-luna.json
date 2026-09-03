@@ -1,0 +1,85 @@
+{
+  "calls": 33,
+  "cost_usd": 2.776075,
+  "cost_usd_per_entry": 0.084123,
+  "encyclopedia_defects": 3,
+  "encyclopedia_judged": 33,
+  "entries_failed": 7,
+  "entries_judged": 33,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "audience_inappropriate": 1,
+    "awkward_style": 22,
+    "factual_error": 6,
+    "grammar_error": 2,
+    "hallucination": 9,
+    "inconsistent_style": 1,
+    "missing_content": 8,
+    "other": 1,
+    "punctuation_error": 1,
+    "scope_mismatch": 3,
+    "spelling_error": 1,
+    "terminology_error": 32
+  },
+  "mean_score": 64.21,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0385,
+    "example grade_1/plain": 0.0787,
+    "gloss college/plain": 0.0112,
+    "gloss grade_1/plain": 0.0787,
+    "gloss neutral/technical": 0.0225
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 26,
+    "example grade_1/plain": 89,
+    "gloss college/plain": 89,
+    "gloss grade_1/plain": 89,
+    "gloss neutral/technical": 89
+  },
+  "score_buckets": {
+    "60-79": 22,
+    "80-89": 3,
+    "90+": 0,
+    "<60": 8
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 12,
+    "domain_fits": 16,
+    "examples_fit_sense": 29,
+    "examples_natural": 34,
+    "gloss_accurate": 13,
+    "relations_valid": 76
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.1348,
+    "domain_fits": 0.1798,
+    "examples_fit_sense": 0.3258,
+    "examples_natural": 0.382,
+    "gloss_accurate": 0.1461,
+    "relations_valid": 0.8539
+  },
+  "senses_judged": 89,
+  "stopped_reason": null,
+  "top_issues": [
+    "noun 0 relations: mainland, island of Crete, Cretan island",
+    "notes: \"Crete stretches across the southern Aegean, separating the Mediterranean from Greece's mainland\" is a loose geographic claim; several examples are near-duplicates of one another.",
+    "noun 0 relations: last name, Bassett family, Bassett lineage",
+    "noun 1 relations: pet bassett, show bassett",
+    "notes: Sense 1's example set is largely metalinguistic and repetitive (four near-identical sentences about medieval landholders), and \"in fourteen twenty\" reads oddly.",
+    "noun 0 relations: unmagic, de enchantment, enchantedness, occult phenomena, supernatural phenomena, fetishes",
+    "noun 1 relations: entrances, ravishing",
+    "noun 2 relations: secularization, fetishism",
+    "notes: Sense 3 mixes in several examples that illustrate the everyday disappointment sense rather than the Weberian process, and lists secularization as both hypernym and synonym.",
+    "noun 0 gloss: esa is not a spelling of the English letter name S; sense appears invented",
+    "noun 0 relations: letter S, ess, grapheme name",
+    "noun 1 gloss: no basis for esa as a variant of Spanish ese; esa is the feminine demonstrative 'that'",
+    "noun 1 relations: ese, letter name S, orthographic symbol",
+    "noun 1 domain: suggested language.orthography",
+    "noun 1 example grade_1/plain: \"uses its short name too\" is opaque and hard for a grade_1 reader to parse",
+    "notes: Both senses are invented; the encyclopedia section (Spanish demonstrative 'that', Finnish given name) contradicts them, and the obvious abbreviation senses (e.g. European Space Agency) are absent.",
+    "adjective 0 relations: attribute, belligerent",
+    "notes: Many examples are metalinguistic or contrived code-switching (\"In historical sources guerrero denotes...\", \"His whole guerrero vibe...\") rather than natural usage. The adjective sense's hypernym->attribute is a meta-label and belligerent is a near-synonym, not a hyponym.",
+    "noun 0 relations: slaughter, massacre, slaughterhouse, calm",
+    "noun 0 domain: suggested warfare and violence, general"
+  ]
+}

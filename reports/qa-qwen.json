@@ -1,0 +1,85 @@
+{
+  "calls": 38,
+  "cost_usd": 2.88807,
+  "cost_usd_per_entry": 0.076002,
+  "encyclopedia_defects": 3,
+  "encyclopedia_judged": 38,
+  "entries_failed": 2,
+  "entries_judged": 38,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "audience_inappropriate": 3,
+    "awkward_style": 29,
+    "factual_error": 6,
+    "grammar_error": 4,
+    "hallucination": 8,
+    "inconsistent_style": 1,
+    "missing_content": 5,
+    "other": 2,
+    "punctuation_error": 2,
+    "scope_mismatch": 2,
+    "spelling_error": 1,
+    "terminology_error": 37
+  },
+  "mean_score": 64.53,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0667,
+    "example grade_1/plain": 0.5,
+    "gloss college/plain": 0.0198,
+    "gloss grade_1/plain": 0.1089,
+    "gloss neutral/technical": 0.0396
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 30,
+    "example grade_1/plain": 8,
+    "gloss college/plain": 101,
+    "gloss grade_1/plain": 101,
+    "gloss neutral/technical": 101
+  },
+  "score_buckets": {
+    "60-79": 30,
+    "80-89": 0,
+    "90+": 0,
+    "<60": 8
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 9,
+    "domain_fits": 16,
+    "examples_fit_sense": 16,
+    "examples_natural": 59,
+    "gloss_accurate": 14,
+    "relations_valid": 90
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.0891,
+    "domain_fits": 0.1584,
+    "examples_fit_sense": 0.1584,
+    "examples_natural": 0.5842,
+    "gloss_accurate": 0.1386,
+    "relations_valid": 0.8911
+  },
+  "senses_judged": 101,
+  "stopped_reason": null,
+  "top_issues": [
+    "noun 0 relations: bare chest, no bra, bras",
+    "noun 0 gloss grade_1/plain: calls it a 'soft cloth top' \u2014 drops that it is underwear and invents 'soft cloth'",
+    "notes: Both examples read as lab-report filler rather than natural usage; 'bras' is an inflected form of the headword and 'bare chest'/'no bra' are not lexical relation targets.",
+    "noun 0 relations: last name, Bassett family, Bassett lineage",
+    "noun 1 relations: pet bassett, show bassett",
+    "notes: Both senses carry see_also targets that are constructed phrases rather than real terms, and sense 1 equates a specific surname with the generic 'last name'.",
+    "noun 0 relations: document holder, paper clipboard",
+    "noun 0 domain: suggested office and stationery supplies",
+    "noun 1 relations: data buffer, permanent storage, persistent memory, clipboard memory",
+    "noun 2 gloss: no established sense of 'clipboard' means a to-do or task list; the meaning is invented",
+    "noun 2 relations: todo list, task list, checklist, completed tasks, finished items",
+    "noun 2 domain: suggested business and project management",
+    "notes: Sense 3 has no basis in usage. Sense 3 also lists the same terms as both synonyms and hyponyms, which cannot both hold.",
+    "verb 0 relations: immure, penned",
+    "adjective 0 relations: confinement, restriction",
+    "adjective 0 domain: suggested biology / animal research",
+    "adjective 1 relations: constraint, limitation",
+    "adjective 2 relations: chemical modification, protective group",
+    "notes: Photolysis of caged ATP releases ATP, not phosphate, so that example states something untrue. Several adjective senses take noun hypernyms (confinement, constraint, protective group), and sense 1 lists immure as both synonym and hyponym.",
+    "noun 0 relations: island of Crete, Cretan island, mainland"
+  ]
+}

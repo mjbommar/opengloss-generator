@@ -1,0 +1,372 @@
+{
+  "anchoring": {
+    "claude-haiku-4-5": {
+      "example_renditions": 3073,
+      "gloss_renditions": 0,
+      "headword_initial_rate": null,
+      "headword_present_rate": 0.9821,
+      "near_copy_rate": null
+    },
+    "gemini-3.7-flash": {
+      "example_renditions": 554,
+      "gloss_renditions": 0,
+      "headword_initial_rate": null,
+      "headword_present_rate": 0.9964,
+      "near_copy_rate": null
+    },
+    "gpt-5.4-nano": {
+      "example_renditions": 0,
+      "gloss_renditions": 0,
+      "headword_initial_rate": null,
+      "headword_present_rate": null,
+      "near_copy_rate": null
+    },
+    "gpt-5.6-luna": {
+      "example_renditions": 8545,
+      "gloss_renditions": 6973,
+      "headword_initial_rate": 0.0513,
+      "headword_present_rate": 0.9927,
+      "near_copy_rate": 0.004
+    },
+    "qwen/qwen3.5-397b-a17b": {
+      "example_renditions": 517,
+      "gloss_renditions": 0,
+      "headword_initial_rate": null,
+      "headword_present_rate": 1.0,
+      "near_copy_rate": null
+    }
+  },
+  "attribution": {
+    "accuracy": 0.6596,
+    "chance_accuracy": 0.25,
+    "confusion_matrix": {
+      "labels": [
+        "claude-haiku-4-5",
+        "gemini-3.7-flash",
+        "gpt-5.6-luna",
+        "qwen/qwen3.5-397b-a17b"
+      ],
+      "matrix": [
+        [
+          294,
+          87,
+          82,
+          54
+        ],
+        [
+          52,
+          353,
+          24,
+          88
+        ],
+        [
+          105,
+          56,
+          328,
+          28
+        ],
+        [
+          50,
+          60,
+          18,
+          389
+        ]
+      ]
+    },
+    "cv_folds": 5,
+    "n_per_writer_balanced": 517,
+    "top_features_per_writer": {
+      "claude-haiku-4-5": [
+        "and",
+        "you",
+        "in",
+        "up",
+        "throughout",
+        "my",
+        "has",
+        "got",
+        "her",
+        "established"
+      ],
+      "gemini-3.7-flash": [
+        "caustic",
+        "caged",
+        "circuses",
+        "cecil",
+        "with",
+        "bouts",
+        "chloride",
+        "burials",
+        "carmine",
+        "chaired"
+      ],
+      "gpt-5.6-luna": [
+        "or",
+        "and",
+        "mia",
+        "used",
+        "name",
+        "is",
+        "its",
+        "use",
+        "an",
+        "beside"
+      ],
+      "qwen/qwen3.5-397b-a17b": [
+        "bbq",
+        "alexa",
+        "babel",
+        "grade_10",
+        "akash",
+        "college",
+        "grade_1",
+        "grade_5",
+        "allenby",
+        "atonement"
+      ]
+    },
+    "writers": [
+      "claude-haiku-4-5",
+      "gemini-3.7-flash",
+      "gpt-5.6-luna",
+      "qwen/qwen3.5-397b-a17b"
+    ]
+  },
+  "counts_by_model": {
+    "claude-haiku-4-5": 3073,
+    "gemini-3.7-flash": 554,
+    "gpt-5.4-nano": 37,
+    "gpt-5.6-luna": 15518,
+    "qwen/qwen3.5-397b-a17b": 517
+  },
+  "gate_breakdown": {
+    "claude-haiku-4-5": {
+      "any_flag_rate": 0.0072,
+      "flag_counts": {
+        "factual_error": 3,
+        "og.hard_vocabulary": 3,
+        "og.headword_absent": 10,
+        "og.readability_miss": 8
+      },
+      "flag_rates": {
+        "factual_error": 0.001,
+        "og.hard_vocabulary": 0.001,
+        "og.headword_absent": 0.0033,
+        "og.readability_miss": 0.0026
+      },
+      "n_items": 3073
+    },
+    "gemini-3.7-flash": {
+      "any_flag_rate": 0.0162,
+      "flag_counts": {
+        "audience_inappropriate": 2,
+        "factual_error": 1,
+        "og.hard_vocabulary": 2,
+        "og.headword_absent": 2,
+        "og.readability_miss": 2
+      },
+      "flag_rates": {
+        "audience_inappropriate": 0.0036,
+        "factual_error": 0.0018,
+        "og.hard_vocabulary": 0.0036,
+        "og.headword_absent": 0.0036,
+        "og.readability_miss": 0.0036
+      },
+      "n_items": 554
+    },
+    "gpt-5.6-luna": {
+      "any_flag_rate": 0.0192,
+      "flag_counts": {
+        "audience_inappropriate": 6,
+        "factual_error": 34,
+        "og.hard_vocabulary": 54,
+        "og.headword_absent": 6,
+        "og.headword_initial": 14,
+        "og.readability_miss": 192,
+        "register_mismatch": 2
+      },
+      "flag_rates": {
+        "audience_inappropriate": 0.0004,
+        "factual_error": 0.0022,
+        "og.hard_vocabulary": 0.0035,
+        "og.headword_absent": 0.0004,
+        "og.headword_initial": 0.0009,
+        "og.readability_miss": 0.0125,
+        "register_mismatch": 0.0001
+      },
+      "n_items": 15350
+    },
+    "qwen/qwen3.5-397b-a17b": {
+      "any_flag_rate": 0.0116,
+      "flag_counts": {
+        "factual_error": 4,
+        "og.hard_vocabulary": 1,
+        "og.readability_miss": 2
+      },
+      "flag_rates": {
+        "factual_error": 0.0077,
+        "og.hard_vocabulary": 0.0019,
+        "og.readability_miss": 0.0039
+      },
+      "n_items": 517
+    }
+  },
+  "lexical_diversity": {
+    "_pooled_all_writers": {
+      "distinct_4gram_rate": 0.9066,
+      "n_items": 19699,
+      "type_token_ratio": 0.0634
+    },
+    "_pooled_luna_only": {
+      "distinct_4gram_rate": 0.8895,
+      "n_items": 15518,
+      "type_token_ratio": 0.068
+    },
+    "claude-haiku-4-5": {
+      "distinct_4gram_rate": 0.9912,
+      "distinct_openers": 2958,
+      "n_items": 3073,
+      "sentence_opener_entropy_bits": 11.5025,
+      "top_openers": [
+        [
+          "you could see",
+          6
+        ],
+        [
+          "the allenby bridge",
+          5
+        ],
+        [
+          "in the old",
+          4
+        ],
+        [
+          "just grab that",
+          3
+        ],
+        [
+          "you could tell",
+          3
+        ]
+      ],
+      "type_token_ratio": 0.1943
+    },
+    "gemini-3.7-flash": {
+      "distinct_4gram_rate": 0.979,
+      "distinct_openers": 514,
+      "n_items": 554,
+      "sentence_opener_entropy_bits": 8.9616,
+      "top_openers": [
+        [
+          "we dance to",
+          4
+        ],
+        [
+          "we danced to",
+          3
+        ],
+        [
+          "during the debate",
+          3
+        ],
+        [
+          "the community center",
+          3
+        ],
+        [
+          "dad made sweet",
+          2
+        ]
+      ],
+      "type_token_ratio": 0.3667
+    },
+    "gpt-5.4-nano": {
+      "distinct_4gram_rate": 1.0,
+      "distinct_openers": 37,
+      "n_items": 37,
+      "sentence_opener_entropy_bits": 5.2095,
+      "top_openers": [
+        [
+          "a doctrine or",
+          1
+        ],
+        [
+          "pliable plant stems",
+          1
+        ],
+        [
+          "a state of",
+          1
+        ],
+        [
+          "a feeling of",
+          1
+        ],
+        [
+          "the chloride ion",
+          1
+        ]
+      ],
+      "type_token_ratio": 0.5673
+    },
+    "gpt-5.6-luna": {
+      "distinct_4gram_rate": 0.8895,
+      "distinct_openers": 12015,
+      "n_items": 15518,
+      "sentence_opener_entropy_bits": 13.3004,
+      "top_openers": [
+        [
+          "a person who",
+          80
+        ],
+        [
+          "the museum displayed",
+          23
+        ],
+        [
+          "relating to the",
+          23
+        ],
+        [
+          "to make a",
+          21
+        ],
+        [
+          "a name for",
+          20
+        ]
+      ],
+      "type_token_ratio": 0.068
+    },
+    "qwen/qwen3.5-397b-a17b": {
+      "distinct_4gram_rate": 0.9839,
+      "distinct_openers": 494,
+      "n_items": 517,
+      "sentence_opener_entropy_bits": 8.9139,
+      "top_openers": [
+        [
+          "grade plain the",
+          4
+        ],
+        [
+          "hey did you",
+          3
+        ],
+        [
+          "long ago people",
+          3
+        ],
+        [
+          "benito is a",
+          3
+        ],
+        [
+          "grade many people",
+          3
+        ]
+      ],
+      "type_token_ratio": 0.3026
+    }
+  },
+  "n_attributed_items": 19699
+}

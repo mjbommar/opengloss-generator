@@ -1,0 +1,84 @@
+{
+  "calls": 35,
+  "cost_usd": 2.712557,
+  "cost_usd_per_entry": 0.077502,
+  "encyclopedia_defects": 3,
+  "encyclopedia_judged": 35,
+  "entries_failed": 5,
+  "entries_judged": 35,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "audience_inappropriate": 1,
+    "awkward_style": 25,
+    "factual_error": 10,
+    "grammar_error": 3,
+    "hallucination": 9,
+    "missing_content": 5,
+    "other": 1,
+    "punctuation_error": 3,
+    "scope_mismatch": 3,
+    "terminology_error": 34,
+    "unsupported_addition": 2
+  },
+  "mean_score": 62.83,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.037,
+    "example grade_1/plain": 0.0909,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.0645,
+    "gloss neutral/technical": 0.0108
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 27,
+    "example grade_1/plain": 22,
+    "gloss college/plain": 93,
+    "gloss grade_1/plain": 93,
+    "gloss neutral/technical": 93
+  },
+  "score_buckets": {
+    "60-79": 26,
+    "80-89": 0,
+    "90+": 0,
+    "<60": 9
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 7,
+    "domain_fits": 21,
+    "examples_fit_sense": 19,
+    "examples_natural": 49,
+    "gloss_accurate": 12,
+    "relations_valid": 83
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.0753,
+    "domain_fits": 0.2258,
+    "examples_fit_sense": 0.2043,
+    "examples_natural": 0.5269,
+    "gloss_accurate": 0.129,
+    "relations_valid": 0.8925
+  },
+  "senses_judged": 93,
+  "stopped_reason": null,
+  "top_issues": [
+    "verb 0 relations: aside, tangent, conciseness, relevance, focus, swerve, discuss, write",
+    "notes: Several relation targets are nouns (aside, tangent, conciseness, relevance, focus) attached to a verb sense, and 'discuss'/'write' are not genuine hypernyms of digress.",
+    "noun 0 relations: document holder, paper clipboard, presentation clipboard, folding clipboard",
+    "noun 1 relations: data buffer, permanent storage, persistent memory, image clipboard, text clipboard",
+    "noun 2 gloss: no established sense of 'clipboard' means a task list; the metaphorical sense is largely invented",
+    "noun 2 relations: todo list, task list, checklist, completed tasks, finished items",
+    "noun 2 domain: suggested business and project management",
+    "notes: Sense 3 lists the same targets as both synonyms and hyponyms, which cannot both hold. Sense 1's example about a C-clamp securing 0.5-1.5 mm sheets invents a specification.",
+    "noun 0 relations: Amazon Echo assistant, Alexa smart-home controller",
+    "noun 2 relations: Alexa Smith, Alexa Johnson",
+    "noun 2 gloss neutral/technical: \"anthroponym\" and \"hypocoristic\" are specialist linguistics terms, beyond a neutral reading level",
+    "notes: Several sense-1 and sense-2 examples restate the definition rather than showing usage, and several sense-2 examples illustrate the assistant sense rather than the countable device sense.",
+    "noun 0 relations: unmagic, de enchantment, enchantedness, occult phenomena, supernatural phenomena, fetishes",
+    "noun 1 relations: entrances, ravishing",
+    "noun 2 relations: secularization, fetishism",
+    "notes: Sense 3 lists secularization as both hypernym and synonym; senses 1 and 2 include non-word or unrelated see_also targets (\"unmagic\", \"de enchantment\", \"entrances\", \"ravishing\").",
+    "verb 1 relations: share, cooperate, cohabitation, hoard",
+    "verb 1 domain: suggested community life",
+    "verb 0 gloss grade_1/plain: \"higher power\" is abstract vocabulary a grade-1 reader cannot interpret",
+    "notes: Several verb examples force the inflected headword ungrammatically (\"Young adults increasingly communes\", \"wants to communes\", \"Participants who communes\", \"sit outside... and communes\")."
+  ]
+}
