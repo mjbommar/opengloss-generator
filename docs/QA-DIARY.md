@@ -669,3 +669,34 @@ relation lists (`assessed, assesses, assessing`); research-register example fill
 **Read:** structurally tier 2 is at core parity (coverage, FK bands, graph), and the judge
 score already equals the core's final score before the passes that raised the core are
 applied to it. The relation-validity remainder is the highest-leverage pending item.
+
+## Iteration 6 — tier-2 final re-judge (2026-09-03 16:45)
+
+Same 40 entries and seed as iteration 5 (`--force`), after the full chain, three
+follow-ups and the post-outage resume. 98 senses, $3.36.
+
+| | iteration 5 (mid-chain) | iteration 6 (final) |
+|---|---|---|
+| mean score | 66.0 | **68.6** |
+| entries below 60 | 7 | **5** |
+| entries 80+ | 1 | 2 |
+| relations_valid defect rate | 88% | 84% |
+| examples_fit_sense | 39% | 36% |
+| examples_natural | 36% | 42% |
+| domain_fits | 29% | 29% |
+| gloss_accurate | 13% | 14% |
+| grade_1 example defects | 10% | 9% |
+| grade_1 gloss defects | 6% | 8% |
+| college gloss defects | 0% | 0% |
+| encyclopedia college defects | — | 2.5% |
+
+**Read.** +2.6 points on the same entries, above the core's final 66.4. The relation
+criterion barely moved (88% → 84%) even though the validity pass demoted or retyped
+~430K edges store-wide: the judge marks a sense defective if *any* listed relation is
+wrong, and the per-sense lists are long (20–40 edges), so a single miss keeps the sense
+flagged. Two follow-ups would move it: a stricter relation cap per sense (keep the
+top-k the judge accepted), and the asymmetric-verdict reconcile pass noted in
+CORE-DIARY. `examples_natural` rose slightly (36% → 42%): the per-sense examples stage
+added 8 sentences per sense and the judge's "corpus-style" complaint applies to more of
+them; the F8 filler detector plus a rewrite pass is the intended answer. Domain fit
+(29%) is unchanged because no pass targets it; the versioned retag (D-46) is the fix.
