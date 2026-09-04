@@ -796,3 +796,26 @@ pairs quote the entry's own example ("What was Mia reluctant to do?" → "to go 
 slide") — grounded but not general knowledge; fine for retrieval pairs, weak for QA
 evaluation. Worth a `question_type`-aware filter at export time rather than a change to
 the generator.
+
+## Iteration 12 — final re-judge for goal 2 (2026-09-04 12:10)
+
+Same 40 entries / 98 senses, seed 7, forced. $3.40. After: retag, reconcile, filler,
+pair stages, verdict-driven reconcile, circular-gloss rewrite, stilted rerun, spans.
+
+| | it. 6 (start of goal 2) | it. 12 (end) |
+|---|---|---|
+| mean score | 68.6 | **70.2** |
+| entries 80+ / below 60 | 2 / 5 | **4 / 5** |
+| relations_valid defect | 83.7% | **60.2%** |
+| domain_fits | 28.6% | **21.4%** |
+| gloss_accurate | 14.3% | **12.2%** |
+| examples_natural | 41.8% | 33.7% |
+| examples_fit_sense | 35.7% | 37.8% |
+| distinct_from_other_senses | 9.2% | 10.2% |
+
+Over the six re-judges since the tier-2 chain ended: +1.6 mean, relations −23 points
+(the contrast verdicts did the last 8), domain −7, gloss accuracy −2 (circular-gloss
+rewrite), naturalness −8. The two that did not move — examples fitting the sense and
+sense distinctness — are the next targets; both are per-sense judgement calls the
+D-53 sense-check and sense-hygiene already make with nano, so the lever is a stronger
+checker on those steps, not a new pass.
