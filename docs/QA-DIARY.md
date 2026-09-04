@@ -737,3 +737,22 @@ the demoted edges out of the list the judge reads and capping per type dropped i
 points. It is still the top defect: with 5–6 typed edges per sense, one wrong edge
 still fails the sense. Next lever is a per-edge accept list from the judge's own
 `invalid_relations` output feeding a targeted demotion — recorded as an open item.
+
+## Iteration 9 — after the filler rewrite (2026-09-03 21:05)
+
+Same 40 entries / 98 senses, seed 7, forced. $3.24.
+
+| | it. 6 | it. 7 (retag) | it. 8 (reconcile) | it. 9 (filler) |
+|---|---|---|---|---|
+| mean score | 68.6 | 68.5 | 69.5 | **69.6** |
+| relations_valid defect | 83.7% | 85.7% | 67.3% | 68.4% |
+| domain_fits | 28.6% | 16.3% | 18.4% | 19.4% |
+| examples_natural | 41.8% | 34.7% | 35.7% | 35.7% |
+| examples_fit_sense | 35.7% | 34.7% | 32.7% | 34.7% |
+
+The filler rewrite did not move `examples_natural` on this sample (35.7% → 35.7%):
+it targets 15 corpus-wide 4-grams, and the judge's naturalness complaint is broader
+("research-prose" register, not a specific phrase). The rewrite is still worth having
+for the encoder (79,533 fewer near-identical sentence frames), but the naturalness
+lever is a register-aware rewrite of the D-53 sentences, not a phrase filter. Net over
+the three passes: **68.6 → 69.6**, relations 84% → 68%, domain 29% → 19%.
