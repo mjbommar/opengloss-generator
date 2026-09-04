@@ -1213,3 +1213,12 @@ entry), **$4.77**, 79,533 of 80,055 flagged example renditions rewritten, 522 re
 (headword dropped or sibling collision), 0 failures, completed under the $6.5 cap.
 $0.00006 per rewrite, matching the pilot. Re-judge running, then the final audit and
 `DONE-QUALITY` hands over to the pair stages.
+
+**21:06 — quality passes complete (`DONE-QUALITY`).** Tier-2 audit after retag +
+reconcile + filler: synonym reciprocity **99.5%** (was 93.7%), antonym **99.97%**
+(was 96.9%), 0 hypernym cycles; relations 948K → **416K** (the tombstoned demotions
+now live in provenance notes); headword-initial glosses 83 (0.02%). New:
+`senses_zero_relations` 3 → **1,760** — senses whose every edge was a demotion; they
+are candidates for a targeted relation regeneration (open item). Spend for the three
+passes + four judges: retag $3.90, reconcile $0, filler $4.77, judges $13.4 → **≈ $22**.
+Pair stages started (luna-only default).
