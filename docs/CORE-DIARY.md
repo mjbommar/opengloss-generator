@@ -1401,3 +1401,7 @@ cost, and the $17 cap would have stopped it at ~35% coverage. Killed; new
 share, gotcha #7) + relaunch 11,532 entries **$10.12** luna-only (45,339 calls,
 116,792 renditions, 0 failures, cache 0.89). Stage total $14.87 vs $12 expected
 (the $3.87 haiku overrun accounts for the gap). Examples × 4 levels started 17:24.
+
+**Tier 3 examples × 4 levels (17:24 → 18:51, 1h27m):** 41,093 calls, **$7.35**
+(expected $8; cap $12), 12,830 entries, 129,433 renditions, 0 failures, cache 0.90.
+Encyclopedia grade_5 + college started 18:51 (cap $28).
