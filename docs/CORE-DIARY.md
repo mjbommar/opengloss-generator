@@ -1239,3 +1239,16 @@ qa-pairs run: 8 patterns ("according to the sources", "the passage", …), repai
 drop; on the pilot's 6,090 pairs: 116 matches (1.9%), 14 repairable, 4 false positives
 (all "the passage" on senses that *are* passages). `echoes_gloss` (first-60-char rule)
 matched 0 on this sample — the pilot's 11.6% were paraphrased restatements, not verbatim.
+
+**22:20 — `circular_gloss` step merged (D-70):** the full detector (headword or any
+inflected/derived form in the canonical gloss; proper nouns exempt) finds **21.9%** of
+senses circular (13.4% by literal headword match, which is what the overnight scan
+measured). Pilot: 179/181 rewritten over three sweeps, $0.0001/rewrite, two permanent
+refusals stopped by the D-47 bound; whole-store extrapolation $1.3–2.2. Graded and
+register renditions are left as they are (independently valid).
+
+Queued behind the post-pair reconcile (`final_hygiene.sh`): circular_gloss (cap $3.5,
++ a $1 second sweep), stilted_examples rerun (cap $3), retrofit spans (cap $1), forced
+re-judge, final audit. Everything for this goal is now merged on `main` and queued; the
+remaining wall-clock is the pair stages (queries ~05:30, contrasts ~09:00, qa-pairs
+~19:00 on 2026-09-04), then ≈ 1.5 h of free/cheap passes.
