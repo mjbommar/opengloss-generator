@@ -25,8 +25,10 @@ Five kinds of pair come out of one entry (``PairKind``):
   (neutral, plain) gloss (label 1): the doc2query-shaped "this text should retrieve this
   definition" pair.
 * ``example_encyclopedia`` -- a sense's representative example paired with its entry's
-  canonical encyclopedia rendition, when one exists (label 1): same idea, aimed at the
-  longer article instead of the one-line gloss.
+  canonical encyclopedia rendition, when one exists **and the entry is monosemous**
+  (label 1): same idea, aimed at the longer article instead of the one-line gloss. The
+  encyclopedia is entry-level, not sense-level -- on a polysemous entry it is not a valid
+  positive for any one sense's example, so it is skipped there entirely (D-71).
 
 "Representative example" (:func:`_representative_example`) is the sense's canonical
 (neutral, plain) example if it has one, else its first example in stored order --
@@ -78,7 +80,9 @@ class Pair:
     ``example_encyclopedia`` pairs, since the encyclopedia is an entry-level rendition
     with no owning sense. ``span_a``/``span_b`` are the headword span within an example
     text (``None`` for the gloss/encyclopedia side of a pair, which is prose, not a
-    tagged sentence).
+    tagged sentence). ``live_senses`` is additive (D-71): how many live senses the entry
+    named by ``headword``/``sense_a`` has, so a downstream consumer can filter or
+    reweight by polysemy without re-deriving it.
     """
 
     headword: str
@@ -93,6 +97,7 @@ class Pair:
     level_a: str
     level_b: str
     kind: str
+    live_senses: int
 
 
 @dataclass(slots=True)
@@ -142,7 +147,9 @@ def _live_senses(entry: Lexeme) -> list[tuple[Sense, str]]:
     return [(sense, sid) for _, sense, sid in entry.iter_senses() if not sense.retired]
 
 
-def _wic_positive_pairs(entry: Lexeme, live: Sequence[tuple[Sense, str]]) -> Iterator[Pair]:
+def _wic_positive_pairs(
+    entry: Lexeme, live: Sequence[tuple[Sense, str]], live_senses: int
+) -> Iterator[Pair]:
     """Yield every same-sense pair among one sense's own example renditions."""
     for sense, sid in live:
         examples = list(sense.examples)
@@ -162,10 +169,13 @@ def _wic_positive_pairs(entry: Lexeme, live: Sequence[tuple[Sense, str]]) -> Ite
                 level_a=a.reading_level.value,
                 level_b=b.reading_level.value,
                 kind=PairKind.WIC_POSITIVE.value,
+                live_senses=live_senses,
             )
 
 
-def _wic_hard_negative_pairs(entry: Lexeme, live: Sequence[tuple[Sense, str]]) -> Iterator[Pair]:
+def _wic_hard_negative_pairs(
+    entry: Lexeme, live: Sequence[tuple[Sense, str]], live_senses: int
+) -> Iterator[Pair]:
     """Yield one pair per pair of the entry's own live senses (the WiC hard case)."""
     reps = [(sid, _representative_example(sense.examples)) for sense, sid in live]
     usable = [(sid, rend) for sid, rend in reps if rend is not None]
@@ -183,10 +193,13 @@ def _wic_hard_negative_pairs(entry: Lexeme, live: Sequence[tuple[Sense, str]]) -
             level_a=rend_a.reading_level.value,
             level_b=rend_b.reading_level.value,
             kind=PairKind.WIC_HARD_NEGATIVE.value,
+            live_senses=live_senses,
         )
 
 
-def _gloss_pairs(entry: Lexeme, live: Sequence[tuple[Sense, str]]) -> Iterator[Pair]:
+def _gloss_pairs(
+    entry: Lexeme, live: Sequence[tuple[Sense, str]], live_senses: int
+) -> Iterator[Pair]:
     """Yield one (representative example -> canonical gloss) pair per live sense."""
     for sense, sid in live:
         rep = _representative_example(sense.examples)
@@ -206,14 +219,22 @@ def _gloss_pairs(entry: Lexeme, live: Sequence[tuple[Sense, str]]) -> Iterator[P
             level_a=rep.reading_level.value,
             level_b=gloss.reading_level.value,
             kind=PairKind.EXAMPLE_GLOSS.value,
+            live_senses=live_senses,
         )
 
 
-def _encyclopedia_pairs(entry: Lexeme, live: Sequence[tuple[Sense, str]]) -> Iterator[Pair]:
+def _encyclopedia_pairs(
+    entry: Lexeme, live: Sequence[tuple[Sense, str]], live_senses: int
+) -> Iterator[Pair]:
     """Yield one (representative example -> canonical encyclopedia) pair per live sense.
 
-    Skipped entirely when the entry has no canonical encyclopedia rendition yet.
+    Skipped entirely when the entry has no canonical encyclopedia rendition yet, or when
+    the entry is polysemous (D-71): the encyclopedia article is written once per entry,
+    about the headword as a whole, so it is only a valid positive for one sense's example
+    when that sense is the entry's only live sense.
     """
+    if live_senses != 1:
+        return
     encyclopedia = entry.encyclopedia.canonical()
     if encyclopedia is None:
         return
@@ -234,16 +255,18 @@ def _encyclopedia_pairs(entry: Lexeme, live: Sequence[tuple[Sense, str]]) -> Ite
             level_a=rep.reading_level.value,
             level_b=encyclopedia.reading_level.value,
             kind=PairKind.EXAMPLE_ENCYCLOPEDIA.value,
+            live_senses=live_senses,
         )
 
 
 def _pairs_for_entry(entry: Lexeme) -> Iterator[Pair]:
     """Yield every within-entry pair (WiC positive/hard-negative, gloss, encyclopedia)."""
     live = _live_senses(entry)
-    yield from _wic_positive_pairs(entry, live)
-    yield from _wic_hard_negative_pairs(entry, live)
-    yield from _gloss_pairs(entry, live)
-    yield from _encyclopedia_pairs(entry, live)
+    live_senses = len(live)
+    yield from _wic_positive_pairs(entry, live, live_senses)
+    yield from _wic_hard_negative_pairs(entry, live, live_senses)
+    yield from _gloss_pairs(entry, live, live_senses)
+    yield from _encyclopedia_pairs(entry, live, live_senses)
 
 
 def _easy_negative_pairs(entries: Sequence[Lexeme], *, n: int, seed: int) -> Iterator[Pair]:
@@ -258,25 +281,29 @@ def _easy_negative_pairs(entries: Sequence[Lexeme], *, n: int, seed: int) -> Ite
     """
     if n <= 0:
         return
-    by_domain: dict[str, list[tuple[str, str, Rendition[Example]]]] = {}
+    by_domain: dict[str, list[tuple[str, str, Rendition[Example], int]]] = {}
     for entry in entries:
-        for sense, sid in _live_senses(entry):
+        entry_live = _live_senses(entry)
+        entry_live_senses = len(entry_live)
+        for sense, sid in entry_live:
             if sense.domain is None:
                 continue
             rep = _representative_example(sense.examples)
             if rep is None:
                 continue
-            by_domain.setdefault(sense.domain.value, []).append((entry.headword, sid, rep))
+            by_domain.setdefault(sense.domain.value, []).append(
+                (entry.headword, sid, rep, entry_live_senses)
+            )
 
     for domain, pool in sorted(by_domain.items()):
         ordered_pool = sorted(pool, key=lambda item: item[1])
-        for headword, sid, rep in ordered_pool:
+        for headword, sid, rep, live_senses in ordered_pool:
             candidates = [c for c in ordered_pool if c[0] != headword]
             if not candidates:
                 continue
             rng = random.Random(f"{seed}:{domain}:{sid}")  # noqa: S311 - sampling, not crypto
             chosen = rng.sample(candidates, min(n, len(candidates)))
-            for other_headword, other_sid, other_rep in chosen:
+            for other_headword, other_sid, other_rep, _other_live_senses in chosen:
                 yield Pair(
                     headword=headword,
                     headword_b=other_headword,
@@ -290,6 +317,7 @@ def _easy_negative_pairs(entries: Sequence[Lexeme], *, n: int, seed: int) -> Ite
                     level_a=rep.reading_level.value,
                     level_b=other_rep.reading_level.value,
                     kind=PairKind.WIC_EASY_NEGATIVE.value,
+                    live_senses=live_senses,
                 )
 
 

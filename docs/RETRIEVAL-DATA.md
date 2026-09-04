@@ -24,11 +24,14 @@ either side.
 | `label` | 0 \| 1 | 1 for every positive pair kind; 0 for both negative kinds. |
 | `level_a` / `level_b` | string | The `ReadingLevel` of each side's source rendition (e.g. `neutral`, `grade_5`). |
 | `kind` | string | One of the five `PairKind` values below — this is the "negative kind" the plan's CLI summary is measured by. |
+| `live_senses` | int | How many live senses the entry named by `headword`/`sense_a` has. Additive (D-71): lets a downstream consumer filter or reweight by polysemy without re-deriving it. |
 
 `headword`/`sense_a`/`sense_b`/`text_a`/`text_b`/`span_a`/`span_b`/`label`/`level_a`/
 `level_b` are exactly the ten fields `RETRIEVAL-DATA-PLAN.md`'s F1 section names;
-`headword_b` and `kind` are additive, needed to make an easy negative and a "what is
-this pair for" distinction representable without a second file format.
+`headword_b`, `kind`, and `live_senses` are additive: `headword_b`/`kind` make an easy
+negative and a "what is this pair for" distinction representable without a second file
+format, and `live_senses` (D-71) lets a downstream consumer identify or filter
+polysemous entries.
 
 ### Pair kinds
 
@@ -47,7 +50,11 @@ this pair for" distinction representable without a second file format.
   canonical (`neutral`, `plain`) gloss.
 * **`example_encyclopedia`** (label 1) — a sense's representative example paired with
   its entry's canonical (`neutral`, `plain`) encyclopedia rendition, when the entry has
-  written one; skipped otherwise.
+  written one **and the entry is monosemous** (exactly one live sense); skipped
+  otherwise. The encyclopedia article is entry-level, not sense-level, so on a
+  polysemous entry it is not a valid positive for any one sense's example (D-71: an
+  earlier version of this export paired it with every sense's example regardless of
+  polysemy — see D-71 in `docs/DECISIONS.md`).
 
 "Representative example" is a sense's canonical (`neutral`, `plain`) example rendition
 if it has one, else its first example in stored order — deterministic, never a random
@@ -99,12 +106,16 @@ uv run opengloss export-pairs --store data/sample-300 --out pairs.jsonl \
 | `example_encyclopedia` | 1,040 |
 | **total** | **25,586** |
 
+**Superseded by D-71** (`example_encyclopedia` gated to monosemous entries only — the
+`1,040` above predates that fix, one per live sense regardless of polysemy). See D-71 in
+`docs/DECISIONS.md` for a before/after comparison on a fresh 300-entry sample.
+
 By label: `1` (positive) = 20,848; `0` (negative) = 4,738. All 300 entries contributed
 at least one pair. Without `--easy-negatives`, the same store yields 22,684 pairs (the
 `wic_easy_negative` row drops to 0, everything else unchanged) — see D-54 in
 `docs/DECISIONS.md` for both runs' full JSON summaries.
 
-## F3 + F4 — `export-triples` and `export-qrels` (D-56)
+## F3 + F4 — `export-triples` and `export-qrels` (D-56, D-71)
 
 Free: no model calls, no store writes. Both commands read a `LexemeStore` and share one
 in-memory projection (`export/triples.py`'s `load_corpus`): every live sense's canonical
@@ -134,12 +145,19 @@ uv run opengloss export-triples --store data/sample-300 --out triples.jsonl \
 ```
 
 One JSONL line per `(query, positive, negative)` triple:
-`query, positive, negative, negative_kind, query_id, positive_id, negative_id, query_source`.
+`query, positive, negative, negative_kind, query_id, positive_id, negative_id,
+query_source, live_senses`.
 
-The positive is one of the sense's canonical gloss, one example, or its lexeme's
-encyclopedia entry (chosen once per sense, seeded); `positive_id` is a sense id, a
-`<sense_id>#example` id, or the lexeme's `<lexeme_id>:encyclopedia` id accordingly. The
-negative is chosen by a **priority-ordered fallback**: the first non-empty candidate set,
+The positive is one of the sense's canonical gloss, one example, or — **only when the
+lexeme is monosemous** (D-71) — its lexeme's encyclopedia entry (chosen once per sense,
+seeded); `positive_id` is a sense id, a `<sense_id>#example` id, or the lexeme's
+`<lexeme_id>:encyclopedia` id accordingly. The encyclopedia entry is written once per
+headword, about the entry as a whole, so it is offered as a candidate positive only when
+this sense is the lexeme's only live one — a polysemous entry's queries draw from gloss
+and example only. `live_senses` (additive; the query's own lexeme's live sense count)
+lets a downstream consumer confirm or further filter by polysemy without re-deriving it
+from `positive_id`. The negative is chosen by a **priority-ordered fallback**: the first
+non-empty candidate set,
 in this order — another live sense of the same headword (`other_sense`), a
 `confusable_with` target (`confusable`), a co-hyponym sharing a direct hypernym
 (`co_hyponym`), or a synonym-of-a-synonym at graph distance 2 (`synonym_of_synonym`) —
@@ -165,6 +183,10 @@ gloss, from a `data/sample-300` run):
 }
 ```
 
+(This record predates `live_senses` (D-71); every current record also carries it — here
+it would be `>= 2`, since `abandoned:adjective:2` above is itself another live sense of
+the same headword.)
+
 ### `export-qrels`
 
 ```
@@ -172,8 +194,9 @@ uv run opengloss export-qrels --store data/sample-300 --out-dir qrels/ --seed 0
 ```
 
 Writes three files under `--out-dir`, all keyed by the same `query_id` and document ids
-as `export-triples`' `positive_id`/`negative_id` (documents are always a sense's
-canonical gloss, id = sense id):
+as `export-triples`' `positive_id`/`negative_id` (documents are a sense's canonical
+gloss, id = sense id, or, since D-71, a lexeme's encyclopedia doc, id =
+`<lexeme_id>:encyclopedia`):
 
 * `qrels.trec` — one `qid 0 docid grade` line per (query, candidate) pair (standard
   `trec_eval` qrels format).
@@ -186,16 +209,21 @@ canonical gloss, id = sense id):
   F2/pseudo queries otherwise has no way to tell the two apart from the listwise file
   alone.
 
-Grades: **3** the query's own sense; **2** a direct synonym target (deliberately excluded
-from `export-triples`' negatives — see above); **1** a direct hypernym or a co-hyponym;
-**0** everything else, which includes every `export-triples` hard-negative kind
-(`other_sense`, `confusable`, `synonym_of_synonym` — **not** `co_hyponym`, already spent
-on grade 1) plus random easy negatives. Grade-2 and grade-1 candidate pools are capped at
-3 each and, when larger, sampled deterministically; grade-0 contributes up to 3 as well
-(one per non-empty hard-negative kind, padded with easy negatives). A sense is graded
-against exactly one tier per query — the tiers are disjoint by construction
-(`export.triples.classify`), and the easy-negative pad additionally excludes whatever a
-higher tier already claimed, so no id is ever offered twice at two grades for one query.
+Grades: **3** the query's own sense, or — only when the lexeme is monosemous (D-71) —
+its lexeme's encyclopedia doc; **2** a direct synonym target (deliberately excluded from
+`export-triples`' negatives — see above); **1** a direct hypernym or a co-hyponym, or a
+**polysemous** lexeme's encyclopedia doc (entry-level, same headword: related, never a
+match and never unrelated, so never graded 0 — D-71); **0** everything else, which
+includes every `export-triples` hard-negative kind (`other_sense`, `confusable`,
+`synonym_of_synonym` — **not** `co_hyponym`, already spent on grade 1) plus random easy
+negatives. Grade-2 and grade-1 candidate pools are capped at 3 each and, when larger,
+sampled deterministically; grade-0 contributes up to 3 as well (one per non-empty
+hard-negative kind, padded with easy negatives). The encyclopedia doc, when the lexeme
+has one, is always included in addition to those caps — there is at most one per
+lexeme, so it never needs sampling. A sense is graded against exactly one tier per query
+— the tiers are disjoint by construction (`export.triples.classify`), and the
+easy-negative pad additionally excludes whatever a higher tier already claimed, so no id
+is ever offered twice at two grades for one query.
 
 One real record's full candidate list (`chronicle:noun:0`, which has a resolved direct
 synonym in `data/sample-300`, plus its grade-0 tier: another sense of the same headword,
@@ -214,6 +242,31 @@ empty for this sense — the padding reaching all the way to a second easy negat
     {"id": "chronicle:verb:0", "text": "To record in detail a sequence of events or facts in written form for historical or educational purposes.", "grade": 0},
     {"id": "backward:adjective:2", "text": "Not modern or progressive; oriented toward tradition and resisting change.", "grade": 0},
     {"id": "arbor:noun:0", "text": "In general academic usage, arbor refers to a garden structure consisting of a shaded, openwork arch or trellis covered with climbing plants, serving as a sheltered outdoor space in landscape design.", "grade": 0}
+  ]
+}
+```
+
+### Measured on `data/sample-300` (300 entries, seed 0)
+
+|  | entries scanned | live senses / queries | rows written |
+|---|---|---|---|
+| `export-triples` | 300 | 1,041 | 2,038 triples |
+| `export-qrels` | 300 | 1,041 | 4,269 qrels rows / 1,041 docs / 1,041 listwise queries |
+
+`export-triples` negative-kind histogram: `other_sense` 997, `easy` 1,041 (`confusable`,
+`co_hyponym`, `synonym_of_synonym` did not fire — see the D-56 note on why a 300-entry
+sample under-represents the three graph tiers whose targets usually live in a different
+sampled entry).
+
+`export-qrels` grade histogram: grade 3 1,041; grade 2 48; grade 1 57; grade 0 3,123.
+
+Every `query_source` in this run is `gloss_pseudo`, since F2 (`Sense.queries`) has not
+landed on `main` yet.
+
+**Superseded by D-71** (encyclopedia-positive/-grade gating by polysemy postdates this
+run — see D-71 in `docs/DECISIONS.md` for a before/after comparison on a fresh
+300-entry sample, including the `docs_written`/grade-histogram shift once a monosemous
+or polysemous lexeme's encyclopedia doc is included).
 
 What each feature in `docs/RETRIEVAL-DATA-PLAN.md` writes, and what one real record of it
 looks like. **Append your feature's section; do not rewrite anyone else's.**
@@ -252,23 +305,6 @@ whichever end asserts it.
   ]
 }
 ```
-
-### Measured on `data/sample-300` (300 entries, seed 0)
-
-|  | entries scanned | live senses / queries | rows written |
-|---|---|---|---|
-| `export-triples` | 300 | 1,041 | 2,038 triples |
-| `export-qrels` | 300 | 1,041 | 4,269 qrels rows / 1,041 docs / 1,041 listwise queries |
-
-`export-triples` negative-kind histogram: `other_sense` 997, `easy` 1,041 (`confusable`,
-`co_hyponym`, `synonym_of_synonym` did not fire — see the D-56 note on why a 300-entry
-sample under-represents the three graph tiers whose targets usually live in a different
-sampled entry).
-
-`export-qrels` grade histogram: grade 3 1,041; grade 2 48; grade 1 57; grade 0 3,123.
-
-Every `query_source` in this run is `gloss_pseudo`, since F2 (`Sense.queries`) has not
-landed on `main` yet.
 
 ## F9 — `export-pretrain`
 

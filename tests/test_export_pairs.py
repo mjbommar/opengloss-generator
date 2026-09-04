@@ -285,6 +285,50 @@ def test_no_example_encyclopedia_pair_without_an_encyclopedia_rendition(tmp_path
     assert "example_encyclopedia" not in outcome.by_kind
 
 
+def test_no_example_encyclopedia_pair_for_a_polysemous_entry(tmp_path):
+    # A two-sense entry's encyclopedia article is entry-level, not sense-level (D-71):
+    # it must not be paired with either sense's example.
+    senses = [
+        Sense(
+            index=i,
+            gloss=Renditions[str](root=[canonical_rendition(f"Sense {i}.")]),
+            examples=Renditions[Example](root=[_example(f"Usage of sense {i}.")]),
+        )
+        for i in range(2)
+    ]
+    store = _store(tmp_path)
+    store.write(_entry("bank", senses, encyclopedia="A bank is a financial institution."))
+
+    outcome = export_pairs(store, tmp_path / "pairs.jsonl")
+
+    assert "example_encyclopedia" not in outcome.by_kind
+    records = _read_jsonl(tmp_path / "pairs.jsonl")
+    assert all(r["live_senses"] == 2 for r in records)
+
+
+def test_example_encyclopedia_pair_kept_for_a_monosemous_entry(tmp_path):
+    # The mirror case: exactly one live sense, so the entry-level encyclopedia article is
+    # a legitimate positive for it (D-71).
+    sense = Sense(
+        index=0,
+        gloss=Renditions[str](root=[canonical_rendition("A tool for striking things.")]),
+        examples=Renditions[Example](root=[_example("The judge banged the gavel.")]),
+    )
+    store = _store(tmp_path)
+    store.write(
+        _entry(
+            "gavel", [sense], encyclopedia="A gavel is a small ceremonial mallet used by judges."
+        )
+    )
+
+    outcome = export_pairs(store, tmp_path / "pairs.jsonl")
+
+    assert outcome.by_kind["example_encyclopedia"] == 1
+    records = _read_jsonl(tmp_path / "pairs.jsonl")
+    encyclopedia_pairs = [r for r in records if r["kind"] == "example_encyclopedia"]
+    assert encyclopedia_pairs[0]["live_senses"] == 1
+
+
 # --------------------------------------------------------------------------------------
 # wic_easy_negative: opt-in, seeded, cross-headword
 # --------------------------------------------------------------------------------------
@@ -443,9 +487,9 @@ def test_outcome_as_dict_matches_the_written_file(tmp_path):
     summary = outcome.as_dict()
     assert summary["pairs_written"] == len(records)
     # wic_positive: 1 pair per sense (2 examples each) = 2; hard_negative: C(2,2)->1 pair;
-    # gloss: 1 per sense = 2; encyclopedia: 1 per sense = 2.
+    # gloss: 1 per sense = 2; no encyclopedia pairs -- bank has two live senses, so its
+    # encyclopedia article is entry-level, not a valid positive for either one (D-71).
     assert outcome.by_kind == {
-        "example_encyclopedia": 2,
         "example_gloss": 2,
         "wic_hard_negative": 1,
         "wic_positive": 2,
@@ -496,5 +540,6 @@ def test_every_record_carries_the_documented_fields(tmp_path, kind_field):
             "level_a",
             "level_b",
             "kind",
+            "live_senses",
         ):
             assert key in record

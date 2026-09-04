@@ -17,6 +17,7 @@ import pytest
 
 from opengloss_generator.config import StoreConfig
 from opengloss_generator.export.qrels import (
+    GRADE_ENCYCLOPEDIA_RELATED,
     GRADE_HYPERNYM_OR_COHYPONYM,
     GRADE_OWN_SENSE,
     GRADE_SYNONYM,
@@ -62,12 +63,16 @@ def _sense(
     )
 
 
-def _entry(headword: str, senses: list[Sense]) -> Lexeme:
+def _entry(headword: str, senses: list[Sense], *, encyclopedia: str | None = None) -> Lexeme:
     """Build a single-POS (noun) entry from a list of senses."""
+    encyclopedia_renditions = Renditions[str](root=[])
+    if encyclopedia is not None:
+        encyclopedia_renditions = Renditions[str](root=[canonical_rendition(encyclopedia)])
     return Lexeme.empty(
         headword,
         kind=LexemeKind.SIMPLEX,
         pos_entries=[POSEntry(pos=PartOfSpeech.NOUN, senses=senses)],
+        encyclopedia=encyclopedia_renditions,
     )
 
 
@@ -114,6 +119,9 @@ def world(tmp_path: Path) -> LexemeStore:
                 relations=[_resolved(RelationType.HYPERNYM, "landform", "landform:noun:0")],
             ),
         ],
+        # Two live senses (D-71): the encyclopedia is entry-level, so it must be graded 1
+        # (GRADE_ENCYCLOPEDIA_RELATED), never 3 or 0.
+        encyclopedia="A bank is a financial institution licensed to accept deposits.",
     )
     landform = _entry("landform", [_sense(0, "Any natural feature of the earth's surface.")])
     shore = _entry(
@@ -172,6 +180,13 @@ def world(tmp_path: Path) -> LexemeStore:
     )
     embankment = _entry("embankment", [_sense(0, "A wall or bank built to prevent flooding.")])
     pebble = _entry("pebble", [_sense(0, "A small stone.")])
+    # A monosemous entry with an encyclopedia, so grade 3 for a lexeme's own encyclopedia
+    # doc (D-71) can be exercised alongside bank's grade-1 case above.
+    gadget = _entry(
+        "gadget",
+        [_sense(0, "A small mechanical device or tool.")],
+        encyclopedia="A gadget is a small mechanical or electronic device.",
+    )
 
     for entry in (
         bank,
@@ -184,6 +199,7 @@ def world(tmp_path: Path) -> LexemeStore:
         moneylender,
         embankment,
         pebble,
+        gadget,
     ):
         store.write(entry)
     return store
@@ -249,7 +265,14 @@ def test_grade_2_tier_is_capped_at_max_grade_2(world: LexemeStore) -> None:
 def test_grade_1_tier_is_capped_at_max_grade_1(world: LexemeStore) -> None:
     result = build_qrels(world, seed=0)
     listwise = _listwise_for(result, "bank:noun:1")
-    grade_1_candidates = [c for c in listwise.candidates if c.grade == GRADE_HYPERNYM_OR_COHYPONYM]
+    # The MAX_GRADE_1 cap applies to the hypernym/co-hyponym tier; bank's own (uncapped,
+    # at-most-one-per-lexeme) encyclopedia doc also grades 1 here since bank is
+    # polysemous (D-71) and is excluded from this count on purpose.
+    grade_1_candidates = [
+        c
+        for c in listwise.candidates
+        if c.grade == GRADE_HYPERNYM_OR_COHYPONYM and not c.id.endswith(":encyclopedia")
+    ]
     assert len(grade_1_candidates) <= MAX_GRADE_1
 
 
@@ -267,6 +290,50 @@ def test_isolated_sense_grade_0_is_filled_entirely_by_easy_negatives(world: Lexe
     assert grade_0  # the pool is large enough that at least one easy negative is found
     for candidate in grade_0:
         assert not candidate.id.startswith("pebble:")
+
+
+# --------------------------------------------------------------------------------------
+# The encyclopedia doc is entry-level, not sense-level (D-71)
+# --------------------------------------------------------------------------------------
+
+
+def test_polysemous_entrys_encyclopedia_doc_is_graded_1_never_0_or_3(world: LexemeStore) -> None:
+    # bank has two live senses; its encyclopedia doc must appear at grade 1 for both of
+    # their queries, and never at grade 3 (reserved for the query's own sense) or 0.
+    result = build_qrels(world, seed=0)
+    for sense_id in ("bank:noun:0", "bank:noun:1"):
+        listwise = _listwise_for(result, sense_id)
+        grades = {c.id: c.grade for c in listwise.candidates}
+        assert grades["bank:encyclopedia"] == GRADE_ENCYCLOPEDIA_RELATED
+
+
+def test_monosemous_entrys_encyclopedia_doc_is_graded_3(world: LexemeStore) -> None:
+    # gadget has exactly one live sense, so its encyclopedia doc is as relevant as the
+    # query's own sense.
+    result = build_qrels(world, seed=0)
+    listwise = _listwise_for(result, "gadget:noun:0")
+    grades = {c.id: c.grade for c in listwise.candidates}
+    assert grades["gadget:encyclopedia"] == GRADE_OWN_SENSE
+
+
+def test_encyclopedia_doc_text_and_id_are_correct(world: LexemeStore) -> None:
+    result = build_qrels(world, seed=0)
+    assert (
+        result.docs["gadget:encyclopedia"] == "A gadget is a small mechanical or electronic device."
+    )
+    assert (
+        result.docs["bank:encyclopedia"]
+        == "A bank is a financial institution licensed to accept deposits."
+    )
+
+
+def test_entries_without_an_encyclopedia_never_get_an_encyclopedia_doc(
+    world: LexemeStore,
+) -> None:
+    result = build_qrels(world, seed=0)
+    listwise = _listwise_for(result, "pebble:noun:0")
+    assert all(not c.id.endswith(":encyclopedia") for c in listwise.candidates)
+    assert not any(doc_id.endswith(":encyclopedia") for doc_id in result.docs if "pebble" in doc_id)
 
 
 # --------------------------------------------------------------------------------------

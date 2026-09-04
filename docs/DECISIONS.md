@@ -4483,3 +4483,105 @@ actual count against this pilot's projection. Separately, the `drifted` check's 
 (2 shared content words) is a cheap proxy, not a meaning check — a rewrite that swaps two
 content words for two synonyms and drops none would pass it while a human reviewer might
 still flag drift; the pilot did not surface a case like that, but a larger run might.
+
+## D-71 (2026-09-04) — The encyclopedia is entry-level; F1/F3/F4 were treating it as sense-level
+
+**Context.** `Lexeme.encyclopedia` is one article per headword, written about the entry
+as a whole — it has no owning sense. `export/triples.py` (F3, D-56), `export/qrels.py`
+(F4, D-56), and `export/pairs.py` (F1, D-54) all read it as if it were, instead, a
+positive belonging to *every* live sense of the entry: `export-triples` offered it as a
+candidate positive text for any sense's queries; `export-qrels` never graded it at all
+(a gap, not the described defect — see below); `export-pairs` paired it with every live
+sense's representative example via `example_encyclopedia`.
+
+The motivating case: `aaa` has six live senses (an auto-club sense, a credit-rating
+sense, a battery-size sense, an IT-protocol sense, and two interjections) and one
+encyclopedia article, about the string "AAA" as a cross-domain acronym. Before this fix,
+`export-triples` over `data/core-store` paired `aaa:interjection:0#q1` — a synthetic
+query for "a reflex cry from sudden pain" — with that article as its positive, and
+`export-pairs` emitted the same pairing (encyclopedia article ↔ the interjection's own
+example) as an `example_encyclopedia` positive. A retrieval or WiC model trained on
+either row would learn that an interjection's query text should retrieve an article
+about a telecom/finance/automotive acronym — a false positive with nothing to do with
+word-sense disambiguation, just an artifact of the encyclopedia being entry-level.
+
+**Verifying the qrels claim.** Before writing any patch, `export/qrels.py` was read in
+full and traced against `tests/test_export_qrels.py`: neither the code nor the module
+docstring nor D-56 itself ever mentions the encyclopedia. `build_qrels`'s `docs` dict is
+populated only from `corpus.gloss[sense_id]`, and `GradedCandidate` never carried
+anything but a sense id. Grading `aaa:encyclopedia` at 3 was never a real behavior on
+`main` to regress — F4 simply never included the encyclopedia doc at all, a gap against
+`docs/RETRIEVAL-DATA-PLAN.md`'s own F3+F4 section ("Positives: canonical gloss, one
+example, encyclopedia neutral"), which named it for both features but was only ever
+implemented for F3. Closing that gap with the same polysemy gate as F1/F3 (rather than
+leaving F4 the one export silent on the encyclopedia) keeps all three exports
+internally consistent, which is the property D-56 explicitly wants of the F3/F4 pair.
+
+**Decision.** Gate every encyclopedia positive/grade on
+`export.triples.is_monosemous(corpus, lexeme_id)` (exactly one live sense):
+
+1. **`export-triples`.** `positive_options` no longer offers the encyclopedia entry as a
+   candidate positive unless the sense's lexeme is monosemous. `Triple` gains
+   `live_senses: int` (the query's own lexeme's live sense count), populated for every
+   triple, so a downstream consumer can filter or reweight by polysemy without
+   re-deriving it from `positive_id`.
+2. **`export-qrels`.** New: a lexeme's encyclopedia doc (when it has one) is added as an
+   extra graded candidate for every one of its senses' queries — `GRADE_OWN_SENSE` (3)
+   when the lexeme is monosemous, `GRADE_ENCYCLOPEDIA_RELATED` (1; same numeric value as
+   `GRADE_HYPERNYM_OR_COHYPONYM`, named separately since it is a different relationship
+   that happens to earn the same relevance judgement) when it is polysemous, and never
+   `GRADE_UNRELATED` (0) — same headword, entry-level, is never "unrelated." This is
+   additive to the existing `MAX_GRADE_1`/`MAX_GRADE_2` caps, not subject to them (there
+   is at most one encyclopedia doc per lexeme, so it never needs sampling).
+   `GradedCandidate` is renamed `sense_id` → `doc_id` and gains a `text` field (populated
+   at construction) so the encyclopedia doc — whose id/text do not come from
+   `corpus.gloss` — does not need a second id-shaped lookup map.
+3. **`export-pairs`.** `_encyclopedia_pairs` is skipped entirely unless the entry has
+   exactly one live sense. `Pair` gains `live_senses: int` (how many live senses the
+   entry named by `headword`/`sense_a` has), populated on every pair kind, including
+   `wic_easy_negative` (which draws `headword`'s own live-sense count, not the partner
+   headword's).
+
+`is_monosemous`/`live_sense_count` live in `export/triples.py` (already the shared
+projection module for F3/F4) and are imported by `export/qrels.py`, so F3/F4 can never
+quietly disagree about which entries count as monosemous.
+
+**Measured on a fresh 300-entry sample** (`aaa`, `people`, `bank`, `stubborn` explicit,
+plus 296 random from `data/core/tier2_50k.tsv`, seed 0, copied read-only from
+`data/core-store`; `--seed 0 --easy-negatives 1` for triples, `--seed 0` for qrels and
+pairs):
+
+| | before | after |
+|---|---|---|
+| `export-triples`: rows written | 16,044 | 16,044 (unchanged — only which text/id is the positive changes) |
+| `export-triples`: rows whose positive is an encyclopedia doc | 4,848 (30.2%) | 336 (2.1%) |
+| `export-qrels`: `docs.jsonl` size | 717 | 1,017 (+300 — every one of the 300 sampled entries has an encyclopedia article) |
+| `export-qrels`: grade histogram | `{0: 25812, 1: 60, 2: 24, 3: 8604}` | `{0: 25812, 1: 7500, 2: 24, 3: 9768}` |
+| `export-pairs`: `example_encyclopedia` rows | 717 (one per live sense) | 97 (one per monosemous entry) |
+
+The qrels grade-3 delta (+1,164) is exactly the 97 monosemous entries × 12 queries/sense;
+the grade-1 delta (+7,440) is exactly the 620 live senses belonging to the 203
+polysemous-with-an-encyclopedia entries × 12 queries/sense. Confirmed directly:
+`aaa:interjection:0#q1`'s triple positive changed from `aaa:encyclopedia` ("The string
+AAA operates as a cross-domain acronym...") to `aaa:interjection:0#example`; its qrels
+row for `aaa:encyclopedia` changed from absent to grade 1 (never 3, never 0); its
+`example_encyclopedia` pair count for `aaa` changed from 6 (one per live sense) to 0.
+`people`, `bank`, and `stubborn` are all polysemous with an encyclopedia article in the
+sample and show the same shift. `data/core-store` was only ever read, never written, by
+this verification.
+
+**Consequence.** `export/triples.py` (`is_monosemous`, `live_sense_count`,
+`Triple.live_senses`), `export/qrels.py` (`GRADE_ENCYCLOPEDIA_RELATED`,
+`GradedCandidate.doc_id`/`.text`, `_encyclopedia_candidate`), `export/pairs.py`
+(`Pair.live_senses`); `cli.py`'s `export-triples`/`export-qrels` docstrings;
+`README.md`'s `export-pairs`/`export-triples`/`export-qrels` rows;
+`docs/RETRIEVAL-DATA.md`'s F1 and F3+F4 sections (which also had a pre-existing broken
+JSON code fence in the F3+F4 section, fixed in passing since it was mid-edit — its
+closing content had been silently swallowed into the F5 heading). Tests: **+9**
+(`tests/test_export_triples.py` — 3 new, 2 rewritten; `tests/test_export_pairs.py` — 2
+new, 2 rewritten; `tests/test_export_qrels.py` — 4 new, 1 rewritten to exclude the
+encyclopedia doc from a pre-existing `MAX_GRADE_1` cap check it does not participate in).
+Counts drop: any downstream trainer or dataset snapshot built from a store with
+polysemous encyclopedia entries will see fewer `example_encyclopedia` pairs and fewer
+encyclopedia-sourced triple positives than before this fix — that is the fix working,
+not a regression to chase.
