@@ -1309,3 +1309,8 @@ item grows accordingly. `DONE-POST-PAIRS` 11:34; final hygiene started.
 judgments for 1,330,311 queries (grade 3: 1.33M own-sense docs; 2: 947K synonym
 glosses; 1: 2.40M hypernym/co-hyponym; 0: 3.99M unrelated), plus `docs.jsonl` and the
 listwise JSONL. All four exports now on disk (≈ 8 GB).
+
+**Circular-gloss rewrite, sweep 1 (11:35 → 12:04, 29m):** 13,991 calls, **$1.93**
+(extrapolation $1.3–2.2; cap $3.5), **21,379 canonical glosses rewritten** across
+13,484 entries, 992 refused (still circular / drifted / collision), completed. Sweep 2
+(cap $1) running for the refusals' second attempt, then stilted rerun and spans.
