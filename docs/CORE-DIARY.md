@@ -1355,3 +1355,14 @@ none; (2) a retype-by-reading-the-contrast step so `related_differently` edges b
 hypernym/hyponym instead of `see_also`; (3) the ~1,000 unmatched one-sided pairs; (4)
 `examples_fit_sense` / `distinct_from_other_senses` have not moved — strengthen the
 nano sense-check; (5) Haiku prompt caching needs a ≥ 4,096-token prefix to engage.
+
+**D-71 fix merged and exports regenerated (13:14 → 13:31, free).** Encyclopedia text
+is a positive only for monosemous entries. Re-exported: `triples.jsonl` 2,639,059
+(encyclopedia positives 2.9%, **0.00% on polysemous entries**, was 30.5%);
+`pairs.jsonl` 7,250,395 (−100K polysemous `example_encyclopedia` pairs);
+`qrels/` 10,001,904 judgments (encyclopedia docs now graded 3 on monosemous entries,
+1 on polysemous ones; docs.jsonl grows to include them); `pretrain.jsonl` unchanged.
+Final integrity check: every store file validates; every export file well-formed.
+
+**Goal 2 closed at 13:31 on 2026-09-04.** Total for the goal $114.42; the fix and
+re-export cost nothing.
