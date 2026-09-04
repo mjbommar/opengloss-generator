@@ -1272,3 +1272,13 @@ side, 116,219 skipped as unresolved. The post-pair reconcile will demote the 24,
 local only; `main` and the 19 merged feature branches are now on
 `github.com/mjbommar/opengloss-generator` (public). Secret scan of the tree: clean.
 Rule from here: push after every merge to `main`.
+
+**QA-pairs, whole store (05:15 → 11:09, 5h55m):** 109,980 calls, **$47.92**
+(extrapolation $46; cap $69), **744,258 pairs accepted** (6.8/sense; easy 307K, medium
+313K, hard 124K; all seven types 100–109K each), 25,630 dropped: meta_reference 12,085
+(D-69's post-check, 1.6% of generated), not_grounded 9,647, unknown_citation 3,090,
+echoes_gloss 808. $0.000064 per accepted pair. 0 failures, 0 429s. Audit + exports next.
+
+**Pair stages total: $83.54** (queries $26.67, contrasts $8.95, qa-pairs $47.92) against
+$148 of caps and a $95 luna-only estimate. Goal-2 spend to date ≈ $106 (quality passes
+$22 + pairs $84); ≈ $10 of cheap passes remain.
