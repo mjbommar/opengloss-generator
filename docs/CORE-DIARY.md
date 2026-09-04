@@ -1222,3 +1222,14 @@ now live in provenance notes); headword-initial glosses 83 (0.02%). New:
 are candidates for a targeted relation regeneration (open item). Spend for the three
 passes + four judges: retag $3.90, reconcile $0, filler $4.77, judges $13.4 → **≈ $22**.
 Pair stages started (luna-only default).
+
+**21:50 — `verdicts` step merged (D-68):** contrast verdicts now feed the graph.
+`unrelated` and `related_differently` edges are demoted to `see_also` (far side too for
+symmetric edges) and tombstoned in the same sweep; converges in two sweeps. On the
+contrasts pilot's 271 entries: 272 near-side + 222 far-side demotions, all 9
+`unrelated` verdicts right on inspection; of `related_differently`, only 28% were POS
+mismatches — the dominant pattern (11 of 15 read) is a synonym that is really a
+hypernym/hyponym (falcon→peregrine, dictator→pharaoh). Demoting to `see_also` loses
+that information; a retype-by-reading-the-paragraph step is the named follow-up. The
+post-pair waiter now runs the full reconcile twice after the contrasts stage covers
+the whole store.
