@@ -3993,3 +3993,165 @@ config-threading fix (carrying the flagging run's own config forward) would make
 and `"all"` scopes still use the same calibrated-for-examples defaults; D-60 already
 flagged the encyclopedia number as unvalidated and this decision does not revisit it — an
 encyclopedia rewrite pass is out of scope here, as it was there.
+
+## D-68 (2026-09-04) — `relation-reconcile --only verdicts`: the `contrasts` stage's verdicts, finally acted on
+
+**Context.** D-57 built the `contrasts` stage and, on purpose, made it inert: it writes a
+paragraph per relation edge, records a `ContrastVerdict` alongside, and changes nothing,
+because D-50 gives relation edits to the hygiene passes and "a stage whose job is prose has
+no business deleting an edge on the strength of a by-product". That left the verdicts
+sitting in `Lexeme.contrasts` with no pass that reads them. D-57 called them "a work list
+for relation hygiene that cost nothing extra" and then nobody worked the list. On the core
+store the list is 1,458 contrasts on 271 entries, of which **445 (30.5%) say the edge is
+not what it claims** — 428 `related_differently` and 17 `unrelated`. Those are model
+verdicts already bought and already on disk.
+
+**Decision.** A fourth free step in `relation_reconcile.py` (D-65), `verdicts`, first in
+the step order. For each live sense, each contrast whose `edge_id` matches one of that
+sense's edges:
+
+1. **`unrelated` and `related_differently` both demote the edge to `see_also`**, with the
+   note `demoted: contrast <verdict>`. The note deliberately uses the project-wide
+   `"demoted: "` shape rather than this module's own `reconcile:asymmetric:` shape, so
+   `is_demotion_note` recognises it through `_GENERIC_DEMOTION_PREFIX` with no new entry in
+   `DEMOTION_NOTE_PREFIXES`, `graph_hygiene._asserted_pairs` reads it as "a pass judged this
+   pair" for as long as the edge survives, and `relation_hygiene._far_side_reason` strips
+   exactly that prefix to build the far-side note. No new convention was invented.
+
+2. **`related_differently` is demoted, not retyped.** The paragraph says the two are
+   related but not *as typed*; it does not say how, the contract never asked, and reading a
+   new relation type out of prose written to answer a different question would be this pass
+   asserting something no model was shown. `see_also` is the honest answer — the two are
+   related, the relation is unnamed — and D-50's `validity` step is free to retype it later
+   on a verdict of its own. The measurement below is what makes this the conservative call
+   rather than the lazy one: most `related_differently` verdicts on this sample are a
+   *synonym that should be a hypernym or hyponym*, and demoting loses the direction. The
+   alternative loses more: guessing which of the two is the general term from a paragraph
+   that was not asked to say.
+
+3. **Far side, sense-level, in the existing second phase.** A contrast is written once per
+   *undirected* pair (D-57 §1), so the reverse edge has no contrast of its own and nothing
+   else will ever reach it. A demoted edge that was symmetric (synonym / antonym /
+   confusable_with) and resolved to an entry in the store queues a `_FarSideDemotion`,
+   applied after the main sweep has fully drained so no two entry locks are held at once
+   (D-31), with **no stop event**, for the reason and by the mechanism D-50's second
+   amendment gives. The far-side identity test is **sense-level** — the opposite of
+   `cap`'s, which is entry-level and right for a cap. A cap is a judgement about how long a
+   list may be; a contrast verdict is a judgement about *these two senses*, and the far
+   entry may hold a perfectly good relation of the same type toward the same lexeme about a
+   different sense. That is `relation_hygiene._is_far_side_of`'s argument, copied.
+
+4. **`verdicts` runs FIRST, ahead of `asymmetric`.** It is a demoting step and every
+   demotion it makes must be visible to `tombstone` in the same sweep, or the edge the
+   `contrasts` stage rejected stays in the list the QA judge reads until somebody runs the
+   pass twice — which is the exact defect D-65 exists to fix, reintroduced. Measured below:
+   with `verdicts` first, all 272 near-side demotions were tombstoned in the same sweep.
+   Nothing later in the order can undo it, since `asymmetric` only looks at live *typed*
+   edges and a demoted one is a `see_also`.
+
+5. **The marker digest gains the contrasts.** D-65's sentinel covered the selected step
+   names and the entry's live edge ids. That is not enough now: a `contrasts` sweep adds
+   verdicts *without touching a single relation*, so an entry reconciled before its
+   contrasts were written has exactly the same edge ids afterwards, the digest matches, the
+   entry is skipped and the verdicts are never applied — silently, forever. The digest now
+   also covers one `contrast=<edge id>=<verdict>` ref per stored contrast, live edge or not
+   (D-62 keeps a contrast whose edge has gone; dropping those would make the digest flicker
+   as `tombstone` removes their edges). The verdict is in the ref as well as the key because
+   a re-judged edge is a different instruction even though the key did not move.
+
+**Two things this step deliberately does not do.** It does not prune `Lexeme.contrasts`
+when it demotes their edges — D-62 is explicit that "a contrast whose edge has gone is
+evidence about a removed relation rather than a validation error", and after `verdicts` and
+`tombstone` have both run that is the common case, not the exception. And the far-side
+phase writes **no marker** on the entry it demotes on, unlike `cap`'s far-side removal.
+That is the difference between the two edits: a cap's removal leaves the entry finished,
+whereas a verdict's demotion leaves behind exactly what `tombstone` exists to remove, and
+this phase runs after `tombstone` has already visited that entry in this sweep. Refreshing
+the marker would freeze the new digest and strand the demoted `see_also` in the judge's
+list; leaving the stale one is what makes the next sweep re-examine the entry. The store
+therefore converges in **two** sweeps rather than one, measured below.
+
+**Measured (`data/sample-verdicts`, 2,908 entries, `--concurrency 8`, free).** The sample
+is every contrast-bearing entry in the core store — the `contrasts` pilot ran over the
+first 300 headwords of `data/core/tier2_50k.tsv` and **271** came back with paragraphs, so
+it is 271 and not the round 300 the brief asked for; there are no others — plus the 2,637
+entries their resolved edges point at, because the far side of a judged edge never carries
+a contrast and the far-side demotions are not measurable without it
+(`scripts/build_sample_verdicts.py`). Copied read-only; `data/core-store` untouched.
+
+| | |
+| --- | --- |
+| Contrasts present | 1,458 on 271 entries |
+| Verdicts | `related_as_typed` 1,013 · `related_differently` 428 · `unrelated` 17 |
+| Contrasts still matching a live edge | 917 (62.9%) — `related_as_typed` 648, `related_differently` 260, `unrelated` 9 |
+| Edges demoted, near side | **272** (`related_differently` 263, `unrelated` 9), on 269 distinct edge ids |
+| By relation type, near side | synonym 241, antonym 31 |
+| Far-side demotions | **222**, of 272 queued — the other 50 far entries hold no reverse edge of that type resolved to that sense |
+| Demoted total, one sweep | 494 (`related_differently` 478, `unrelated` 16; synonym 437, antonym 57) |
+| Tombstoned in the same sweep | 272 — every near-side demotion |
+| Second sweep | tombstones the 222 far-side demotions, demotes 0; third sweep is a no-op (793 skipped) |
+| Duration | 8.4 s for the full five-step sweep, $0 |
+
+Two numbers are worth reading twice. **541 of 1,458 contrasts (37.1%) no longer match a
+live edge at all** — the relation they were written about has already been demoted or
+tombstoned by `relation_hygiene` and D-65's own steps in the weeks since. That is D-62's
+"don't cross-check contrasts against live edges" rule earning its keep: those paragraphs are
+still true and still readable, they are simply evidence about an edge the graph no longer
+asserts. And a `--only verdicts` sweep reports 496 demotions where the full sweep reports
+494: two reverse edges that the demoting half of the far-side phase would have demoted were
+already removed by `dedup` or `cap` earlier in the same sweep. The edge is gone either way.
+
+**The eyeball check: do these look like the right edges?** All 9 acted-on `unrelated`
+verdicts and a seeded random 15 of the 260 distinct acted-on `related_differently` edges were read against
+the paragraph the model wrote.
+
+*All 9 `unrelated`.* Seven are unambiguously right and two are defensible:
+`rushing:adjective:1-synonym->torrent` (adjective resolved to a noun),
+`tug:verb:0-synonym->yank:noun:0` and `tug:verb:0-synonym->jerk:noun:0` (same defect
+twice), `tug:noun:1-synonym->tugboat` (the *pull* sense of the noun resolved to the
+*vessel* sense), `madam:noun:0-antonym->senhor` (cross-language: English against
+Portuguese), `privileged:adjective:1-antonym->rootless:adjective:2` (a computing sense
+against a social one), `decorate:verb:0-antonym->denuded:verb:2`. The two arguable ones are
+`coma:noun:0-synonym->insensibility` and `riddle:noun:2-synonym->strainer`, where the two
+words really are near neighbours and the paragraph argues a fine distinction; demoting to
+`see_also` rather than deleting is exactly the right disposal for both — the cross-reference
+survives, the false synonymy claim does not.
+
+*15 of 260 `related_differently`.* Every one is a real defect, and **D-57's diagnosis does
+not generalise.** That decision, reading 19 verdicts on a 300-entry slice, found "most are
+the same real defect — a relation resolved to a sense of the wrong part of speech". Counted
+over all 269 distinct acted-on edges here, a part-of-speech mismatch between the source sense and
+the resolved target sense accounts for **75 (27.9%)**, not most: `cracking:verb:0-synonym->
+fracture:noun:0`, `annotated:adjective:1-antonym->unmarked:verb:1`,
+`catching:verb:2-synonym->draw:noun:3` in this sample of 15. The dominant pattern is
+different and, for this step, more interesting: a **synonym that is really a hypernym or a
+hyponym**. `falcon->peregrine` ("peregrine names a specific species… falcon is the broader
+genus term"), `psychic->clairvoyant`, `examiner->investigator`, `preserving->archiving`,
+`accusation->indictment`, `compulsory->required`, `dictator->pharaoh`,
+`operative->shinobi`, `justification->legitimacy`, `militant->partisan`,
+`penetrate->tunnel` — eleven of the fifteen. In every one the paragraph names which member
+is the broader term, in prose, and the step throws that away by demoting to `see_also`.
+That is the honest cost of decision 2 and it is written down here rather than hidden: the
+information to retype these correctly exists, in the contrast text, and reading it back out
+would need a model call this pass does not make. A `relation-hygiene` step that retypes a
+`see_also` carrying `demoted: contrast related_differently` by reading its contrast
+paragraph is the obvious next feature, and it is not this one.
+
+The judgement, then: **yes, these are the edges a reader would agree with.** Nothing in the
+24 read was an edge that should have been left alone; the disagreement is only ever about
+whether `see_also` is generous enough, never about whether the original type was wrong.
+
+**Consequence.** Modified: `src/opengloss_generator/workflows/relation_reconcile.py`
+(`RelationReconcileStep.VERDICTS` first in `ALL`, `VERDICT_NOTE_PREFIX`, `_apply_verdicts`,
+`_FarSideDemotion`/`_far_side_demotion`/`_is_far_side_demotion_of`/`_demote_far_side`/
+`_demote_far_side_all`, `_contrast_refs` in the marker digest, `by_verdict` and
+`far_side_demoted` on `RelationReconcileStepResult`, and the `tombstone`-without-a-demoting-
+step warning extended to name `verdicts` as well as `asymmetric`); `cli.py` (the `--only`
+help and the command docstring); `README.md` (the `relation-reconcile` row). New:
+`scripts/build_sample_verdicts.py`. Tests: **+13** (`tests/test_relation_reconcile.py`:
+each verdict's disposition, the far-side reverse demotion and its sense-level restraint, a
+contrast keyed on another sense, unresolved and asymmetric edges queueing no far-side work,
+idempotence, the contrast surviving its own edge, demote-then-tombstone in one sweep, the
+far-side demotion tombstoned by the next sweep, and contrasts arriving after a sweep
+reopening a marked entry), 1,086 pass. `data/core-store` untouched — the sample is a
+read-only copy.
