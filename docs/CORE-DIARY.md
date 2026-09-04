@@ -1282,3 +1282,10 @@ echoes_gloss 808. $0.000064 per accepted pair. 0 failures, 0 429s. Audit + expor
 **Pair stages total: $83.54** (queries $26.67, contrasts $8.95, qa-pairs $47.92) against
 $148 of caps and a $95 luna-only estimate. Goal-2 spend to date ≈ $106 (quality passes
 $22 + pairs $84); ≈ $10 of cheap passes remain.
+
+**Exports (11:10 → 11:23, free) → `data/exports/`:** `pairs.jsonl` 7,350,478 WiC-style
+pairs (3.0 GB); `triples.jsonl` 2,641,578 query/positive/hard-negative triples from
+1,330,311 queries (3.4 GB); `pretrain.jsonl` **108.3M words** of natural documents at
+grade_5 + college (dictionary / thesaurus / encyclopedia / usage-note templates; 0.8
+GB). `export-qrels` failed in the script on a flag name (`--out` vs `--out-dir`) and is
+being rerun by hand. `DONE-PAIRS` 11:23; the post-pair reconcile started.
