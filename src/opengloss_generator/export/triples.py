@@ -1,10 +1,21 @@
-"""F3 — MS MARCO-style ``(query, positive, negative)`` triples, for $0 (D-56).
+"""F3 — MS MARCO-style ``(query, positive, negative)`` triples, for $0 (D-56, D-71).
 
-Every fact this module needs is already on disk: a sense's own gloss/example/
-encyclopedia text is the positive, and the resolved semantic graph (other senses of the
-same headword, ``confusable_with`` targets, co-hyponyms, and synonyms-of-synonyms) hands
-back hard negatives that would otherwise cost a model call or a human annotator to mine.
-No model is called anywhere in this module.
+Every fact this module needs is already on disk: a sense's own gloss/example text is a
+positive, and the resolved semantic graph (other senses of the same headword,
+``confusable_with`` targets, co-hyponyms, and synonyms-of-synonyms) hands back hard
+negatives that would otherwise cost a model call or a human annotator to mine. No model
+is called anywhere in this module.
+
+**The encyclopedia positive is entry-level, not sense-level (D-71).**
+``Lexeme.encyclopedia`` is one article per headword, written about the entry as a whole
+-- it is only ever offered as a positive option (:func:`positive_options`) for a sense
+whose lexeme is monosemous (:func:`is_monosemous`: exactly one live sense). Pairing a
+polysemous entry's encyclopedia article with one sense's query would teach a false
+positive: e.g. ``aaa:interjection:0``'s pseudo-query ("a reflex cry from sudden pain")
+paired with the encyclopedia article about ``AAA`` the cross-domain acronym, on an entry
+with six live senses. Every :class:`Triple` carries ``live_senses`` (the query's own
+lexeme's live sense count) so a downstream consumer can filter or reweight by polysemy
+without re-deriving it from ``positive_id``.
 
 **Where the query comes from.** F2's ``Sense.queries`` (doc2query-style synthetic
 queries) does not exist on ``main`` yet. Every query is read defensively with
@@ -71,6 +82,8 @@ __all__ = [
     "Triple",
     "TriplesResult",
     "build_triples",
+    "is_monosemous",
+    "live_sense_count",
     "load_corpus",
     "write_triples",
 ]
@@ -398,6 +411,23 @@ def classify(corpus: Corpus, sense_id: str) -> SenseGraphInfo:
     )
 
 
+def live_sense_count(corpus: Corpus, lexeme_id: str) -> int:
+    """Return how many live senses ``lexeme_id`` has (0 for an id with none loaded)."""
+    return len(corpus.senses_by_lexeme.get(lexeme_id, ()))
+
+
+def is_monosemous(corpus: Corpus, lexeme_id: str) -> bool:
+    """Return whether ``lexeme_id`` has exactly one live sense (D-71).
+
+    ``Lexeme.encyclopedia`` is written once per entry, about the headword as a whole --
+    it is a valid stand-in for "the" meaning of a headword only when that headword has
+    exactly one live sense. Shared by :func:`positive_options` (F3) and
+    ``export.qrels`` (F4) so the two exports never disagree about which entries count as
+    monosemous.
+    """
+    return live_sense_count(corpus, lexeme_id) == 1
+
+
 @dataclass(slots=True)
 class PositiveOption:
     """One candidate positive text for a sense: gloss, example, or encyclopedia."""
@@ -410,8 +440,13 @@ class PositiveOption:
 def positive_options(corpus: Corpus, sense_id: str) -> list[PositiveOption]:
     """Return the available positive texts for ``sense_id``.
 
-    The canonical gloss is always available (every sense has one); one example and the
-    owning lexeme's neutral encyclopedia entry are added when present.
+    The canonical gloss is always available (every sense has one); one example is added
+    when present. The owning lexeme's encyclopedia entry is added **only when the lexeme
+    is monosemous** (this sense is its only live sense): the encyclopedia article is
+    written once per entry, about the headword as a whole, not about any one sense, so
+    pairing it with a query anchored on one sense of a polysemous entry (e.g. an
+    interjection sense of ``aaa`` paired with the article about the acronym ``AAA``) would
+    teach a false positive (D-71).
 
     Args:
         corpus: The loaded corpus.
@@ -425,13 +460,16 @@ def positive_options(corpus: Corpus, sense_id: str) -> list[PositiveOption]:
     example = corpus.example.get(sense_id)
     if example is not None:
         options.append(PositiveOption(source="example", doc_id=f"{sense_id}#example", text=example))
-    encyclopedia = corpus.encyclopedia.get(lexeme_id)
-    if encyclopedia is not None:
-        options.append(
-            PositiveOption(
-                source="encyclopedia", doc_id=encyclopedia_owner_id(lexeme_id), text=encyclopedia
+    if is_monosemous(corpus, lexeme_id):
+        encyclopedia = corpus.encyclopedia.get(lexeme_id)
+        if encyclopedia is not None:
+            options.append(
+                PositiveOption(
+                    source="encyclopedia",
+                    doc_id=encyclopedia_owner_id(lexeme_id),
+                    text=encyclopedia,
+                )
             )
-        )
     return options
 
 
@@ -481,7 +519,15 @@ def select_hard_negative(info: SenseGraphInfo, seed: int, sense_id: str) -> tupl
 
 @dataclass(slots=True)
 class Triple:
-    """One ``(query, positive, negative)`` training row."""
+    """One ``(query, positive, negative)`` training row.
+
+    Attributes:
+        live_senses: How many live senses the query's own lexeme has. ``1`` means the
+            positive may be the lexeme's encyclopedia entry (see
+            :func:`positive_options`); ``> 1`` means it never is, for this triple's
+            query. Additive field (D-71) so a downstream consumer can filter or reweight
+            by polysemy without re-deriving it from ``positive_id``.
+    """
 
     query: str
     positive: str
@@ -491,6 +537,7 @@ class Triple:
     positive_id: str
     negative_id: str
     query_source: str
+    live_senses: int
 
 
 @dataclass(slots=True)
@@ -524,6 +571,7 @@ def _triples_for_query(
     sense_id: str,
     easy_negatives: int,
     easy_pool: tuple[str, ...],
+    live_senses: int,
 ) -> Iterator[Triple]:
     """Yield the hard-negative triple (if any) and the easy-negative triples for one query.
 
@@ -536,6 +584,7 @@ def _triples_for_query(
         sense_id: The query's own sense id.
         easy_negatives: How many easy-negative triples to emit for this query.
         easy_pool: This sense's lexeme-excluded easy-negative pool.
+        live_senses: The query's own lexeme's live sense count (see :class:`Triple`).
 
     Yields:
         One :class:`Triple` per negative produced.
@@ -552,6 +601,7 @@ def _triples_for_query(
             positive_id=positive.doc_id,
             negative_id=target,
             query_source=query.source,
+            live_senses=live_senses,
         )
 
     for attempt in range(easy_negatives):
@@ -567,6 +617,7 @@ def _triples_for_query(
             positive_id=positive.doc_id,
             negative_id=target,
             query_source=query.source,
+            live_senses=live_senses,
         )
 
 
@@ -602,7 +653,9 @@ def build_triples(
         info = classify(corpus, sense_id)
         options = positive_options(corpus, sense_id)
         positive = _rng(seed, sense_id, "positive").choice(options)
-        pool = easy_negative_pool(corpus, corpus.lexeme_of[sense_id], easy_pool_cache)
+        lexeme_id = corpus.lexeme_of[sense_id]
+        pool = easy_negative_pool(corpus, lexeme_id, easy_pool_cache)
+        senses_in_lexeme = live_sense_count(corpus, lexeme_id)
 
         for query in corpus.queries.get(sense_id, ()):
             queries_considered += 1
@@ -615,6 +668,7 @@ def build_triples(
                 sense_id=sense_id,
                 easy_negatives=easy_negatives,
                 easy_pool=pool,
+                live_senses=senses_in_lexeme,
             ):
                 triples.append(triple)
                 by_kind[triple.negative_kind] = by_kind.get(triple.negative_kind, 0) + 1

@@ -60,6 +60,8 @@ from opengloss_generator.store import LexemeStore
 #   bank:noun:2: retired, and the (bogus) target of an edge from landform, to prove a
 #   retired target is dropped rather than treated as live.
 #   pebble:noun:0: fully isolated -- no relations, no example, no encyclopedia.
+#   gadget:noun:0: the entry's only live sense, with an encyclopedia -- the D-71 case
+#   where the encyclopedia positive is kept (contrast with bank, which is polysemous).
 
 
 def _sense(
@@ -207,6 +209,14 @@ def world(tmp_path: Path) -> LexemeStore:
     )
     embankment = _entry("embankment", [_sense(0, "A wall or bank built to prevent flooding.")])
     pebble = _entry("pebble", [_sense(0, "A small stone.")])
+    # A monosemous entry with an encyclopedia, so the D-71 encyclopedia-positive gating
+    # can be tested on both sides: bank (polysemous, no positive) and gadget (one live
+    # sense, positive kept).
+    gadget = _entry(
+        "gadget",
+        [_sense(0, "A small mechanical device or tool.")],
+        encyclopedia="A gadget is a small mechanical or electronic device.",
+    )
 
     for entry in (
         bank,
@@ -218,6 +228,7 @@ def world(tmp_path: Path) -> LexemeStore:
         moneylender,
         embankment,
         pebble,
+        gadget,
     ):
         store.write(entry)
     return store
@@ -416,13 +427,29 @@ def test_direct_synonym_is_never_a_candidate_hard_negative(world: LexemeStore) -
 # --------------------------------------------------------------------------------------
 
 
-def test_positive_options_include_example_and_encyclopedia_when_present(world: LexemeStore) -> None:
+def test_positive_options_include_example_but_not_encyclopedia_when_polysemous(
+    world: LexemeStore,
+) -> None:
+    # bank has two live senses (bank:noun:0, bank:noun:1), so its encyclopedia article is
+    # entry-level, not a valid positive for either one's queries (D-71).
     corpus = load_corpus(world)
+    assert len(corpus.senses_by_lexeme["bank"]) > 1
     options = positive_options(corpus, "bank:noun:0")
     sources = {option.source for option in options}
-    assert sources == {"gloss", "example", "encyclopedia"}
+    assert sources == {"gloss", "example"}
+
+
+def test_positive_options_include_encyclopedia_when_monosemous(world: LexemeStore) -> None:
+    # gadget has exactly one live sense, so its encyclopedia article legitimately stands
+    # for "the" meaning of the headword (D-71).
+    corpus = load_corpus(world)
+    assert len(corpus.senses_by_lexeme["gadget"]) == 1
+    options = positive_options(corpus, "gadget:noun:0")
+    sources = {option.source for option in options}
+    assert sources == {"gloss", "encyclopedia"}
     encyclopedia_option = next(o for o in options if o.source == "encyclopedia")
-    assert encyclopedia_option.doc_id == "bank:encyclopedia"
+    assert encyclopedia_option.doc_id == "gadget:encyclopedia"
+    assert encyclopedia_option.text == "A gadget is a small mechanical or electronic device."
 
 
 def test_positive_options_are_gloss_only_for_an_isolated_sense(world: LexemeStore) -> None:
@@ -501,4 +528,35 @@ def test_write_triples_round_trips_as_jsonl(world: LexemeStore, tmp_path: Path) 
         "positive_id",
         "negative_id",
         "query_source",
+        "live_senses",
     }
+
+
+def test_triples_never_carry_a_polysemous_entrys_encyclopedia_positive(
+    world: LexemeStore,
+) -> None:
+    # bank is polysemous (D-71): none of its triples' positive_id may be its encyclopedia
+    # doc, and every one of its triples reports live_senses > 1.
+    result = build_triples(world, seed=0, easy_negatives=1)
+    bank_triples = [t for t in result.triples if t.query_id.startswith("bank:")]
+    assert bank_triples
+    for triple in bank_triples:
+        assert triple.positive_id != "bank:encyclopedia"
+        assert triple.live_senses > 1
+
+
+def test_triples_keep_a_monosemous_entrys_encyclopedia_positive(world: LexemeStore) -> None:
+    # gadget has exactly one live sense, so its encyclopedia article is a legitimate
+    # positive option (chosen or not, per sense, by the seeded positive-text draw) and
+    # every one of its triples reports live_senses == 1.
+    seen_encyclopedia_positive = False
+    for seed in range(10):
+        result = build_triples(world, seed=seed, easy_negatives=1)
+        gadget_triples = [t for t in result.triples if t.query_id.startswith("gadget:")]
+        assert gadget_triples
+        for triple in gadget_triples:
+            assert triple.live_senses == 1
+        if any(t.positive_id == "gadget:encyclopedia" for t in gadget_triples):
+            seen_encyclopedia_positive = True
+    # Reachable: at least one of the seeds above drew the encyclopedia as the positive.
+    assert seen_encyclopedia_positive

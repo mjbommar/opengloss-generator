@@ -1,4 +1,4 @@
-"""F4 — TREC-style graded qrels, a docs corpus, and a listwise JSONL, for $0 (D-56).
+"""F4 — TREC-style graded qrels, a docs corpus, and a listwise JSONL, for $0 (D-56, D-71).
 
 Shares ``export/triples.py``'s corpus (:func:`~opengloss_generator.export.triples.load_corpus`)
 and candidate classification (:func:`~opengloss_generator.export.triples.classify`), because
@@ -8,15 +8,21 @@ ranking metric (nDCG, MRR-graded, listwise loss). Reusing the same tiers keeps t
 consistent with each other — a sense F3 calls a hard negative is exactly a sense F4 grades 0,
 never something F4 quietly disagrees with.
 
-**Grades.** 3 = the query's own sense (its canonical gloss); 2 = a direct synonym target
-(the strongest non-identical match — deliberately never offered as an F3 negative, for the
-same reason); 1 = a direct hypernym or a co-hyponym (a broader or sibling concept: related,
-not a match); 0 = everything else, which includes every one of F3's graph hard-negative
-kinds (another sense of the same headword, a ``confusable_with`` target, a synonym-of-a-
-synonym) plus random easy negatives from unrelated headwords. Grade-2 and grade-1 pools are
-capped (:data:`MAX_GRADE_2`, :data:`MAX_GRADE_1`) and, when larger, sampled — deterministically,
-via the same seeded-``random.Random``-per-decision discipline ``export/triples.py`` uses — so a
-richly connected sense does not dominate the file with near-duplicate candidates.
+**Grades.** 3 = the query's own sense (its canonical gloss), or, only when the lexeme is
+monosemous, its entry's encyclopedia doc (:func:`~opengloss_generator.export.triples.is_monosemous`,
+D-71); 2 = a direct synonym target (the strongest non-identical match — deliberately never
+offered as an F3 negative, for the same reason); 1 = a direct hypernym or a co-hyponym (a
+broader or sibling concept: related, not a match), or a **polysemous** lexeme's encyclopedia
+doc (:data:`GRADE_ENCYCLOPEDIA_RELATED` — same headword, entry-level, never graded 0: see
+D-71 and ``export/triples.py``'s module docstring for why the encyclopedia is entry-level, not
+sense-level); 0 = everything else, which includes every one of F3's graph hard-negative kinds
+(another sense of the same headword, a ``confusable_with`` target, a synonym-of-a-synonym)
+plus random easy negatives from unrelated headwords. Grade-2 and grade-1 pools are capped
+(:data:`MAX_GRADE_2`, :data:`MAX_GRADE_1`) and, when larger, sampled — deterministically, via
+the same seeded-``random.Random``-per-decision discipline ``export/triples.py`` uses — so a
+richly connected sense does not dominate the file with near-duplicate candidates; the
+encyclopedia doc, when present, is always included in addition to those caps (there is at
+most one per lexeme, so it never needs sampling).
 
 **Where the query comes from.** Identical to F3: ``Sense.queries`` (F2) when present,
 else the sense's ``grade_5/plain`` gloss (or its canonical gloss) as a pseudo-query, with
@@ -29,7 +35,8 @@ module docstring for the full reasoning; it is not repeated here.
 * ``qrels.trec`` — one ``qid 0 docid grade`` line per (query, candidate) pair, the
   standard ``trec_eval`` qrels format.
 * ``docs.jsonl`` — one ``{"id", "text"}`` line per distinct document referenced anywhere
-  in the qrels file (every document is a sense's canonical gloss; ids are sense ids).
+  in the qrels file (every document is a sense's canonical gloss, id = sense id, or a
+  lexeme's encyclopedia doc, id = ``<lexeme_id>:encyclopedia``).
 * ``listwise.jsonl`` — one ``{"query", "query_id", "candidates": [{"id", "text", "grade"}]}``
   line per query, the same information as the other two files but grouped for a listwise
   trainer that wants one query's whole ranked list at once.
@@ -46,20 +53,23 @@ from opengloss_generator.export.triples import (
     HARD_NEGATIVE_PRIORITY,
     classify,
     easy_negative_pool,
+    is_monosemous,
     load_corpus,
 )
 from opengloss_generator.export.triples import (
     _rng as _seeded_rng,
 )
+from opengloss_generator.identity import encyclopedia_owner_id
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
-    from opengloss_generator.export.triples import SenseGraphInfo
+    from opengloss_generator.export.triples import Corpus, SenseGraphInfo
     from opengloss_generator.store import LexemeStore
 
 __all__ = [
+    "GRADE_ENCYCLOPEDIA_RELATED",
     "GRADE_HYPERNYM_OR_COHYPONYM",
     "GRADE_OWN_SENSE",
     "GRADE_SYNONYM",
@@ -77,6 +87,13 @@ GRADE_OWN_SENSE = 3
 GRADE_SYNONYM = 2
 GRADE_HYPERNYM_OR_COHYPONYM = 1
 GRADE_UNRELATED = 0
+
+#: Grade for a polysemous entry's encyclopedia doc (D-71): same headword, entry-level --
+#: related, never a match (:data:`GRADE_OWN_SENSE`) and never unrelated
+#: (:data:`GRADE_UNRELATED`). Numerically the same as :data:`GRADE_HYPERNYM_OR_COHYPONYM`
+#: but named separately since the two are semantically distinct relationships that happen
+#: to earn the same relevance judgement.
+GRADE_ENCYCLOPEDIA_RELATED = 1
 
 #: Caps on how many candidates each non-trivial tier contributes per query, so a densely
 #: connected sense does not crowd out everything else in the listwise file.
@@ -168,14 +185,39 @@ def _grade_0_candidates(
 
 @dataclass(slots=True)
 class GradedCandidate:
-    """One document graded relative to one query's own sense."""
+    """One document graded relative to one query's own sense.
 
-    sense_id: str
+    ``doc_id`` is a sense id for every tier except the encyclopedia one, where it is the
+    owning lexeme's ``<lexeme_id>:encyclopedia`` id (D-71) -- carrying ``text`` here,
+    rather than looking it up later by id, keeps that one case from needing a second,
+    id-shaped map alongside ``Corpus.gloss``.
+    """
+
+    doc_id: str
+    text: str
     grade: int
+
+
+def _encyclopedia_candidate(corpus: Corpus, sense_id: str) -> GradedCandidate | None:
+    """Return the query's lexeme's encyclopedia doc as a graded candidate, if it has one.
+
+    Entry-level, not sense-level (D-71): graded :data:`GRADE_OWN_SENSE` only when the
+    lexeme is monosemous (``sense_id`` is its only live sense, so the article legitimately
+    stands for "the" meaning of the headword); otherwise :data:`GRADE_ENCYCLOPEDIA_RELATED`
+    -- same headword, entry-level, related but never a match, and never
+    :data:`GRADE_UNRELATED`. Returns ``None`` when the lexeme has no encyclopedia entry.
+    """
+    lexeme_id = corpus.lexeme_of[sense_id]
+    encyclopedia = corpus.encyclopedia.get(lexeme_id)
+    if encyclopedia is None:
+        return None
+    grade = GRADE_OWN_SENSE if is_monosemous(corpus, lexeme_id) else GRADE_ENCYCLOPEDIA_RELATED
+    return GradedCandidate(encyclopedia_owner_id(lexeme_id), encyclopedia, grade)
 
 
 def _graded_candidates(
     info: SenseGraphInfo,
+    corpus: Corpus,
     sense_id: str,
     seed: int,
     easy_pool: tuple[str, ...],
@@ -184,28 +226,33 @@ def _graded_candidates(
 
     Args:
         info: The sense's tiered candidates.
+        corpus: The loaded corpus, for document text and the encyclopedia doc (D-71).
         sense_id: The sense the candidates are graded relative to.
         seed: The run's ``--seed``.
         easy_pool: This sense's lexeme-excluded easy-negative pool.
 
     Returns:
-        One :class:`GradedCandidate` per document, own sense first.
+        One :class:`GradedCandidate` per document, own sense first, the encyclopedia doc
+        (if any) last.
     """
-    graded = [GradedCandidate(sense_id, GRADE_OWN_SENSE)]
+    graded = [GradedCandidate(sense_id, corpus.gloss[sense_id], GRADE_OWN_SENSE)]
     graded += [
-        GradedCandidate(target, GRADE_SYNONYM)
+        GradedCandidate(target, corpus.gloss[target], GRADE_SYNONYM)
         for target in _sample(info.synonym, MAX_GRADE_2, (seed, sense_id, "grade2"))
     ]
     tier_one_pool = info.hypernym | info.co_hyponym
     graded += [
-        GradedCandidate(target, GRADE_HYPERNYM_OR_COHYPONYM)
+        GradedCandidate(target, corpus.gloss[target], GRADE_HYPERNYM_OR_COHYPONYM)
         for target in _sample(tier_one_pool, MAX_GRADE_1, (seed, sense_id, "grade1"))
     ]
-    already_graded = {candidate.sense_id for candidate in graded}
+    already_graded = {candidate.doc_id for candidate in graded}
     graded += [
-        GradedCandidate(target, GRADE_UNRELATED)
+        GradedCandidate(target, corpus.gloss[target], GRADE_UNRELATED)
         for target in _grade_0_candidates(info, sense_id, seed, easy_pool, already_graded)
     ]
+    encyclopedia_candidate = _encyclopedia_candidate(corpus, sense_id)
+    if encyclopedia_candidate is not None:
+        graded.append(encyclopedia_candidate)
     return graded
 
 
@@ -292,15 +339,14 @@ def build_qrels(store: LexemeStore, *, seed: int = 0, limit: int | None = None) 
         senses_considered += 1
         info = classify(corpus, sense_id)
         pool = easy_negative_pool(corpus, corpus.lexeme_of[sense_id], easy_pool_cache)
-        graded = _graded_candidates(info, sense_id, seed, pool)
+        graded = _graded_candidates(info, corpus, sense_id, seed, pool)
         for candidate in graded:
-            docs.setdefault(candidate.sense_id, corpus.gloss[candidate.sense_id])
+            docs.setdefault(candidate.doc_id, candidate.text)
 
         for query in corpus.queries.get(sense_id, ()):
             queries_considered += 1
             candidates = [
-                ListwiseCandidate(id=c.sense_id, text=corpus.gloss[c.sense_id], grade=c.grade)
-                for c in graded
+                ListwiseCandidate(id=c.doc_id, text=c.text, grade=c.grade) for c in graded
             ]
             for candidate in candidates:
                 qrels.append(

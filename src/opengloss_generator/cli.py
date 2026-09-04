@@ -1481,11 +1481,14 @@ def export_triples_cmd(
         int | None, typer.Option("--limit", help="Cap entries scanned, for a fast smoke run.")
     ] = None,
 ) -> None:
-    """Export MS MARCO-style ``(query, positive, negative)`` triples (F3, D-56).
+    """Export MS MARCO-style ``(query, positive, negative)`` triples (F3, D-56, D-71).
 
     Free: no model calls. Queries come from ``Sense.queries`` (F2) when present; when
     absent, the sense's ``grade_5/plain`` gloss (or its canonical gloss) stands in as a
-    pseudo-query, and every record's ``query_source`` says which happened. The negative
+    pseudo-query, and every record's ``query_source`` says which happened. The positive
+    is the sense's canonical gloss, one example, or its lexeme's encyclopedia entry --
+    the encyclopedia only when the lexeme is monosemous (D-71: it is an entry-level
+    article, not a valid stand-in for one sense of a polysemous headword). The negative
     is the first non-empty candidate, in priority order, among: another live sense of the
     same headword, a ``confusable_with`` target, a co-hyponym, or a synonym-of-a-synonym;
     ``--easy-negatives`` adds that many random-headword negatives per query as well.
@@ -1510,12 +1513,14 @@ def export_qrels_cmd(
         int | None, typer.Option("--limit", help="Cap entries scanned, for a fast smoke run.")
     ] = None,
 ) -> None:
-    """Export TREC-style graded qrels, a docs corpus, and a listwise JSONL (F4, D-56).
+    """Export TREC-style graded qrels, a docs corpus, and a listwise JSONL (F4, D-56, D-71).
 
-    Free: no model calls. Grades: 3 = the query's own sense, 2 = a direct synonym
-    target, 1 = a direct hypernym or a co-hyponym, 0 = everything else (the same graph
-    hard-negative kinds ``export-triples`` uses, plus random easy negatives). Queries
-    follow the same F2-or-gloss-pseudo-query rule as ``export-triples``.
+    Free: no model calls. Grades: 3 = the query's own sense, or a monosemous lexeme's
+    encyclopedia doc; 2 = a direct synonym target; 1 = a direct hypernym or a co-hyponym,
+    or a polysemous lexeme's encyclopedia doc (entry-level, same headword, D-71 --
+    never graded 0); 0 = everything else (the same graph hard-negative kinds
+    ``export-triples`` uses, plus random easy negatives). Queries follow the same
+    F2-or-gloss-pseudo-query rule as ``export-triples``.
     """
     cfg = _build_config(config_path, store, None, None)
     lexeme_store = LexemeStore(cfg.store)
