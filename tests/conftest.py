@@ -1414,6 +1414,24 @@ QA_MIXED_HEADWORD = "mixedqaword"
 #: watch a whole call be dropped and the sense still carry its marker.
 QA_UNGROUNDED_HEADWORD = "ungroundedqaword"
 
+#: A headword whose ``definition`` answer (index 1) is the canonical gloss, verbatim, cited
+#: to the gloss's own source id regardless of round-robin — scripted for D-69's
+#: ``echoes_gloss`` post-check.
+QA_GLOSS_ECHO_HEADWORD = "glossechoqaword"
+
+#: A headword whose ``factual`` answer (index 0) names the prompt's own scaffolding
+#: mid-sentence, where there is no leading clause to strip — scripted for D-69's
+#: unrepairable ``meta_reference`` drop.
+QA_META_REFERENCE_HEADWORD = "metareferenceqaword"
+
+#: A headword whose ``factual`` answer (index 0) opens with a leading clause naming the
+#: scaffolding, followed by a clean sentence — scripted for D-69's free repair.
+QA_META_REPAIR_HEADWORD = "metarepairqaword"
+
+#: The leading clause :data:`QA_META_REPAIR_HEADWORD`'s scripted answer opens with. Kept
+#: as a constant so the test can check what the stored answer looks like once it is gone.
+QA_META_REPAIR_CLAUSE = "According to the sources, "
+
 
 def _qa_sources(prompt: str) -> list[tuple[str, str, str]]:
     """Return the ``(id, label, text)`` of every source line a qa_pairs prompt listed."""
@@ -1425,7 +1443,10 @@ def _qa_pair_set_payload(prompt: str) -> dict[str, Any]:
 
     Each answer quotes the first ten words of the source it cites, which is the cheapest
     possible way to be genuinely grounded: the overlap floor sees a large intersection and
-    the pair survives, unless the headword scripts otherwise.
+    the pair survives, unless the headword scripts otherwise. The ``definition`` answer is
+    given a small "In short, " lead-in rather than the bare quote every other type gets, so
+    a generic scripted sense does not incidentally echo its own (usually short) gloss and
+    trip D-69's ``echoes_gloss`` check by accident of fixture construction.
     """
     headword = _headword(prompt)
     sources = _qa_sources(prompt)
@@ -1434,7 +1455,12 @@ def _qa_pair_set_payload(prompt: str) -> dict[str, Any]:
     for index, question_type in enumerate(QA_QUESTION_TYPES):
         source_id, _, text = sources[index % len(sources)]
         question = f"What does {headword} mean, asked the {question_type} way?"
-        answer = " ".join(text.split()[:10])
+        quoted = " ".join(text.split()[:10])
+        answer = (
+            f"In short, {quoted[0].lower()}{quoted[1:]}"
+            if question_type == "definition"
+            else quoted
+        )
         grounded_in = [source_id]
         if headword == QA_UNGROUNDED_HEADWORD:
             answer = QA_UNGROUNDED_ANSWER
@@ -1447,6 +1473,15 @@ def _qa_pair_set_payload(prompt: str) -> dict[str, Any]:
                 grounded_in = []
             elif index == 4:
                 question = f"What does {headword} mean, asked the factual way?"
+        elif headword == QA_GLOSS_ECHO_HEADWORD and question_type == "definition":
+            gloss_id, _, gloss_text = sources[0]
+            answer = gloss_text
+            grounded_in = [gloss_id]
+        elif headword == QA_META_REFERENCE_HEADWORD and index == 0:
+            answer = f"{quoted}, as shown in the example above, is the relevant detail."
+        elif headword == QA_META_REPAIR_HEADWORD and index == 0:
+            lowered = quoted[0].lower() + quoted[1:]
+            answer = f"{QA_META_REPAIR_CLAUSE}{lowered}."
         pairs.append(
             {
                 "question": question,
