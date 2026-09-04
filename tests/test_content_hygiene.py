@@ -43,6 +43,11 @@ from opengloss_generator.workflows.content_hygiene import (
     run_content_hygiene,
 )
 from tests.conftest import (
+    CIRCULAR_COLLIDE_HEADWORD,
+    CIRCULAR_COLLISION_TEXT,
+    CIRCULAR_DRIFT_HEADWORD,
+    CIRCULAR_INITIAL_HEADWORD,
+    CIRCULAR_STILL_HEADWORD,
     DEGENERATE_ECHO_HEADWORD,
     DEGENERATE_INITIAL_HEADWORD,
     FRAGMENT_STILL_HEADWORD,
@@ -660,7 +665,214 @@ async def test_only_fragment_examples_runs_alone(session):
 
 
 # --------------------------------------------------------------------------------------
-# Step 7 — degenerate_renditions
+# Step 7 — circular_gloss
+# --------------------------------------------------------------------------------------
+
+
+def test_a_literal_headword_is_detected_as_circular():
+    entry = _entry("stubborn", gloss="Marked by a stubborn unwillingness to change.")
+
+    offenders = module._circular_glosses(entry)
+
+    assert len(offenders) == 1
+    assert offenders[0].rendition.content == "Marked by a stubborn unwillingness to change."
+
+
+def test_a_gloss_naming_neither_the_headword_nor_a_form_is_not_circular():
+    entry = _entry("stubborn", gloss=DEFAULT_GLOSS)
+
+    assert module._circular_glosses(entry) == []
+
+
+def test_an_inflected_form_is_detected_as_circular():
+    # "lilt" has no morphology of its own here, so the inflected form comes entirely
+    # from spans.generate_forms's rule-based "-ing" suffix, exactly as a real entry
+    # missing a Morphology block would be caught.
+    entry = _entry("lilt", gloss="A tuneful rhythm produced by lilting prosody.")
+
+    offenders = module._circular_glosses(entry)
+
+    assert len(offenders) == 1
+
+
+def test_a_proper_noun_is_exempt_from_circular_gloss():
+    entry = _entry(
+        "Larsen",
+        gloss="Larsen is a common Scandinavian surname.",
+        kind=LexemeKind.PROPER_NOUN,
+    )
+
+    assert module._circular_glosses(entry) == []
+
+
+def test_a_multiword_headword_only_counts_when_the_whole_phrase_appears():
+    mentions_one_word = _entry("ice axe", gloss="A tool climbers use to cut steps into hard ice.")
+    mentions_the_phrase = _entry(
+        "ice axe", gloss="A climber gripped the ice axe firmly before the ascent."
+    )
+
+    assert module._circular_glosses(mentions_one_word) == []
+    assert len(module._circular_glosses(mentions_the_phrase)) == 1
+
+
+async def test_a_circular_canonical_gloss_is_rewritten(session):
+    entry = _entry("stubborn", gloss="Marked by a stubborn unwillingness to change.")
+    session.store.write(entry)
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.CIRCULAR_GLOSS}
+    )
+
+    result = outcome.steps[ContentHygieneStep.CIRCULAR_GLOSS]
+    assert result.calls == 1
+    assert result.accepted == 1
+    assert result.rejected == 0
+    assert result.rewritten == 1
+    assert result.cost_usd > 0.0
+
+    stored = session.store.read("stubborn")
+    rewritten = stored.pos_entries[0].senses[0].gloss.canonical()
+    assert "stubborn" not in rewritten.content.lower()
+    assert rewritten.assessment is not None
+    assert rewritten.assessment.readability_grade is not None
+    assert "superseded circular gloss: Marked by a stubborn unwillingness to change." in _notes(
+        stored
+    )
+
+
+async def test_a_rewrite_that_still_names_the_headword_is_refused(session):
+    entry = _entry(
+        CIRCULAR_STILL_HEADWORD,
+        gloss=f"Marked by a {CIRCULAR_STILL_HEADWORD} unwillingness to change.",
+    )
+    session.store.write(entry)
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.CIRCULAR_GLOSS}
+    )
+
+    result = outcome.steps[ContentHygieneStep.CIRCULAR_GLOSS]
+    assert result.calls == 1
+    assert result.accepted == 0
+    assert result.rejected == 1
+    assert _gloss_texts(session.store.read(CIRCULAR_STILL_HEADWORD))[0] == (
+        f"Marked by a {CIRCULAR_STILL_HEADWORD} unwillingness to change."
+    )
+
+
+async def test_a_circular_headword_initial_rewrite_is_refused(session):
+    entry = _entry(
+        CIRCULAR_INITIAL_HEADWORD,
+        gloss=f"Marked by a {CIRCULAR_INITIAL_HEADWORD} unwillingness to change.",
+    )
+    session.store.write(entry)
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.CIRCULAR_GLOSS}
+    )
+
+    result = outcome.steps[ContentHygieneStep.CIRCULAR_GLOSS]
+    assert result.calls == 1
+    assert result.accepted == 0
+    assert result.rejected == 1
+    assert _gloss_texts(session.store.read(CIRCULAR_INITIAL_HEADWORD))[0] == (
+        f"Marked by a {CIRCULAR_INITIAL_HEADWORD} unwillingness to change."
+    )
+
+
+async def test_a_rewrite_that_collides_with_a_sibling_is_refused(session):
+    entry = _entry(
+        CIRCULAR_COLLIDE_HEADWORD,
+        gloss=f"Marked by a {CIRCULAR_COLLIDE_HEADWORD} unwillingness to change.",
+        extra_glosses=[
+            Rendition[str](
+                reading_level=ReadingLevel.GRADE_5,
+                style=Register.PLAIN,
+                content=CIRCULAR_COLLISION_TEXT,
+            )
+        ],
+    )
+    session.store.write(entry)
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.CIRCULAR_GLOSS}
+    )
+
+    result = outcome.steps[ContentHygieneStep.CIRCULAR_GLOSS]
+    assert result.calls == 1
+    assert result.accepted == 0
+    assert result.rejected == 1
+    assert _gloss_texts(session.store.read(CIRCULAR_COLLIDE_HEADWORD))[0] == (
+        f"Marked by a {CIRCULAR_COLLIDE_HEADWORD} unwillingness to change."
+    )
+
+
+async def test_a_rewrite_that_drifts_in_meaning_is_refused(session):
+    entry = _entry(
+        CIRCULAR_DRIFT_HEADWORD,
+        gloss=f"Marked by a {CIRCULAR_DRIFT_HEADWORD} unwillingness to change.",
+    )
+    session.store.write(entry)
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.CIRCULAR_GLOSS}
+    )
+
+    result = outcome.steps[ContentHygieneStep.CIRCULAR_GLOSS]
+    assert result.calls == 1
+    assert result.accepted == 0
+    assert result.rejected == 1
+    assert _gloss_texts(session.store.read(CIRCULAR_DRIFT_HEADWORD))[0] == (
+        f"Marked by a {CIRCULAR_DRIFT_HEADWORD} unwillingness to change."
+    )
+
+
+async def test_a_non_circular_canonical_gloss_costs_nothing(session):
+    session.store.write(_entry("duo", gloss=DEFAULT_GLOSS))
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={ContentHygieneStep.CIRCULAR_GLOSS}
+    )
+
+    assert outcome.steps[ContentHygieneStep.CIRCULAR_GLOSS].calls == 0
+    assert session.meter.summary().total_usd == 0.0
+
+
+async def test_a_second_circular_gloss_sweep_is_free_and_changes_nothing(session):
+    entry = _entry("stubborn", gloss="Marked by a stubborn unwillingness to change.")
+    session.store.write(entry)
+    only = {ContentHygieneStep.CIRCULAR_GLOSS}
+
+    await run_content_hygiene(session.store, session.stages, workers=4, only=only)
+    spent = session.meter.summary().total_usd
+
+    again = await run_content_hygiene(session.store, session.stages, workers=4, only=only)
+
+    assert again.steps[ContentHygieneStep.CIRCULAR_GLOSS].calls == 0
+    assert session.meter.summary().total_usd == spent
+
+
+async def test_only_circular_gloss_runs_alone(session):
+    session.store.write(
+        _entry(
+            "stubborn",
+            relations=[_relation(RelationType.SYNONYM, "stubborn")],
+            gloss="Marked by a stubborn unwillingness to change.",
+        )
+    )
+
+    outcome = await run_content_hygiene(
+        session.store, session.stages, workers=4, only={"circular_gloss"}
+    )
+
+    assert set(outcome.steps) == {"circular_gloss"}
+    assert outcome.steps[ContentHygieneStep.CIRCULAR_GLOSS].accepted == 1
+    # self_synonym was not selected, so its own defect on the same entry survives.
+    assert _relations_of(session.store.read("stubborn"))[0].type is RelationType.SYNONYM
+
+
+# --------------------------------------------------------------------------------------
+# Step 8 — degenerate_renditions
 # --------------------------------------------------------------------------------------
 
 
@@ -959,7 +1171,7 @@ def test_a_pre_existing_marker_is_parsed():
 
 
 # --------------------------------------------------------------------------------------
-# Step 8 — filler_examples
+# Step 9 — filler_examples
 # --------------------------------------------------------------------------------------
 
 
