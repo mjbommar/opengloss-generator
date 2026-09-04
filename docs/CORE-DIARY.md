@@ -1375,3 +1375,10 @@ folded. **12,838 new lemmas** in `data/core/tier3_final.tsv`. Migrating them fro
 v1.3 source (free), then the recipe-A chain: retrofit passes, resolve, gloss × 4
 levels, examples × 4 levels, encyclopedia grade_5 + college, hygiene block, reconcile,
 judge sample, audit. Caps sum $96; expected ≈ $66.
+
+**14:21 — migration done** (12,838 files, 0 failures, 10 min; store now 54,724
+entries). **Chain gotcha #6:** `retrofit` and `resolve` take no `--from-list`; the
+first launch's structural stages exited in 2 s each on a usage error (stderr was in
+the per-stage error files, not the log). Killed before the paid stages, fixed to
+store-wide runs (`retrofit --only <pass>`, `resolve --all`; markers skip the
+enriched 42K), relaunched 14:22.
