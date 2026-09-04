@@ -1289,3 +1289,9 @@ pairs (3.0 GB); `triples.jsonl` 2,641,578 query/positive/hard-negative triples f
 grade_5 + college (dictionary / thesaurus / encyclopedia / usage-note templates; 0.8
 GB). `export-qrels` failed in the script on a flag name (`--out` vs `--out-dir`) and is
 being rerun by hand. `DONE-PAIRS` 11:23; the post-pair reconcile started.
+
+**Post-pair reconcile, sweep 1 (11:24 → 11:29, 5m, $0):** `verdicts` demoted
+**44,660** edges (near side 24,962 = the 24,183 `related_differently` + 439 `unrelated`
++ …; far side 19,698), all tombstoned in the same sweep; `dedup` removed 6,723 exact
+duplicate edges; `cap` trimmed 23; `asymmetric` found nothing left to reconcile.
+21,800 entries changed. Sweep 2 (tombstoning the far-side demotions) running.
