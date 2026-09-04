@@ -1337,7 +1337,10 @@ def relation_hygiene(
 def relation_reconcile(
     only: Annotated[
         str | None,
-        typer.Option("--only", help="Comma list of steps (asymmetric, tombstone, cap)."),
+        typer.Option(
+            "--only",
+            help="Comma list of steps (verdicts, asymmetric, tombstone, dedup, cap).",
+        ),
     ] = None,
     from_list: Annotated[
         Path | None,
@@ -1353,13 +1356,14 @@ def relation_reconcile(
 ) -> None:
     """Reconcile the relation lists relation-hygiene's demotions left behind (D-65).
 
-    Free, no model calls. ``asymmetric`` applies the stricter of two disagreeing
-    directional verdicts on a symmetric pair; ``tombstone`` takes every demoted
-    ``see_also`` out of the sense's relation list and writes it to provenance instead,
-    which is what shortens the list the QA judge is shown; ``cap`` trims each sense's
-    per-type runs. Idempotent; ``--dry-run`` computes every edit and writes nothing. Run
-    after ``relation-hygiene``, and re-run ``graph-hygiene`` afterwards to confirm
-    reciprocity.
+    Free, no model calls. ``verdicts`` demotes every edge a stored contrast says is not
+    what it claims, near side and far side (D-68); ``asymmetric`` applies the stricter of
+    two disagreeing directional verdicts on a symmetric pair; ``tombstone`` takes every
+    demoted ``see_also`` out of the sense's relation list and writes it to provenance
+    instead, which is what shortens the list the QA judge is shown; ``dedup`` drops exact
+    duplicate edges; ``cap`` trims each sense's per-type runs. Idempotent; ``--dry-run``
+    computes every edit and writes nothing. Run after ``relation-hygiene`` and
+    ``contrasts``, and re-run ``graph-hygiene`` afterwards to confirm reciprocity.
     """
     cfg = _build_config(config_path, store, None, concurrency, dry_run)
     steps = {s.strip() for s in only.split(",") if s.strip()} if only else None

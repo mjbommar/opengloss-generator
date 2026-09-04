@@ -18,6 +18,8 @@ import pytest
 
 from opengloss_generator.config import AppConfig, ConcurrencyConfig, StoreConfig
 from opengloss_generator.schema import (
+    Contrast,
+    ContrastVerdict,
     Example,
     Lexeme,
     LexemeKind,
@@ -47,6 +49,7 @@ from opengloss_generator.workflows.relation_reconcile import (
     MARKER_PREFIX,
     TOMBSTONE_LINE_PREFIX,
     TOMBSTONE_RECORD_PREFIX,
+    VERDICT_NOTE_PREFIX,
     RelationCaps,
     RelationReconcileStep,
     is_demotion_note,
@@ -164,8 +167,280 @@ def _pair(
     return alpha, beta
 
 
+def _contrast(
+    edge: str,
+    verdict: ContrastVerdict,
+    *,
+    target_sense_id: str | None = None,
+    text: str = "Alpha and beta differ in register and in the situations each one fits.",
+) -> Contrast:
+    """Build one stored contrast, keyed by the edge id the ``contrasts`` stage derived."""
+    return Contrast(
+        edge_id=edge,
+        target_sense_id=target_sense_id,
+        text=Renditions[str](root=[canonical_rendition(text)]),
+        verdict=verdict,
+    )
+
+
+def _judged_pair(
+    verdict: ContrastVerdict, *, relation_type: RelationType = RelationType.SYNONYM
+) -> tuple[Lexeme, Lexeme]:
+    """Return ``(alpha, beta)``: a reciprocated symmetric pair, judged from alpha's end.
+
+    The shape the ``contrasts`` stage actually leaves behind (D-57 §1): one contrast on
+    the lexicographically smaller end, none on the other, and both ends asserting the
+    edge because ``graph_hygiene`` reciprocated it.
+    """
+    alpha = _entry("alpha", relations=[_relation(relation_type, "beta", sense_id="beta:noun:0")])
+    alpha.contrasts.append(
+        _contrast(
+            f"alpha:noun:0-{relation_type.value}->beta", verdict, target_sense_id="beta:noun:0"
+        )
+    )
+    beta = _entry("beta", relations=[_relation(relation_type, "alpha", sense_id="alpha:noun:0")])
+    return alpha, beta
+
+
 # --------------------------------------------------------------------------------------
-# Step 1 — asymmetric
+# Step 1 — verdicts
+# --------------------------------------------------------------------------------------
+
+
+async def test_an_unrelated_verdict_demotes_its_edge(store):
+    alpha, beta = _judged_pair(ContrastVerdict.UNRELATED)
+    store.write(alpha)
+    store.write(beta)
+
+    outcome = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    result = outcome.steps[RelationReconcileStep.VERDICTS]
+    assert result.by_verdict == {"unrelated": 2}  # near side and far side
+    assert result.by_type == {"synonym": 2}
+    assert result.far_side_demoted == 1
+    assert result.calls == 0
+    assert result.cost_usd == 0.0
+
+    relation = _relations_of(store.read("alpha"))[0]
+    assert relation.type is RelationType.SEE_ALSO
+    assert relation.note == f"{VERDICT_NOTE_PREFIX}unrelated"
+    assert is_demotion_note(relation.note)
+
+
+async def test_a_related_differently_verdict_demotes_with_its_own_note(store):
+    # The paragraph says the two are related but not as typed; it does not say how, so
+    # the edge is demoted rather than retyped to a guess.
+    alpha, beta = _judged_pair(ContrastVerdict.RELATED_DIFFERENTLY)
+    store.write(alpha)
+    store.write(beta)
+
+    outcome = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    assert outcome.steps[RelationReconcileStep.VERDICTS].by_verdict == {"related_differently": 2}
+    relation = _relations_of(store.read("alpha"))[0]
+    assert relation.type is RelationType.SEE_ALSO
+    assert relation.note == f"{VERDICT_NOTE_PREFIX}related_differently"
+
+
+async def test_a_related_as_typed_verdict_leaves_its_edge_alone(store):
+    alpha, beta = _judged_pair(ContrastVerdict.RELATED_AS_TYPED)
+    store.write(alpha)
+    store.write(beta)
+
+    outcome = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    result = outcome.steps[RelationReconcileStep.VERDICTS]
+    assert result.demoted == 0
+    assert result.by_verdict == {}
+    assert outcome.entries_changed == 0
+    assert _relations_of(store.read("alpha"))[0].type is RelationType.SYNONYM
+    assert _relations_of(store.read("beta"))[0].type is RelationType.SYNONYM
+
+
+async def test_a_verdict_demotion_demotes_the_reverse_edge_on_the_far_side(store):
+    # A contrast is written once per undirected pair, so nothing but the far-side phase
+    # will ever act on beta's half of it.
+    alpha, beta = _judged_pair(ContrastVerdict.UNRELATED, relation_type=RelationType.ANTONYM)
+    store.write(alpha)
+    store.write(beta)
+
+    await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    reverse = _relations_of(store.read("beta"))[0]
+    assert reverse.type is RelationType.SEE_ALSO
+    assert reverse.note == f"{FAR_SIDE_NOTE_PREFIX}alpha:noun:0 (contrast unrelated)"
+    assert is_demotion_note(reverse.note)
+
+
+async def test_the_far_side_phase_leaves_a_reverse_about_another_sense_alone(store):
+    # Sense-level, unlike ``cap``'s far side: the verdict is a judgement about these two
+    # senses, and beta's second sense may hold a perfectly good synonym toward alpha.
+    alpha, _ = _judged_pair(ContrastVerdict.UNRELATED)
+    beta = _entry(
+        "beta",
+        senses=[
+            _sense(0, [_relation(RelationType.SYNONYM, "alpha", sense_id="alpha:noun:0")]),
+            _sense(1, [_relation(RelationType.SYNONYM, "alpha", sense_id="alpha:noun:1")]),
+        ],
+    )
+    store.write(alpha)
+    store.write(beta)
+
+    await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    stored = store.read("beta")
+    assert _relations_of(stored, 0)[0].type is RelationType.SEE_ALSO
+    assert _relations_of(stored, 1)[0].type is RelationType.SYNONYM
+
+
+async def test_a_contrast_keyed_on_another_sense_does_not_touch_this_one(store):
+    # The join is by edge id, which begins with the sense id, so a contrast written about
+    # sense 1 cannot demote sense 0's identically typed edge toward the same target.
+    alpha = _entry(
+        "alpha",
+        senses=[
+            _sense(0, [_relation(RelationType.SYNONYM, "beta", sense_id="beta:noun:0")]),
+            _sense(1, [_relation(RelationType.SYNONYM, "beta", sense_id="beta:noun:0")]),
+        ],
+    )
+    alpha.contrasts.append(_contrast("alpha:noun:1-synonym->beta", ContrastVerdict.UNRELATED))
+    store.write(alpha)
+
+    outcome = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    assert outcome.steps[RelationReconcileStep.VERDICTS].demoted == 1
+    stored = store.read("alpha")
+    assert _relations_of(stored, 0)[0].type is RelationType.SYNONYM
+    assert _relations_of(stored, 1)[0].type is RelationType.SEE_ALSO
+
+
+async def test_a_verdict_on_an_unresolved_edge_demotes_but_queues_no_far_side_work(store):
+    alpha = _entry("alpha", relations=[_relation(RelationType.SYNONYM, "beta")])
+    alpha.contrasts.append(_contrast("alpha:noun:0-synonym->beta", ContrastVerdict.UNRELATED))
+    beta = _entry("beta", relations=[_relation(RelationType.SYNONYM, "alpha")])
+    store.write(alpha)
+    store.write(beta)
+
+    outcome = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    result = outcome.steps[RelationReconcileStep.VERDICTS]
+    assert result.demoted == 1
+    assert result.far_side_demoted == 0
+    assert _relations_of(store.read("beta"))[0].type is RelationType.SYNONYM
+
+
+async def test_a_verdict_on_an_asymmetric_type_queues_no_far_side_work(store):
+    alpha = _entry(
+        "alpha", relations=[_relation(RelationType.HYPERNYM, "beta", sense_id="beta:noun:0")]
+    )
+    alpha.contrasts.append(_contrast("alpha:noun:0-hypernym->beta", ContrastVerdict.UNRELATED))
+    beta = _entry(
+        "beta", relations=[_relation(RelationType.HYPERNYM, "alpha", sense_id="alpha:noun:0")]
+    )
+    store.write(alpha)
+    store.write(beta)
+
+    outcome = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    result = outcome.steps[RelationReconcileStep.VERDICTS]
+    assert result.by_type == {"hypernym": 1}
+    assert result.far_side_demoted == 0
+
+
+async def test_the_verdicts_step_is_idempotent(store):
+    alpha, beta = _judged_pair(ContrastVerdict.UNRELATED)
+    store.write(alpha)
+    store.write(beta)
+
+    await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+    before = store.read("alpha").model_dump_json()
+    beta_before = store.read("beta").model_dump_json()
+
+    again = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    assert again.steps[RelationReconcileStep.VERDICTS].demoted == 0
+    assert store.read("alpha").model_dump_json() == before
+    assert store.read("beta").model_dump_json() == beta_before
+
+
+async def test_the_contrast_survives_the_edge_it_demoted(store):
+    # D-62: a contrast whose edge has gone is evidence about a removed relation, not a
+    # validation error, so nothing here prunes the entry's contrast list.
+    alpha, beta = _judged_pair(ContrastVerdict.UNRELATED)
+    store.write(alpha)
+    store.write(beta)
+
+    await run_relation_reconcile(store, workers=4)
+
+    stored = store.read("alpha")
+    assert _terms(stored) == []
+    assert [c.edge_id for c in stored.contrasts] == ["alpha:noun:0-synonym->beta"]
+
+
+async def test_a_full_sweep_demotes_a_verdict_edge_and_tombstones_it_in_the_same_sweep(store):
+    # The whole reason ``verdicts`` is first in the step order: run the other way round,
+    # the edge the contrasts stage rejected would still be in the list the QA judge reads
+    # until somebody ran the pass a second time.
+    alpha, beta = _judged_pair(ContrastVerdict.RELATED_DIFFERENTLY)
+    store.write(alpha)
+    store.write(beta)
+
+    outcome = await run_relation_reconcile(store, workers=4)
+
+    assert outcome.steps[RelationReconcileStep.VERDICTS].demoted == 2
+    assert outcome.steps[RelationReconcileStep.TOMBSTONE].removed == 1
+    stored = store.read("alpha")
+    assert _terms(stored) == []
+    listing = next(note for note in _notes(stored) if note.startswith(TOMBSTONE_RECORD_PREFIX))
+    assert listing.splitlines()[1] == (
+        f"{TOMBSTONE_LINE_PREFIX}see_also -> beta [{VERDICT_NOTE_PREFIX}related_differently]"
+    )
+
+
+async def test_the_far_side_demotion_is_tombstoned_by_the_next_sweep(store):
+    # The far-side phase runs after ``tombstone`` has already visited beta, so it writes
+    # no marker: the stale one disagrees with beta's new digest and the next sweep
+    # re-examines the entry, which is what takes the demoted see_also out of the list.
+    alpha, beta = _judged_pair(ContrastVerdict.UNRELATED)
+    store.write(alpha)
+    store.write(beta)
+
+    await run_relation_reconcile(store, workers=4)
+    assert _terms(store.read("beta")) == ["alpha"]
+
+    second = await run_relation_reconcile(store, workers=4)
+
+    assert second.steps[RelationReconcileStep.TOMBSTONE].removed == 1
+    assert _terms(store.read("beta")) == []
+
+
+async def test_contrasts_arriving_after_a_sweep_reopen_the_entry(store):
+    # A ``contrasts`` sweep adds verdicts without touching a relation, so a digest over
+    # edge ids alone would skip the entry forever and never apply them.
+    alpha, beta = _judged_pair(ContrastVerdict.UNRELATED)
+    contrasts = list(alpha.contrasts)
+    alpha.contrasts.clear()
+    _relations_of(alpha).append(_relation(RelationType.SEE_ALSO, "x", note=NANO_INVALID_NOTE))
+    store.write(alpha)
+    store.write(beta)
+
+    first = await run_relation_reconcile(store, workers=4)
+    assert first.steps[RelationReconcileStep.TOMBSTONE].removed == 1
+    assert first.steps[RelationReconcileStep.VERDICTS].demoted == 0
+
+    reopened = store.read("alpha")
+    reopened.contrasts.extend(contrasts)
+    store.write(reopened)
+
+    second = await run_relation_reconcile(store, workers=4)
+
+    assert second.entries_skipped == 0
+    assert second.steps[RelationReconcileStep.VERDICTS].demoted == 2
+    assert _terms(store.read("alpha")) == []
+
+
+# --------------------------------------------------------------------------------------
+# Step 2 — asymmetric
 # --------------------------------------------------------------------------------------
 
 
@@ -380,7 +655,7 @@ async def test_a_demoted_reverse_outside_the_from_list_still_decides_the_near_si
 
 
 # --------------------------------------------------------------------------------------
-# Step 2 — tombstone
+# Step 3 — tombstone
 # --------------------------------------------------------------------------------------
 
 

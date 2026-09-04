@@ -22,8 +22,25 @@ reciprocity fell 98.4% → 93.7% and antonym 99.7% → 96.9% after the validity 
 D-50's own far-side phase repairs the demotions *it* makes; it cannot repair a
 disagreement between two verdicts it made deliberately.
 
-Three steps, selectable by name through ``only=``, every one of them **free** — no model
+Five steps, selectable by name through ``only=``, every one of them **free** — no model
 call is made anywhere in this module — and every one idempotent:
+
+``verdicts``
+    Applies what the ``contrasts`` stage (D-57) concluded. Each
+    :class:`~opengloss_generator.schema.Contrast` on ``Lexeme.contrasts`` is keyed by the
+    D-1 edge id of the relation it was written about and carries a
+    :class:`~opengloss_generator.schema.ContrastVerdict`; the stage records those verdicts
+    and acts on none of them, because D-50 gives relation edits to the hygiene passes.
+    This is the pass that acts. ``unrelated`` and ``related_differently`` both demote the
+    edge to ``see_also``, with the note ``demoted: contrast <verdict>``;
+    ``related_as_typed`` leaves it alone. ``related_differently`` gets a demotion rather
+    than a retype because the paragraph says the two are related but *not how* — the
+    contract never asked — and guessing a type out of prose written to answer a different
+    question would be this pass asserting something no model was shown. A demoted edge
+    that was symmetric and resolved queues a far-side demotion of its reverse, which no
+    contrast of its own will ever reach: D-57 §1 writes one contrast per *undirected*
+    pair. Counted per verdict as well as per relation type. **First in the step order**,
+    so its demotions are tombstoned in the same sweep.
 
 ``asymmetric``
     For each symmetric type (``synonym``, ``antonym``, ``confusable_with``): where a live
@@ -81,7 +98,9 @@ reused or removed, so the edge's ``provenance_id`` still resolves.
 against the entry's live edges (D-62, :class:`~opengloss_generator.schema.Contrast`): "a
 contrast whose edge has gone is evidence about a removed relation rather than a
 validation error". A contrast for a tombstoned edge therefore survives this pass intact,
-which is the behaviour that schema note was written for.
+which is the behaviour that schema note was written for — including a contrast for an edge
+``verdicts`` demoted and ``tombstone`` then removed one step later, which is the common
+case once both steps have run.
 
 Reciprocity, and ``graph_hygiene``
 ----------------------------------
@@ -108,6 +127,12 @@ The pass must not create new one-sidedness. Two places could:
    (D-31) — removes the reverse edges from the target entry, with the same provenance
    record.
 
+The far-side phase has two halves — ``verdicts``' demotions and ``cap``'s removals — and
+both run once the main sweep has fully drained. The demoting half deliberately writes no
+marker on the entry it touches, because what it leaves behind is exactly what ``tombstone``
+exists to remove and that step has already visited the entry in this sweep; leaving the
+stale marker is what makes the next sweep re-examine it.
+
 **The far-side phase is given no stop event**, for D-50's second amendment's reason and
 by the same mechanism: ``run_pool``'s workers return before pulling their first item once
 the event is set, so a phase that honoured it would silently do nothing and leave the
@@ -120,17 +145,23 @@ passing one.
 Idempotence, and the marker
 ---------------------------
 
-All three steps are idempotent *by construction*, the way ``relation_hygiene``'s free
-steps are — they leave nothing behind for themselves to find. A demoted edge is a
-``see_also`` and ``asymmetric`` only looks at live typed ones; a tombstoned edge is gone;
-a capped type is at or under its cap. Re-running the pass over an untouched store changes
-nothing and reports zeroes.
+Every step is idempotent *by construction*, the way ``relation_hygiene``'s free steps are
+— they leave nothing behind for themselves to find. A demoted edge is a ``see_also`` and
+``asymmetric`` only looks at live typed ones; a tombstoned edge is gone; a capped type is
+at or under its cap. ``verdicts`` gets this for free from the shape of an edge id, which
+carries the relation type: demoting ``s-synonym->b`` leaves ``s-see_also->b``, which
+matches no contrast, so a second sweep has nothing to find. Re-running the pass over an
+untouched store changes nothing and reports zeroes.
 
 The D-47-style marker on top of that is a *skip*, not the mechanism:
 ``relation_reconcile:<digest>`` on a zero-cost provenance record, where the digest covers
-the selected step names together with the entry's live edge ids **as this run leaves
-them**. Steps are in the digest because a marker written by ``--only tombstone`` must not
-stop a later full sweep from capping the same entry. Written only on entries this pass
+the selected step names, the entry's live edge ids **as this run leaves them**, and one
+``contrast=<edge id>=<verdict>`` ref per stored contrast. Steps are in the digest because
+a marker written by ``--only tombstone`` must not stop a later full sweep from capping the
+same entry. The contrast refs are in it because a later ``contrasts`` sweep adds verdicts
+without touching a single relation: an entry reconciled before its contrasts were written
+has exactly the same edge ids afterwards, and a digest over those alone would skip it
+forever, so the verdicts would never be applied. Written only on entries this pass
 actually changed, so a store does not grow one provenance record per entry per sweep; an
 unchanged entry is re-examined next time and, being idempotent, costs nothing but the
 read.
@@ -144,11 +175,11 @@ answer: ``--from-list`` names the remainder without a whole-store re-sweep.
 Concurrency and locking (D-31)
 ------------------------------
 
-Unlike ``relation_hygiene``, which drives one pooled sweep per step, all three steps here
-run inside **one** handler under **one** hold of the entry's lock. They are free, they are
-ordered (``tombstone`` must see what ``asymmetric`` demoted; ``cap`` must count what
-``tombstone`` removed), and three sweeps would mean three read-modify-write cycles per
-entry to reach the same state. ``asymmetric``'s far-side *input* is collected up front by
+Unlike ``relation_hygiene``, which drives one pooled sweep per step, every step here runs
+inside **one** handler under **one** hold of the entry's lock. They are free, they are
+ordered (``tombstone`` must see what ``verdicts`` and ``asymmetric`` demoted; ``cap`` must
+count what ``tombstone`` removed), and five sweeps would mean five read-modify-write cycles
+per entry to reach the same state. ``asymmetric``'s far-side *input* is collected up front by
 :func:`_collect_demoted_pairs`, a read-only projection of the whole store taken without
 locks — the discipline ``graph_hygiene._load_view`` and ``audit_store`` already use — and
 never restricted by ``lexeme_ids``, because the far side of an edge on the list is very
@@ -170,10 +201,11 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from opengloss_generator.errors import BudgetExceededError
+from opengloss_generator.identity import edge_id
 from opengloss_generator.log import get_logger
 from opengloss_generator.prompts import PROMPT_VERSION
 from opengloss_generator.runner import run_pool
-from opengloss_generator.schema import Provenance, RelationType, StageName
+from opengloss_generator.schema import ContrastVerdict, Provenance, RelationType, StageName
 from opengloss_generator.workflows.content_hygiene import PROGRESS_EVERY, StepResult
 from opengloss_generator.workflows.relation_hygiene import (
     FAR_SIDE_NOTE_PREFIX,
@@ -199,6 +231,7 @@ __all__ = [
     "MARKER_PREFIX",
     "TOMBSTONE_LINE_PREFIX",
     "TOMBSTONE_RECORD_PREFIX",
+    "VERDICT_NOTE_PREFIX",
     "RelationCaps",
     "RelationReconcileOutcome",
     "RelationReconcileStep",
@@ -220,6 +253,19 @@ DETERMINISTIC_MODEL = "rule:relation_reconcile"
 #: the same sweep, so there is no surviving ``see_also`` for that signal to protect. The
 #: prefix is instead one of :data:`DEMOTION_NOTE_PREFIXES`, so ``tombstone`` removes it.
 ASYMMETRIC_NOTE_PREFIX = "reconcile:asymmetric:"
+
+#: Note written on an edge the ``verdicts`` step demotes, completed with the
+#: :class:`~opengloss_generator.schema.ContrastVerdict` that decided it — so a demoted
+#: edge reads ``demoted: contrast unrelated`` or ``demoted: contrast related_differently``.
+#: It uses the project-wide ``"demoted: "`` shape deliberately, unlike
+#: :data:`ASYMMETRIC_NOTE_PREFIX`: :func:`is_demotion_note` recognises it through
+#: :data:`_GENERIC_DEMOTION_PREFIX` without a new entry in
+#: :data:`DEMOTION_NOTE_PREFIXES`, ``graph_hygiene._asserted_pairs`` reads it as "a pass
+#: judged this pair" for as long as the edge survives, and
+#: ``relation_hygiene._far_side_reason`` strips exactly this prefix to build the far-side
+#: note, so the reverse edge is annotated ``demoted: far side of <sense> (contrast
+#: unrelated)`` with no new convention invented here.
+VERDICT_NOTE_PREFIX = "demoted: contrast "
 
 #: Header line of the provenance record ``tombstone`` writes for one sense, completed
 #: with the sense id. One record per sense per sweep, however many edges it removed.
@@ -292,6 +338,7 @@ _PROGRESS_EVERY = PROGRESS_EVERY
 class RelationReconcileStep:
     """Names of the steps :func:`run_relation_reconcile` can select between."""
 
+    VERDICTS = "verdicts"
     ASYMMETRIC = "asymmetric"
     TOMBSTONE = "tombstone"
     DEDUP = "dedup"
@@ -300,7 +347,20 @@ class RelationReconcileStep:
     #: The order the steps are applied in, whatever order ``--only`` lists them: a
     #: tombstone must be able to see what ``asymmetric`` just demoted, and a cap must
     #: count what ``tombstone`` has already taken out of the list.
-    ALL: tuple[str, ...] = (ASYMMETRIC, TOMBSTONE, DEDUP, CAP)
+    #:
+    #: ``verdicts`` is **first**, ahead of ``asymmetric``, for the same reason and one
+    #: more. The same reason: it is a demoting step, and every demotion it makes must be
+    #: visible to ``tombstone`` in the *same* sweep, or the edge the ``contrasts`` stage
+    #: said is not what it claims stays in the list the QA judge is shown until somebody
+    #: runs the pass twice. The one more: ``asymmetric`` reads
+    #: :func:`_collect_demoted_pairs`' index, which is taken **before** any step runs, so
+    #: a verdict demotion cannot feed ``asymmetric`` within one sweep however they are
+    #: ordered — but a verdict demotion on entry *A* does queue a far-side demotion on
+    #: *B*, and running ``verdicts`` first keeps the near side and the far side of one
+    #: contrast in one sweep rather than splitting them across two. Nothing later in the
+    #: order can undo it: ``asymmetric`` only looks at live *typed* edges and a demoted
+    #: one is a ``see_also``.
+    ALL: tuple[str, ...] = (VERDICTS, ASYMMETRIC, TOMBSTONE, DEDUP, CAP)
 
 
 # --------------------------------------------------------------------------------------
@@ -377,24 +437,40 @@ class RelationReconcileStepResult(StepResult):
     """``StepResult`` plus the per-type breakdown each step is measured by.
 
     Attributes:
-        by_type: The step's edits per relation type — demotions for ``asymmetric``,
-            removals for ``tombstone`` and ``cap`` — keyed by the type's string value.
+        by_type: The step's edits per relation type — demotions for ``verdicts`` and
+            ``asymmetric``, removals for ``tombstone``, ``dedup`` and ``cap`` — keyed by
+            the type's string value. For ``verdicts`` the type counted is the one the
+            edge carried **before** the demotion, which is the type the contrast was
+            written about.
+        by_verdict: ``verdicts`` only: the same demotions keyed by the
+            :class:`~opengloss_generator.schema.ContrastVerdict` that decided them.
+            ``related_as_typed`` never appears — that verdict leaves its edge alone — so
+            the keys are ``unrelated`` and ``related_differently``. Far-side demotions are
+            counted here too, under the verdict of the near-side contrast that implied
+            them, so this and :attr:`by_type` sum to :attr:`StepResult.demoted`.
         senses_capped: How many senses lost at least one relation to a cap (``cap`` only).
         far_side_removed: How many of ``removed`` were the reverse of an edge this step
             capped on another entry (``cap`` only), folded into ``removed`` as well so
             that figure keeps meaning "how many edges did this step take out".
+        far_side_demoted: How many of ``demoted`` were the reverse of an edge this step
+            demoted on another entry (``verdicts`` only), folded into ``demoted`` as well
+            for the same reason and named as ``relation_hygiene`` names it.
     """
 
     by_type: dict[str, int] = field(default_factory=dict)
+    by_verdict: dict[str, int] = field(default_factory=dict)
     senses_capped: int = 0
     far_side_removed: int = 0
+    far_side_demoted: int = 0
 
     def as_dict(self) -> dict[str, object]:
         """Return :meth:`StepResult.as_dict`'s view plus this pass's own counters."""
         data = super().as_dict()
         data["by_type"] = dict(sorted(self.by_type.items()))
+        data["by_verdict"] = dict(sorted(self.by_verdict.items()))
         data["senses_capped"] = self.senses_capped
         data["far_side_removed"] = self.far_side_removed
+        data["far_side_demoted"] = self.far_side_demoted
         return data
 
 
@@ -464,27 +540,37 @@ class RelationReconcileOutcome:
 
 @dataclass(slots=True)
 class _EntryEdits:
-    """What the three steps did to one entry, before it is folded into the tally.
+    """What the steps did to one entry, before it is folded into the tally.
 
     Attributes:
+        verdict_demoted: ``verdicts``' demotions, per pre-demotion relation type value.
+        by_verdict: the same demotions, per ``ContrastVerdict`` value.
         demoted: ``asymmetric``'s demotions, per relation type value.
         tombstoned: ``tombstone``'s removals, per relation type value.
+        deduped: ``dedup``'s removals, per relation type value.
         capped: ``cap``'s removals, per relation type value.
         senses_capped: Senses that lost at least one relation to a cap.
         far_side: Reverse edges ``cap``'s removals imply, for the second phase.
+        far_side_demotions: Reverse edges ``verdicts``' demotions imply, for the same
+            second phase.
     """
 
+    verdict_demoted: dict[str, int] = field(default_factory=dict)
+    by_verdict: dict[str, int] = field(default_factory=dict)
     demoted: dict[str, int] = field(default_factory=dict)
     tombstoned: dict[str, int] = field(default_factory=dict)
     deduped: dict[str, int] = field(default_factory=dict)
     capped: dict[str, int] = field(default_factory=dict)
     senses_capped: int = 0
     far_side: list[_FarSideRemoval] = field(default_factory=list)
+    far_side_demotions: list[_FarSideDemotion] = field(default_factory=list)
 
     @property
     def changed(self) -> bool:
         """Return whether any step edited this entry."""
-        return bool(self.demoted or self.tombstoned or self.deduped or self.capped)
+        return bool(
+            self.verdict_demoted or self.demoted or self.tombstoned or self.deduped or self.capped
+        )
 
 
 def _add(counts: dict[str, int], relation_type: RelationType, amount: int = 1) -> None:
@@ -572,12 +658,33 @@ class _Tally:
             if result is not None:
                 result.far_side_removed += sum(edits.capped.values())
 
+    async def far_side_demotion(self, lexeme_id: str, edits: _EntryEdits) -> None:
+        """Fold one ``verdicts`` far-side visit into that step's result, not as a scan.
+
+        The mirror of :meth:`far_side` for the demoting half of the second phase; see
+        that method for why a far-side visit is not counted as a scan.
+
+        Args:
+            lexeme_id: The far entry visited.
+            edits: What was demoted on it.
+        """
+        async with self._lock:
+            self._fold(lexeme_id, edits)
+            result = self._results.get(RelationReconcileStep.VERDICTS)
+            if result is not None:
+                result.far_side_demoted += sum(edits.verdict_demoted.values())
+
     def _fold(self, lexeme_id: str, edits: _EntryEdits) -> None:
         """Apply one entry's edits to the results. Caller holds the lock."""
+        self._apply(RelationReconcileStep.VERDICTS, edits.verdict_demoted, demoted=True)
         self._apply(RelationReconcileStep.ASYMMETRIC, edits.demoted, demoted=True)
         self._apply(RelationReconcileStep.TOMBSTONE, edits.tombstoned)
         self._apply(RelationReconcileStep.DEDUP, edits.deduped)
         self._apply(RelationReconcileStep.CAP, edits.capped)
+        verdicts = self._results.get(RelationReconcileStep.VERDICTS)
+        if verdicts is not None:
+            for key, amount in edits.by_verdict.items():
+                verdicts.by_verdict[key] = verdicts.by_verdict.get(key, 0) + amount
         cap = self._results.get(RelationReconcileStep.CAP)
         if cap is not None:
             cap.senses_capped += edits.senses_capped
@@ -853,6 +960,28 @@ def _edge_refs(entry: Lexeme) -> list[str]:
     return [edge.edge_id for edge in entry.edges()]
 
 
+def _contrast_refs(entry: Lexeme) -> list[str]:
+    """Return one ``contrast=<edge id>=<verdict>`` ref per contrast on an entry.
+
+    The edge ids alone would not do. A ``contrasts`` sweep adds paragraphs to an entry
+    without touching a single relation, so an entry this pass has already reconciled has
+    exactly the same :func:`_edge_refs` afterwards as before, and a digest built from
+    those alone would skip it and the new verdicts would never be applied. The verdict is
+    in the ref as well as the edge id because a re-judged edge — one contrast replaced by
+    another over the same edge — is a different instruction to this pass even though the
+    key did not move.
+
+    Args:
+        entry: The entry to project.
+
+    Returns:
+        One ref per stored contrast, live edge or not: D-62 keeps a contrast whose edge
+        has gone, and dropping those from the digest would make the marker flicker
+        between two values as ``tombstone`` removes their edges.
+    """
+    return [f"contrast={c.edge_id}={c.verdict.value}" for c in entry.contrasts]
+
+
 def _marker_note(steps: Sequence[str], entry: Lexeme) -> str:
     """Return the sentinel to stamp on an entry this sweep changed.
 
@@ -863,9 +992,15 @@ def _marker_note(steps: Sequence[str], entry: Lexeme) -> str:
         entry: The entry, in the state the sweep is leaving it.
 
     Returns:
-        ``relation_reconcile:<digest>``.
+        ``relation_reconcile:<digest>``, the digest over the selected steps, the entry's
+        live edge ids and its contrast refs (:func:`_contrast_refs`).
     """
-    return f"{MARKER_PREFIX}:{_digest([*(f'step={s}' for s in steps), *_edge_refs(entry)])}"
+    parts = [
+        *(f"step={s}" for s in steps),
+        *_edge_refs(entry),
+        *_contrast_refs(entry),
+    ]
+    return f"{MARKER_PREFIX}:{_digest(parts)}"
 
 
 def _record_order(provenance_id: str) -> int:
@@ -923,7 +1058,288 @@ def _already_reconciled(entry: Lexeme, marker: str) -> bool:
 
 
 # --------------------------------------------------------------------------------------
-# Step 1 — asymmetric
+# Step 1 — verdicts
+# --------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class _FarSideDemotion:
+    """One reverse edge a ``verdicts`` demotion implies, for the second phase.
+
+    The demoting counterpart of :class:`_FarSideRemoval`, and a near-copy of
+    ``relation_hygiene._FarSideRequest``, which is what it mirrors: a contrast is written
+    once per *undirected* pair (D-57 §1, ``contrasts._owns``), so the reverse edge has no
+    contrast of its own and nothing but this queue will ever act on it.
+
+    Attributes:
+        lexeme_id: The entry to visit — the demoted relation's target lexeme (B).
+        source_lexeme: The entry the verdict was applied on (A).
+        source_sense: The sense of A whose relation was demoted, so the far side can be
+            identified positively rather than plausibly
+            (:func:`_is_far_side_demotion_of`).
+        relation_type: The type the relation had **before** the demotion. Only a reverse
+            still carrying it is a candidate, which is what makes a second sweep a no-op.
+        verdict: The near-side contrast's verdict, so the far-side note names the same
+            reason the near-side note does and the far-side demotion is counted under the
+            same key in :attr:`RelationReconcileStepResult.by_verdict`.
+    """
+
+    lexeme_id: str
+    source_lexeme: str
+    source_sense: str
+    relation_type: RelationType
+    verdict: ContrastVerdict
+
+
+def _verdict_reason(verdict: ContrastVerdict) -> str:
+    """Return the reason half of a verdict demotion note, without ``"demoted: "``.
+
+    ``relation_hygiene`` folds exactly this substring into its far-side notes, through
+    ``_far_side_reason``; naming it once here keeps the near-side note and the far-side
+    note from drifting apart.
+
+    Args:
+        verdict: The contrast's verdict.
+
+    Returns:
+        ``contrast <verdict>``.
+    """
+    return f"{VERDICT_NOTE_PREFIX.removeprefix(_GENERIC_DEMOTION_PREFIX)}{verdict.value}"
+
+
+def _verdict_note(verdict: ContrastVerdict) -> str:
+    """Return the demotion note one acted-on contrast verdict earns its edge.
+
+    ``related_differently`` gets the same demotion as ``unrelated`` and **not** a guess at
+    a better type. The paragraph says these two are related but not in the way the edge
+    claims; it does not say how, the contract never asked, and inventing a type from prose
+    written to answer a different question would be this pass asserting something no model
+    was asked to judge. ``see_also`` is the honest answer: the two are related, the
+    relation is unnamed, and D-50's ``validity`` step is free to retype it later on a
+    verdict of its own.
+
+    Args:
+        verdict: The contrast's verdict; never ``related_as_typed``, which is not acted on.
+
+    Returns:
+        ``demoted: contrast <verdict>``.
+    """
+    return f"{_GENERIC_DEMOTION_PREFIX}{_verdict_reason(verdict)}"
+
+
+def _apply_verdicts(
+    entry: Lexeme, editor: _Editor, known: frozenset[str], edits: _EntryEdits
+) -> None:
+    """Demote every edge a stored contrast says is not what it claims (D-57, D-68).
+
+    The ``contrasts`` stage records a verdict per edge and acts on none of them, because
+    D-50 gives relation edits to the hygiene passes. This is that pass. The join is by
+    **edge id**: a contrast's key is ``<sense id>-<type>-><target lexeme>``, which is
+    exactly what :meth:`~opengloss_generator.schema.Lexeme.edges` derives, so "the
+    contrasts belonging to this sense" needs no separate index and a contrast written
+    about a sense that D-52 has since retired matches nothing here (retired senses are not
+    in :func:`_live_senses`) and is left alone, as D-62 requires.
+
+    Because the edge id carries the *type*, a demoted edge no longer matches its own
+    contrast — ``s-synonym->b`` becomes ``s-see_also->b`` — so this step is idempotent by
+    construction, the way every other step here is, and does not need to read its own note
+    back to know it has run. ``see_also`` relations are skipped outright for the same
+    reason, belt and braces: no contrast is ever written for one (``contrasts.DEFAULT_KINDS``
+    is the three symmetric types), and skipping means a second pass cannot re-note an edge
+    the first one demoted.
+
+    Args:
+        entry: The entry being edited, mutated in place.
+        editor: The entry's provenance editor.
+        known: Every lexeme id in the store, for deciding whether a far-side demotion has
+            an entry to land on.
+        edits: The running per-entry counts and far-side requests, extended in place.
+    """
+    acted = {
+        contrast.edge_id: contrast
+        for contrast in entry.contrasts
+        if contrast.verdict is not ContrastVerdict.RELATED_AS_TYPED
+    }
+    if not acted:
+        return
+    for _, sense, sense_id in _live_senses(entry):
+        for relation in sense.relations:
+            if relation.type is RelationType.SEE_ALSO:
+                continue
+            target_lexeme = relation.target.lexeme_id
+            contrast = acted.get(edge_id(sense_id, relation.type.value, target_lexeme))
+            if contrast is None:
+                continue
+            far_side = _far_side_demotion(entry, sense_id, relation, contrast.verdict, known)
+            _add(edits.verdict_demoted, relation.type)
+            _count_verdict(edits, contrast.verdict)
+            _retype(
+                relation,
+                RelationType.SEE_ALSO,
+                _verdict_note(contrast.verdict),
+                editor.provenance_id(),
+            )
+            if far_side is not None:
+                edits.far_side_demotions.append(far_side)
+
+
+def _count_verdict(edits: _EntryEdits, verdict: ContrastVerdict) -> None:
+    """Fold one demotion into the per-verdict counts."""
+    edits.by_verdict[verdict.value] = edits.by_verdict.get(verdict.value, 0) + 1
+
+
+def _far_side_demotion(
+    entry: Lexeme,
+    sense_id: str,
+    relation: Relation,
+    verdict: ContrastVerdict,
+    known: frozenset[str],
+) -> _FarSideDemotion | None:
+    """Return the far-side demotion one verdict demotion implies, or ``None``.
+
+    Must be called *before* ``relation`` is retyped: it reads ``relation.type`` to decide
+    whether the type being left behind was symmetric, which is precisely the type that
+    stops holding once the retype has happened. Mirrors
+    ``relation_hygiene._far_side_request``, with one extra condition — the reverse must be
+    resolved to a sense and the target must actually be an entry in this store — because
+    an unresolved target names a surface form no reader can follow and a target outside
+    the store has no reverse edge for the phase to find.
+
+    Args:
+        entry: The entry the demotion is happening on (A).
+        sense_id: The sense whose relation is being demoted (S).
+        relation: The relation about to be demoted, inspected before the retype.
+        verdict: The contrast's verdict, carried through to the far-side note.
+        known: Every lexeme id in the store.
+
+    Returns:
+        The queued demotion, or ``None`` when the type is asymmetric, the target is
+        unresolved, absent from the store, or this same entry.
+    """
+    if relation.type not in _SYMMETRIC_RELATION_TYPES or not relation.target.resolved:
+        return None
+    target_lexeme = relation.target.lexeme_id
+    if target_lexeme == entry.lexeme_id or target_lexeme not in known:
+        return None
+    return _FarSideDemotion(
+        lexeme_id=target_lexeme,
+        source_lexeme=entry.lexeme_id,
+        source_sense=sense_id,
+        relation_type=relation.type,
+        verdict=verdict,
+    )
+
+
+def _is_far_side_demotion_of(relation: Relation, request: _FarSideDemotion) -> bool:
+    """Return whether a far-side relation is the reciprocal a verdict demotion implies.
+
+    Sense-level, and deliberately so — the opposite of :func:`_is_far_side_of`, whose
+    entry-level test is right for a cap. A cap is a judgement about how long a list may
+    be; a contrast verdict is a judgement about *these two senses*, and the far entry may
+    hold a perfectly good relation of the same type toward the same lexeme about a
+    different sense. Demoting that would be a new defect, not a repair. Copied from
+    ``relation_hygiene._is_far_side_of``, which makes the same argument.
+
+    Args:
+        relation: The far-side relation under consideration.
+        request: The demotion that prompted the check.
+
+    Returns:
+        Whether it still carries the pre-demotion type, points back at the source lexeme,
+        and either was never resolved or resolves to exactly the demoted sense.
+    """
+    return (
+        relation.type is request.relation_type
+        and relation.target.lexeme_id == request.source_lexeme
+        and relation.target.sense_id in (None, request.source_sense)
+    )
+
+
+async def _demote_far_side(
+    request: _FarSideDemotion, store: LexemeStore, tally: _Tally, *, dry_run: bool
+) -> None:
+    """Demote the reverse edge one contrast verdict implies, for $0.
+
+    Visits ``request.lexeme_id`` (B) under its own lock, and only ever after the main
+    sweep has fully drained and released A's lock, so no two entry locks are ever held at
+    once (D-31). Idempotent: a relation already demoted to ``see_also`` no longer carries
+    ``request.relation_type`` and :func:`_is_far_side_demotion_of` skips it.
+
+    **No marker is written or refreshed here**, unlike :func:`_remove_far_side`. That is
+    the difference between the two phases' edits. A cap's far-side *removal* leaves the
+    entry finished — there is nothing further for this pass to do to it — whereas a
+    verdict's far-side *demotion* leaves behind exactly what ``tombstone`` exists to take
+    out, and this phase runs after the sweep in which that step already visited B.
+    Refreshing B's marker would freeze the new digest and skip the entry on the next
+    sweep, stranding the demoted ``see_also`` in the list the QA judge reads. Leaving the
+    stale marker means the next sweep's digest disagrees with it and B is re-examined,
+    which is what tombstones the edge.
+
+    Args:
+        request: The far-side demotion to perform.
+        store: The store.
+        tally: The tally to fold the visit into, as a far-side visit rather than a scan.
+        dry_run: Compute the demotion and report it without writing.
+    """
+    edits = _EntryEdits()
+    async with store.locked(request.lexeme_id):
+        entry = store.read(request.lexeme_id)
+        if entry is None:
+            return
+        editor = _Editor(entry)
+        for _, sense, _ in _live_senses(entry):
+            for relation in sense.relations:
+                if not _is_far_side_demotion_of(relation, request):
+                    continue
+                reason = _verdict_reason(request.verdict)
+                note = f"{FAR_SIDE_NOTE_PREFIX}{request.source_sense} ({reason})"
+                _add(edits.verdict_demoted, relation.type)
+                _count_verdict(edits, request.verdict)
+                _retype(relation, RelationType.SEE_ALSO, note, editor.provenance_id())
+        if edits.changed and not dry_run:
+            store.write(entry)
+    if edits.changed:
+        await tally.far_side_demotion(request.lexeme_id, edits)
+
+
+async def _demote_far_side_all(
+    requests: Sequence[_FarSideDemotion],
+    store: LexemeStore,
+    tally: _Tally,
+    *,
+    workers: int,
+    dry_run: bool,
+) -> None:
+    """Run the ``verdicts`` far-side phase over every demotion the main sweep queued.
+
+    **Takes no stop event, deliberately**, for the reason :func:`_remove_far_side_all`
+    gives at length and by the same mechanism: ``run_pool``'s workers return before
+    pulling their first item once the event is set, so a phase that honoured it would
+    silently do nothing and leave the store asserting one half of a symmetric pair a
+    contrast has just said is not what it claims.
+
+    Args:
+        requests: Every far-side demotion the main sweep queued, in any order and with
+            duplicates; deduplicated here and processed in a stable order so the same
+            store produces the same result whatever order the workers finished in.
+        store: The store.
+        tally: The tally to accumulate into.
+        workers: Pool size.
+        dry_run: Compute the demotions and report them without writing.
+    """
+    ordered = sorted(
+        set(requests),
+        key=lambda r: (r.lexeme_id, r.source_lexeme, r.source_sense, r.relation_type.value),
+    )
+
+    async def visit(request: _FarSideDemotion) -> None:
+        await _demote_far_side(request, store, tally, dry_run=dry_run)
+
+    await _drive(ordered, visit, tally, workers=workers, stop_event=None)
+
+
+# --------------------------------------------------------------------------------------
+# Step 2 — asymmetric
 # --------------------------------------------------------------------------------------
 
 
@@ -1015,7 +1431,7 @@ def _demote_asymmetric(
 
 
 # --------------------------------------------------------------------------------------
-# Step 2 — tombstone
+# Step 3 — tombstone, and dedup
 # --------------------------------------------------------------------------------------
 
 
@@ -1073,7 +1489,7 @@ def _dedup(entry: Lexeme, editor: _Editor, edits: _EntryEdits) -> None:
 
 
 # --------------------------------------------------------------------------------------
-# Step 3 — cap
+# Step 5 — cap
 # --------------------------------------------------------------------------------------
 
 
@@ -1324,6 +1740,7 @@ def _reconcile_entry(
     *,
     steps: Sequence[str],
     index: set[tuple[str, str, str]],
+    known: frozenset[str],
     caps: RelationCaps,
 ) -> _EntryEdits:
     """Apply every selected step to one entry, in :attr:`RelationReconcileStep.ALL` order.
@@ -1333,6 +1750,7 @@ def _reconcile_entry(
         steps: The selected step names.
         index: :func:`_collect_demoted_pairs`' projection, empty when ``asymmetric``
             was not selected.
+        known: Every lexeme id in the store, empty when ``verdicts`` was not selected.
         caps: The per-type allowances.
 
     Returns:
@@ -1340,6 +1758,8 @@ def _reconcile_entry(
     """
     edits = _EntryEdits()
     editor = _Editor(entry)
+    if RelationReconcileStep.VERDICTS in steps:
+        _apply_verdicts(entry, editor, known, edits)
     if RelationReconcileStep.ASYMMETRIC in steps:
         _demote_asymmetric(entry, editor, index, edits)
     if RelationReconcileStep.TOMBSTONE in steps:
@@ -1363,10 +1783,12 @@ async def run_relation_reconcile(
 ) -> RelationReconcileOutcome:
     """Reconcile the relation lists the hygiene passes' demotions left behind (D-65).
 
-    Three free steps, described in full in the module docstring: ``asymmetric`` applies
-    the stricter of two disagreeing directional verdicts on a symmetric pair,
-    ``tombstone`` takes every demoted ``see_also`` out of ``Sense.relations`` and writes it
-    to provenance instead, and ``cap`` trims each sense's per-type runs to
+    Five free steps, described in full in the module docstring: ``verdicts`` demotes every
+    edge a stored :class:`~opengloss_generator.schema.Contrast` says is not what it claims
+    (D-68), ``asymmetric`` applies the stricter of two disagreeing directional verdicts on
+    a symmetric pair, ``tombstone`` takes every demoted ``see_also`` out of
+    ``Sense.relations`` and writes it to provenance instead, ``dedup`` drops exact
+    duplicate edges, and ``cap`` trims each sense's per-type runs to
     :class:`RelationCaps`. No model call is made anywhere.
 
     Args:
@@ -1378,8 +1800,8 @@ async def run_relation_reconcile(
         only: Step names to run; defaults to all of :attr:`RelationReconcileStep.ALL`.
             Steps are applied in that attribute's order whatever order they are given in.
         lexeme_ids: Ids to visit; defaults to every id in the store, sorted. ``asymmetric``
-            still reads the *whole* store for its index, because the far side of an edge on
-            the list is very often not on it.
+            still reads the *whole* store for its index, and ``verdicts`` for its id set,
+            because the far side of an edge on the list is very often not on it.
         caps: Per-type allowances for ``cap``; defaults to :class:`RelationCaps`' own.
         dry_run: Compute every edit and report it without writing anything.
 
@@ -1396,15 +1818,25 @@ async def run_relation_reconcile(
         raise ValueError(f"unknown relation reconcile step(s): {unknown}")
     steps = tuple(name for name in RelationReconcileStep.ALL if name in selected)
 
-    if RelationReconcileStep.TOMBSTONE in steps and RelationReconcileStep.ASYMMETRIC not in steps:
-        # Removing a demotion tombstone also removes graph_hygiene's own signal not to
-        # re-create the pair (_asserted_pairs). That is safe only once `asymmetric` has
-        # demoted the live half, which is why the default sweep runs both.
-        _LOG.warning("relation_reconcile_tombstone_without_asymmetric", steps=list(steps))
+    # Removing a demotion tombstone also removes graph_hygiene's own signal not to
+    # re-create the pair (_asserted_pairs). That is safe only once the steps that demote
+    # the live half have run, which is why the default sweep runs all of them; `verdicts`
+    # is on this list for the same reason `asymmetric` is, and a sweep that tombstones
+    # without either is the one selection that can hand work back to graph_hygiene.
+    demoting = (RelationReconcileStep.VERDICTS, RelationReconcileStep.ASYMMETRIC)
+    if RelationReconcileStep.TOMBSTONE in steps:
+        missing = [name for name in demoting if name not in steps]
+        if missing:
+            _LOG.warning(
+                "relation_reconcile_tombstone_without_demotion",
+                steps=list(steps),
+                missing=missing,
+            )
 
     caps = caps or RelationCaps()
     ids = list(lexeme_ids) if lexeme_ids is not None else sorted(store.iter_ids())
     index = _collect_demoted_pairs(store) if RelationReconcileStep.ASYMMETRIC in steps else set()
+    known = frozenset(store.iter_ids()) if RelationReconcileStep.VERDICTS in steps else frozenset()
     _LOG.info(
         "relation_reconcile_index",
         demoted_reverses=len(index),
@@ -1414,6 +1846,7 @@ async def run_relation_reconcile(
 
     tally = _Tally(steps)
     removals: list[_FarSideRemoval] = []
+    demotions: list[_FarSideDemotion] = []
     removals_lock = asyncio.Lock()
 
     async def reconcile(lexeme_id: str) -> None:
@@ -1426,16 +1859,20 @@ async def run_relation_reconcile(
             if _already_reconciled(entry, marker):
                 await tally.skipped()
                 return
-            edits = _reconcile_entry(entry, steps=steps, index=index, caps=caps)
+            edits = _reconcile_entry(entry, steps=steps, index=index, known=known, caps=caps)
             if edits.changed and not dry_run:
                 entry.add_provenance(_rule_provenance(_marker_note(steps, entry)))
                 store.write(entry)
-        if edits.far_side:
+        if edits.far_side or edits.far_side_demotions:
             async with removals_lock:
                 removals.extend(edits.far_side)
+                demotions.extend(edits.far_side_demotions)
         await tally.entry(lexeme_id, edits)
 
     await _drive(ids, reconcile, tally, workers=workers, stop_event=stop_event)
+    # Both halves of the far-side phase, run once the main sweep has fully drained so no
+    # two entry locks are ever held at once (D-31), and neither given the stop event.
+    await _demote_far_side_all(demotions, store, tally, workers=workers, dry_run=dry_run)
     await _remove_far_side_all(
         removals, store, tally, workers=workers, steps=steps, dry_run=dry_run
     )
