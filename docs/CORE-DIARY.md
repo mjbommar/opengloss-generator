@@ -1388,3 +1388,11 @@ hygiene $0.07 (12,874 entries), tag_domain (luna) **$1.10** (30,203 senses), spa
 $0.10, repair $0.01, resolve **$4.12** (18,958 calls, completed under the $8 cap).
 Structural total **$5.41** vs the $5 expected. Graph-hygiene, then the three luna
 rendition stages.
+
+**15:45 — chain gotcha #7, caught after $4.75:** `scripts/pair-stages-luna-only.toml`
+turns the rotation off only for the three pair stages and *keeps* luna/haiku 80/20 on
+RENDITIONS and EXAMPLES. The tier-3 gloss stage therefore drew haiku on 20% of calls
+(935 of 4,746) carrying **81% of the cost** ($3.87 of $4.75) — 4× the planned unit
+cost, and the $17 cap would have stopped it at ~35% coverage. Killed; new
+`scripts/luna-only.toml` (no writers on any policy); relaunched from the gloss stage
+(idempotent; the 1,176 entries done are kept).
