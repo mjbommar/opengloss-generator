@@ -53,8 +53,8 @@ is an owner id for a field that is not a rendition set at all.
 Post-checks, all free
 ---------------------
 
-The model is told to ground every answer and to cite what it used. Three deterministic
-checks decide whether it did, and each rejection is counted by reason:
+The model is told to ground every answer and to cite what it used. Deterministic checks
+decide whether it did, and each rejection is counted by reason:
 
 * **Citation.** ``grounded_in`` must be non-empty and must name only ids that were
   actually supplied. An answer citing ``abseil:noun:0#neutral/plain`` on a verb sense's
@@ -65,6 +65,17 @@ checks decide whether it did, and each rejection is counted by reason:
   renditions it cited. This is a floor, not a similarity score: it catches the answer that
   cites a passage it did not read, and it deliberately does not punish paraphrase, which
   is what a good answer to a *reasoning* or *hypothetical* question mostly is.
+* **Meta-reference (D-69).** :func:`meta_reference` scans the answer for a phrase that
+  refers to the prompt's own scaffolding — "the sources", "the passage", "according to the
+  example" — rather than to the world, which the instructions ban explicitly and D-58's
+  pilot found happening anyway in 7.9% of stored answers. A leading clause naming the
+  scaffolding is stripped for free and the answer re-checked; if a meta-reference still
+  remains anywhere, the pair is dropped as ``meta_reference``. Repairs and drops are
+  counted separately, because a repair costs nothing and a drop does.
+* **Gloss echo (D-69).** A ``definition`` answer whose first 60 characters, casefolded and
+  whitespace-collapsed, equal the gloss's own is a verbatim copy rather than the
+  "own words" restatement the instructions ask for (D-58's pilot: 11.6% of stored
+  `definition` answers). Dropped as ``echoes_gloss``.
 * **Distinctness.** Two pairs asking the same normalised question are one row twice
   (``Sense._questions_are_distinct``), so the second is dropped — against the pairs
   accepted earlier in the same answer *and* against the pairs the sense already holds.
@@ -120,6 +131,7 @@ if TYPE_CHECKING:
     from opengloss_generator.store import LexemeStore
 
 __all__ = [
+    "GLOSS_ECHO_PREFIX_LENGTH",
     "MARKER_PREFIX",
     "MAX_ATTEMPTS",
     "MIN_SHARED_CONTENT_WORDS",
@@ -127,6 +139,7 @@ __all__ = [
     "QACallRecord",
     "QAPairsOutcome",
     "QAPairsPlan",
+    "meta_reference",
     "plan_qa_pairs",
     "run_qa_pairs",
 ]
@@ -337,6 +350,14 @@ class DropReason(StrEnum):
     #: The same normalised question as a pair accepted earlier in this answer, or as one
     #: the sense already holds.
     DUPLICATE_QUESTION = "duplicate_question"
+    #: The answer refers to the prompt's own scaffolding (D-58/D-69) — "the sources",
+    #: "the passage", "according to the example" — rather than to the world, and a leading
+    #: clause naming it could not be stripped without a meta-reference still remaining.
+    META_REFERENCE = "meta_reference"
+    #: A ``definition`` answer whose first 60 characters, casefolded and
+    #: whitespace-collapsed, equal the canonical gloss's — a verbatim echo rather than a
+    #: restatement (D-69).
+    ECHOES_GLOSS = "echoes_gloss"
 
 
 # --------------------------------------------------------------------------------------
@@ -480,6 +501,120 @@ def _content_words(text: str) -> set[str]:
         for word in _WORD_RE.findall(text.lower())
         if len(word) >= _MIN_CONTENT_WORD_LENGTH and word not in _STOPWORDS
     }
+
+
+# --------------------------------------------------------------------------------------
+# Meta-reference and gloss-echo (D-69)
+# --------------------------------------------------------------------------------------
+#
+# D-58's pilot measured both of these directly on stored output despite an explicit ban in
+# the instructions (``QA_PAIRS_INSTRUCTIONS`` above already tells the model never to write
+# "the text", "the passage", "the sources" or their kin) — 7.9% of answers referred to the
+# prompt's own scaffolding instead of the world, and 11.6% of ``definition`` answers copied
+# the gloss verbatim. Both are free to catch after the fact, so both are checked here
+# rather than trusted to the instructions a second time.
+
+#: One clause per meta-reference shape the pilot found, and the shapes D-69 added by
+#: extension. Word-boundaried and case-insensitive throughout. Deliberately narrow: "for
+#: example" and "an example of" name a rhetorical device, not the prompt's scaffolding, and
+#: none of these patterns contain the bare word "example" without a preceding "the" (or an
+#: enclosing "according to" / "in the ... above" frame) for exactly that reason.
+_META_REFERENCE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bthe examples?\b", re.IGNORECASE),
+    re.compile(r"\bthe passage\b", re.IGNORECASE),
+    re.compile(r"\bthe text (?:above|provided|given)\b", re.IGNORECASE),
+    re.compile(
+        r"\baccording to the (?:sources?|text|example|passage|gloss|entry|definition)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\bas (?:described|stated|mentioned|shown) (?:in|above)\b", re.IGNORECASE),
+    re.compile(r"\bin the (?:example|passage|sources?) (?:above|provided|given)\b", re.IGNORECASE),
+    re.compile(r"\bthe (?:given|provided|supplied) (?:text|examples?|sources?)\b", re.IGNORECASE),
+    re.compile(r"\bthe sources\b", re.IGNORECASE),
+)
+
+#: A leading clause naming the scaffolding, up to its comma — the free repair. Only a
+#: clause at the very start of the answer is worth stripping: a meta-reference buried
+#: mid-sentence usually cannot be removed without also removing the fact it is attached to,
+#: so it is left to fall through to a drop instead.
+_LEADING_META_CLAUSE_RE = re.compile(
+    r"^(?:according to the \w+|as (?:described|stated|mentioned|shown) (?:in the \w+|above))"
+    r"[^,]*,\s*",
+    re.IGNORECASE,
+)
+
+
+def meta_reference(answer: str) -> str | None:
+    """Return the offending phrase if ``answer`` refers to the prompt's own scaffolding.
+
+    Checks :data:`_META_REFERENCE_PATTERNS` in order and returns the first match's own
+    text — not a canonicalised label — so a caller can log or test against exactly what
+    was found. Deliberately does not match "for example" or "an example of": those name a
+    rhetorical device, not "the example(s)" the model was shown.
+
+    Args:
+        answer: The answer text to scan (question text is not checked: the instructions
+            already ban "According to source 3, ..."-shaped questions and D-58's pilot
+            found the leakage in answers).
+
+    Returns:
+        The matched phrase, or ``None`` if no pattern fires.
+    """
+    for pattern in _META_REFERENCE_PATTERNS:
+        match = pattern.search(answer)
+        if match:
+            return match.group(0)
+    return None
+
+
+def _repair_meta_reference(answer: str) -> str:
+    """Strip a leading scaffolding-naming clause from ``answer``, if there is one.
+
+    E.g. ``"According to the sources, riverbanks erode fastest on outer bends."`` becomes
+    ``"Riverbanks erode fastest on outer bends."`` An answer with no such leading clause
+    (or one that is entirely the clause) is returned unchanged.
+
+    Args:
+        answer: The answer text, already known to contain a meta-reference.
+
+    Returns:
+        The answer with its leading clause removed and its first letter recapitalised, or
+        the original text if there was no leading clause to remove.
+    """
+    stripped = _LEADING_META_CLAUSE_RE.sub("", answer, count=1)
+    if stripped == answer or not stripped.strip():
+        return answer
+    return stripped[0].upper() + stripped[1:]
+
+
+#: How many leading characters of a ``definition`` answer are compared against the gloss's
+#: own leading characters, both casefolded and whitespace-collapsed. Sixty catches a
+#: verbatim or near-verbatim copy of a gloss of ordinary length without being so short that
+#: two independently-written answers to a short gloss collide by chance.
+GLOSS_ECHO_PREFIX_LENGTH = 60
+
+
+def _echo_key(text: str) -> str:
+    """Return ``text`` casefolded and whitespace-collapsed, for the gloss-echo comparison."""
+    return " ".join(text.casefold().split())
+
+
+def _echoes_gloss(answer: str, gloss: str) -> bool:
+    """Return whether a ``definition`` answer is a verbatim echo of the canonical gloss.
+
+    Args:
+        answer: The cleaned answer text.
+        gloss: The sense's canonical gloss text, as supplied to the same call.
+
+    Returns:
+        Whether the first :data:`GLOSS_ECHO_PREFIX_LENGTH` characters of each, normalised
+        the same way, are identical.
+    """
+    if not gloss:
+        return False
+    return (
+        _echo_key(answer)[:GLOSS_ECHO_PREFIX_LENGTH] == _echo_key(gloss)[:GLOSS_ECHO_PREFIX_LENGTH]
+    )
 
 
 # --------------------------------------------------------------------------------------
@@ -819,11 +954,12 @@ def plan_qa_pairs(entry: Lexeme) -> QAPairsPlan:
 # --------------------------------------------------------------------------------------
 
 
-def _judge(
+def _judge(  # noqa: PLR0911 - one early return per post-check, each a named drop reason
     draft: _DraftQAPair,
     by_id: dict[str, _Source],
     taken: set[str],
-) -> QAPair | DropReason:
+    gloss: str,
+) -> tuple[QAPair | DropReason, bool]:
     """Accept one drafted pair, or say why it was not kept.
 
     Checks run cheapest first and the first failure wins, so a pair that is both
@@ -831,41 +967,65 @@ def _judge(
     have to fix first. An accepted pair adds its question to ``taken`` on the way out, so
     the pairs after it in the same answer are compared against it.
 
+    A meta-reference is repaired before it is judged fatal (D-69): if the answer opens with
+    a clause naming the scaffolding ("According to the sources, ..."), that clause is
+    stripped for free, and only an answer that still names the scaffolding afterwards is
+    dropped. The repair happens after the grounding checks and before the gloss-echo and
+    duplicate checks, so a repaired answer is judged on what it says once the leftover
+    scaffolding is gone.
+
     Args:
         draft: One pair as the model returned it.
         by_id: The sources supplied to this call, keyed by the id the model cites them by.
         taken: Normalised questions already spoken for — the sense's stored pairs plus
             everything accepted earlier in this answer. Updated on acceptance.
+        gloss: The sense's canonical gloss text, for the ``echoes_gloss`` check.
 
     Returns:
-        The pair ready to store, or the reason it was not kept.
+        ``(the pair ready to store, or the reason it was not kept; whether a leading
+        meta-reference clause was stripped from the answer)``.
     """
     question = _clean(draft.question)
     answer = _clean(draft.answer)
     if not question or not answer:
-        return DropReason.EMPTY
+        return DropReason.EMPTY, False
 
     cited = list(dict.fromkeys(draft.grounded_in))
     if not cited:
-        return DropReason.NO_CITATION
+        return DropReason.NO_CITATION, False
     if any(source_id not in by_id for source_id in cited):
-        return DropReason.UNKNOWN_CITATION
+        return DropReason.UNKNOWN_CITATION, False
 
     supporting = _content_words(" ".join(by_id[source_id].text for source_id in cited))
     if len(_content_words(answer) & supporting) < MIN_SHARED_CONTENT_WORDS:
-        return DropReason.NOT_GROUNDED
+        return DropReason.NOT_GROUNDED, False
+
+    repaired = False
+    if meta_reference(answer) is not None:
+        candidate = _repair_meta_reference(answer)
+        if candidate != answer and meta_reference(candidate) is None:
+            answer = candidate
+            repaired = True
+        else:
+            return DropReason.META_REFERENCE, False
+
+    if draft.question_type == QuestionType.DEFINITION and _echoes_gloss(answer, gloss):
+        return DropReason.ECHOES_GLOSS, repaired
 
     key = normalise_query_text(question)
     if not key or key in taken:
-        return DropReason.DUPLICATE_QUESTION
+        return DropReason.DUPLICATE_QUESTION, repaired
     taken.add(key)
 
-    return QAPair(
-        question=question,
-        answer=answer,
-        question_type=draft.question_type,
-        difficulty=draft.difficulty,
-        grounded_in=cited,
+    return (
+        QAPair(
+            question=question,
+            answer=answer,
+            question_type=draft.question_type,
+            difficulty=draft.difficulty,
+            grounded_in=cited,
+        ),
+        repaired,
     )
 
 
@@ -873,7 +1033,7 @@ def _sift(
     drafted: Sequence[_DraftQAPair],
     sources: Sequence[_Source],
     taken: set[str],
-) -> tuple[list[QAPair], dict[str, int]]:
+) -> tuple[list[QAPair], dict[str, int], int]:
     """Run every drafted pair past :func:`_judge`, in the order it was returned.
 
     Order is the model's own and nothing here re-orders or prefers, which keeps the result
@@ -885,18 +1045,22 @@ def _sift(
         taken: Normalised questions already spoken for; updated as pairs are accepted.
 
     Returns:
-        ``(pairs to store, drop counts by reason)``.
+        ``(pairs to store, drop counts by reason, meta-reference repairs made)``.
     """
     by_id = {source.source_id: source for source in sources}
+    gloss = next((source.text for source in sources if source.label == "definition"), "")
     accepted: list[QAPair] = []
     dropped: dict[str, int] = {}
+    repairs = 0
     for draft in drafted:
-        verdict = _judge(draft, by_id, taken)
+        verdict, repaired = _judge(draft, by_id, taken, gloss)
+        if repaired:
+            repairs += 1
         if isinstance(verdict, DropReason):
             dropped[verdict.value] = dropped.get(verdict.value, 0) + 1
             continue
         accepted.append(verdict)
-    return accepted, dropped
+    return accepted, dropped, repairs
 
 
 # --------------------------------------------------------------------------------------
@@ -939,6 +1103,7 @@ class QAPairsOutcome:
     accepted_by_type: dict[str, int] = field(default_factory=dict)
     accepted_by_difficulty: dict[str, int] = field(default_factory=dict)
     senses_with_full_type_coverage: int = 0
+    meta_reference_repairs: int = 0
     output_tokens: int = 0
     cost_usd: float = 0.0
     stopped_reason: str | None = None
@@ -962,6 +1127,7 @@ class QAPairsOutcome:
             "accepted_by_type": dict(sorted(self.accepted_by_type.items())),
             "accepted_by_difficulty": dict(sorted(self.accepted_by_difficulty.items())),
             "senses_with_full_type_coverage": self.senses_with_full_type_coverage,
+            "meta_reference_repairs": self.meta_reference_repairs,
             "mean_output_tokens_per_call": (
                 round(self.output_tokens / self.calls, 1) if self.calls else 0.0
             ),
@@ -1016,6 +1182,7 @@ class _Tally:
         generated: int,
         accepted: Sequence[QAPair],
         dropped: dict[str, int],
+        repairs: int = 0,
     ) -> None:
         """Record one completed call: its money, its answer, and what survived it."""
         async with self._lock:
@@ -1026,6 +1193,7 @@ class _Tally:
             result.output_tokens += output_tokens
             result.pairs_generated += generated
             result.accepted += len(accepted)
+            result.meta_reference_repairs += repairs
             for reason, count in dropped.items():
                 result.dropped_by_reason[reason] = result.dropped_by_reason.get(reason, 0) + count
             for pair in accepted:
@@ -1104,13 +1272,14 @@ async def _write_sense(
 
     drafted = list(result.output.pairs)
     taken = {pair.key for pair in sense.qa}
-    accepted, dropped = _sift(drafted, sources, taken)
+    accepted, dropped, repairs = _sift(drafted, sources, taken)
     await tally.call(
         cost_usd=result.cost_usd,
         output_tokens=result.output_tokens,
         generated=len(drafted),
         accepted=accepted,
         dropped=dropped,
+        repairs=repairs,
     )
 
     # The marker rides the generating call's own record, so one record is both "what this

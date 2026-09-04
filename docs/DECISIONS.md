@@ -4155,3 +4155,115 @@ idempotence, the contrast surviving its own edge, demote-then-tombstone in one s
 far-side demotion tombstoned by the next sweep, and contrasts arriving after a sweep
 reopening a marked entry), 1,086 pass. `data/core-store` untouched — the sample is a
 read-only copy.
+
+## D-69 (2026-09-04) — `qa-pairs`: two more free post-checks for D-58's own recorded defects — meta-reference leakage and gloss echo
+
+**Context.** D-58's pilot shipped `qa-pairs` with three free post-checks and recorded two
+more as "the highest-value next change" rather than fixing them on the spot: **7.9%** of
+stored answers named the prompt's own scaffolding ("the example(s)", "according to the
+sources", "the passage") despite an explicit ban in the instructions, and **11.6%** of
+`definition` answers echoed the canonical gloss verbatim rather than restating it. Both
+defects are checkable for free against text already on disk, which is exactly the shape
+of check this stage exists to run.
+
+**Decision.**
+
+1. **`meta_reference(answer) -> str | None`** scans an answer against eight
+   word-boundaried, case-insensitive patterns covering the shapes above (`"the
+   example(s)"`, `"the passage"`, `"the text above/provided/given"`, `"according to the
+   sources/text/example/passage/gloss/entry/definition"`, `"as described/stated/
+   mentioned/shown in/above"`, `"in the example/passage/sources above/provided/given"`,
+   `"the given/provided/supplied text/examples/sources"`, `"the sources"`), returning the
+   phrase matched. Deliberately does not match `"for example"` or `"an example of"`: both
+   name a rhetorical device, not the prompt's own supplied text, and no pattern fires on
+   the bare word `"example"` without a preceding `"the"` or an enclosing frame.
+2. **Repair before drop.** A leading clause naming the scaffolding — `"According to the
+   sources, "`, `"As described in the example, "` and their kin, up to the first comma —
+   is stripped for free and the answer re-checked. Only an answer that still names the
+   scaffolding after that repair is dropped, as `meta_reference`; a repair that succeeds
+   is counted separately (`meta_reference_repairs`) rather than folded into either the
+   accepted or the dropped count, because it is neither a clean answer nor a rejected one.
+3. **`echoes_gloss`.** A `definition` answer is dropped when its first 60 characters,
+   casefolded and whitespace-collapsed, equal the canonical gloss's own first 60 — a
+   verbatim-or-near-verbatim copy, checked against exactly the text the model was shown,
+   never against a rendition rewritten since.
+4. Both checks sit in `_judge`, after the existing citation and overlap checks and before
+   the duplicate-question check, in the same "cheapest first, first failure wins" order
+   the sieve already used. No retry, matching every other check in this stage: a dropped
+   or repaired pair costs nothing extra because the next sense's call is already buying
+   seven more.
+
+**Measured (`data/sample-qameta`, 300 headwords copied read-only from
+`../opengloss-generator/data/core-store`'s first 300 `tier2_50k.tsv` entries, which
+already carried `qa-pairs` output from an earlier whole-store run — a different sample
+from D-58's own `sample-300` pilot, so the rates below are an independent measurement,
+not a reproduction).**
+
+| measured | |
+|---|---|
+| QA pairs scanned | 6,090 |
+| meta-reference matches | **116 (1.90%)** |
+| — repairable by the leading-clause strip | 14 (12.1% of matches) |
+| — would be dropped outright | 102 (1.67% of all pairs) |
+| `definition` pairs scanned | 883 |
+| `echoes_gloss` matches (first-60-char rule, exact) | **0 (0.00%)** |
+
+The `echoes_gloss` rate on this sample is far below D-58's 11.6%, and reading the
+`definition` answers explains why without impeaching the check: this sample's answers
+routinely restate the gloss almost word-for-word but swap its opening frame (`"A
+preposition indicating ..."` -> `"Aboard indicates ..."`), which changes the first 60
+characters even though most of the sentence after them is an unchanged copy. The
+first-60-character rule is deliberately the narrow, cheap-to-verify check specified for
+this stage rather than a general near-duplicate detector; it catches a true nose-to-tail
+echo and nothing subtler, and this sample's zero count is a real property of *this*
+sample's answers, not evidence the check is broken.
+
+**False-positive judgement.** All 116 meta-reference matches were read. 112 are
+unambiguous true positives — the answer names "the example(s)", "the sources" or "the
+passage" to point at the prompt's own supplied text, exactly the failure the check exists
+to catch (e.g. `crab:noun:2`, comparison: *"The definition places it in the pubic region,
+while the examples describe it living ... in body hair"*; `dent:noun:0`, hypothetical:
+*"Yes, according to the sources, dents can be produced not only by impact but also by
+pressure..."*). 4 are genuine false positives, and all 4 fall under the bare `"the
+passage"` pattern fired against a headword whose own meaning is a physical passage:
+`gorge:noun:1` answered three questions with "the passage" meaning the throat itself
+("the passage in the upper digestive tract through which food passes"), and
+`reinforce:verb:0` used it for a tunnel ("before the passage was reopened"). One further
+case is borderline (`lengthy:adjective:0`: "the passage benefits from paraphrase" reads
+as a generic statement about lengthy text rather than a pointer at the supplied
+encyclopedia passage). No false positive occurred under any of the other seven pattern
+families across the 108 remaining matches, and no idiom of the excluded shapes ("for
+example", "an example of") was ever caught. Net: a ~3.4% false-positive rate concentrated
+entirely in one pattern, on headwords whose ordinary sense collides with the scaffolding
+vocabulary — recorded here rather than acted on, since the patterns shipped are exactly
+those specified and narrowing `"the passage"` further (e.g. requiring `"above"`,
+`"provided"` or `"given"` to follow it, as the other passage-shaped patterns already do)
+is a follow-up worth measuring on its own before it is adopted.
+
+**Consequence.** `src/opengloss_generator/workflows/qa_pairs.py`: `DropReason.
+META_REFERENCE`, `DropReason.ECHOES_GLOSS`, `meta_reference()`, `GLOSS_ECHO_PREFIX_LENGTH`
+(both exported), `_repair_meta_reference()`, `_echoes_gloss()`, `_echo_key()`; `_judge()`
+now returns `(verdict, repaired: bool)` and `_sift()` a third element (repairs made);
+`QAPairsOutcome.meta_reference_repairs`, reported in `as_dict()`. `tests/test_qa_pairs.py`
++8 (2 parametrized pattern tests covering the positive shapes and the "for example" /
+"an example of" negatives, the repair path, the unrepairable drop, the gloss-echo drop,
+and the summary carrying both new counters). `tests/conftest.py`: `_qa_pair_set_payload`'s
+`definition`-type answer now gets an "In short, " lead-in rather than a bare quote, so a
+generic scripted sense does not incidentally echo its own short gloss by fixture
+construction rather than genuine model behaviour; three new scripted headwords
+(`QA_GLOSS_ECHO_HEADWORD`, `QA_META_REFERENCE_HEADWORD`, `QA_META_REPAIR_HEADWORD`)
+appended to the existing D-58 block. New: `scripts/qa_pairs_meta_audit.py`, a read-only,
+zero-model-call measurement script (mirrors `scripts/near_copy_rate.py`'s own shape) for
+re-running the measurement above against any store. `uv run ruff check`/`format`, `uv run
+ty check`, `uv run pytest` (1,095 passed, 2 pre-existing skips, up from 1,073 at this
+branch's fork point) are clean on `hygiene/qa-meta`. Untouched, per the branch's scope:
+`cli.py`, `schema.py`, `config.py`, `prompts.py`, and the production
+`../opengloss-generator/data/core-store` (this decision's own measurement store,
+`data/sample-qameta`, lives only in this worktree).
+
+**Left undone.** The `"the passage"` false positives above are a real, narrow gap: a
+headword-aware exclusion (skip the check, or require a following "above/provided/given",
+when the sense's own gloss is about a physical passage) would close it, but should be
+measured on its own pilot rather than folded into this change sight-unseen. `procedural`
+degrading into `factual` when a sense describes no procedure (D-58's third recorded
+defect) is still untouched, and is not a regex-shaped fix in the first place.

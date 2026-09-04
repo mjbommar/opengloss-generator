@@ -38,10 +38,15 @@ from opengloss_generator.workflows.qa_pairs import (
     MARKER_PREFIX,
     MAX_ATTEMPTS,
     DropReason,
+    meta_reference,
     plan_qa_pairs,
     run_qa_pairs,
 )
 from tests.conftest import (
+    QA_GLOSS_ECHO_HEADWORD,
+    QA_META_REFERENCE_HEADWORD,
+    QA_META_REPAIR_CLAUSE,
+    QA_META_REPAIR_HEADWORD,
     QA_MIXED_HEADWORD,
     QA_QUESTION_TYPES,
     QA_UNGROUNDED_HEADWORD,
@@ -234,6 +239,100 @@ async def test_a_question_the_sense_already_holds_is_dropped(session):
     assert again.accepted == 0
     assert again.dropped_by_reason == {DropReason.DUPLICATE_QUESTION.value: 7}
     assert len(_pairs(session.store, "abseil")) == 7
+
+
+# --------------------------------------------------------------------------------------
+# Meta-reference and gloss echo (D-69)
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "According to the sources, the current cuts fastest on the outer bend.",
+        "As described in the example, the climber rappelled down slowly.",
+        "As stated above, friction controls the descent.",
+        "As shown in the example above, the rope stayed taut.",
+        "In the passage above, the author explains the mechanism.",
+        "The given text does not mention the second sense.",
+        "The provided examples all describe the same technique.",
+        "The supplied sources agree on this point.",
+        "The text provided does not go further.",
+        "The passage explains how friction converts to heat.",
+        "The sources describe two distinct meanings.",
+        "What does the passage say about vegetation?",
+    ],
+)
+def test_meta_reference_catches_every_scripted_shape(answer):
+    assert meta_reference(answer) is not None
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "For example, a climber might use a figure-eight descender.",
+        "An example of this is a river cutting into its outer bank.",
+        "Willow roots are a good example of what holds the bank together.",
+        "This is just one example among many.",
+        "The current cuts fastest on the outer bend of a river.",
+        "Friction converts the climber's kinetic energy into heat.",
+    ],
+)
+def test_meta_reference_does_not_fire_on_ordinary_use_of_example(answer):
+    assert meta_reference(answer) is None
+
+
+async def test_a_leading_meta_reference_clause_is_repaired_rather_than_dropped(session):
+    # QA_META_REPAIR_HEADWORD's factual answer opens with "According to the sources, " --
+    # a leading clause the free repair can remove without touching the fact after it.
+    session.store.write(_entry(QA_META_REPAIR_HEADWORD))
+
+    outcome = await run_qa_pairs(session.store, session.stages, workers=2)
+
+    assert outcome.dropped_by_reason == {}
+    assert outcome.meta_reference_repairs == 1
+    assert outcome.accepted == 7
+    stored = _pairs(session.store, QA_META_REPAIR_HEADWORD)
+    factual = next(pair for pair in stored if pair.question_type.value == "factual")
+    assert not factual.answer.startswith(QA_META_REPAIR_CLAUSE)
+    assert meta_reference(factual.answer) is None
+
+
+async def test_an_unrepairable_meta_reference_is_dropped(session):
+    # QA_META_REFERENCE_HEADWORD's factual answer names the scaffolding mid-sentence, with
+    # no leading clause to strip, so the repair cannot help and the pair is dropped.
+    session.store.write(_entry(QA_META_REFERENCE_HEADWORD))
+
+    outcome = await run_qa_pairs(session.store, session.stages, workers=2)
+
+    assert outcome.dropped_by_reason == {DropReason.META_REFERENCE.value: 1}
+    assert outcome.meta_reference_repairs == 0
+    assert outcome.accepted == 6
+    assert len(_pairs(session.store, QA_META_REFERENCE_HEADWORD)) == 6
+
+
+async def test_a_definition_answer_that_echoes_the_gloss_verbatim_is_dropped(session):
+    session.store.write(_entry(QA_GLOSS_ECHO_HEADWORD))
+
+    outcome = await run_qa_pairs(session.store, session.stages, workers=2)
+
+    assert outcome.dropped_by_reason == {DropReason.ECHOES_GLOSS.value: 1}
+    assert outcome.accepted == 6
+    stored = _pairs(session.store, QA_GLOSS_ECHO_HEADWORD)
+    assert "definition" not in {pair.question_type.value for pair in stored}
+
+
+async def test_the_summary_reports_meta_reference_and_echoes_gloss_drops(session):
+    session.store.write(_entry(QA_META_REFERENCE_HEADWORD))
+    session.store.write(_entry(QA_GLOSS_ECHO_HEADWORD))
+    session.store.write(_entry(QA_META_REPAIR_HEADWORD))
+
+    outcome = await run_qa_pairs(session.store, session.stages, workers=2)
+    summary = outcome.as_dict()
+
+    assert summary["dropped_by_reason"]["meta_reference"] == 1
+    assert summary["dropped_by_reason"]["echoes_gloss"] == 1
+    assert summary["meta_reference_repairs"] == 1
 
 
 # --------------------------------------------------------------------------------------
