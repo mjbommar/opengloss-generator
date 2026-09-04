@@ -1295,3 +1295,12 @@ being rerun by hand. `DONE-PAIRS` 11:23; the post-pair reconcile started.
 + …; far side 19,698), all tombstoned in the same sweep; `dedup` removed 6,723 exact
 duplicate edges; `cap` trimmed 23; `asymmetric` found nothing left to reconcile.
 21,800 entries changed. Sweep 2 (tombstoning the far-side demotions) running.
+
+**Post-pair reconcile sweep 2 + graph-hygiene + audit (11:29 → 11:34, $0):** sweep 2
+tombstoned the far-side demotions (11,649 entries) and reconciled 151 more one-sided
+edges; graph-hygiene changed 755. Audit: synonym edges 54,952 → **41,606** (the
+verdicts removed a quarter), reciprocity synonym 99.5% → 97.6%, antonym 99.97% →
+98.7% (a few hundred pairs the two sweeps did not fully close; a third sweep is free
+and can run any time), 0 cycles; `senses_zero_relations` 1,760 → **2,142** — the
+verdicts emptied ~380 more senses whose only edges were mistyped. That regeneration
+item grows accordingly. `DONE-POST-PAIRS` 11:34; final hygiene started.
