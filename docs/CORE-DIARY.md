@@ -1304,3 +1304,8 @@ verdicts removed a quarter), reciprocity synonym 99.5% → 97.6%, antonym 99.97%
 and can run any time), 0 cycles; `senses_zero_relations` 1,760 → **2,142** — the
 verdicts emptied ~380 more senses whose only edges were mistyped. That regeneration
 item grows accordingly. `DONE-POST-PAIRS` 11:34; final hygiene started.
+
+**Qrels export (11:32 → 11:45, free):** `data/exports/qrels/` — 8,671,844 graded
+judgments for 1,330,311 queries (grade 3: 1.33M own-sense docs; 2: 947K synonym
+glosses; 1: 2.40M hypernym/co-hyponym; 0: 3.99M unrelated), plus `docs.jsonl` and the
+listwise JSONL. All four exports now on disk (≈ 8 GB).
