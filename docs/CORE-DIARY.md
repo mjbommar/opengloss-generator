@@ -1396,3 +1396,8 @@ RENDITIONS and EXAMPLES. The tier-3 gloss stage therefore drew haiku on 20% of c
 cost, and the $17 cap would have stopped it at ~35% coverage. Killed; new
 `scripts/luna-only.toml` (no writers on any policy); relaunched from the gloss stage
 (idempotent; the 1,176 entries done are kept).
+
+**Tier 3 gloss × 4 levels (15:35 → 17:24):** first launch 1,176 entries $4.75 (haiku
+share, gotcha #7) + relaunch 11,532 entries **$10.12** luna-only (45,339 calls,
+116,792 renditions, 0 failures, cache 0.89). Stage total $14.87 vs $12 expected
+(the $3.87 haiku overrun accounts for the gap). Examples × 4 levels started 17:24.
