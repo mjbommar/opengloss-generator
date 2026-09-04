@@ -819,3 +819,25 @@ rewrite), naturalness −8. The two that did not move — examples fitting the s
 sense distinctness — are the next targets; both are per-sense judgement calls the
 D-53 sense-check and sense-hygiene already make with nano, so the lever is a stronger
 checker on those steps, not a new pass.
+
+## Iteration 13 — final-state integrity check (2026-09-04 12:30)
+
+**Store:** all 41,886 files validate on current `main`; 110,870 live senses, 19,970
+retired. Coverage of live senses: 9 gloss renditions 100%, example levels 99.8%,
+queries 100%, QA pairs 99.7%, domain 100%, relations 97.0%; encyclopedia at 3 levels
+100% of entries; contrasts on 59% of entries (the rest have no eligible edges).
+
+**Exports:** every file well-formed (0 malformed lines in 2,000-line heads + 0.05%
+random samples): pairs 7,350,478; triples 2,641,578; listwise 1,330,311; docs
+110,870; qrels.trec 8,671,844; pretrain 334,640 docs, mean 369 words.
+
+**Defect found — encyclopedia used as a sense-level positive.** `Lexeme.encyclopedia`
+is entry-level, but `export-triples` pairs every sense's queries with it: on `aaa` (6
+live senses) the query "reflex cry from sudden pain" gets the acronym article as its
+positive. Measured on a 1/97 sample: **30.5% of triples** carry an encyclopedia
+positive on a polysemous entry (wrong); `export-pairs` 1.3% of pairs
+(`example_encyclopedia`); `export-qrels` unaffected (its docs are senses only). Fix in
+progress (branch `fix/encyclopedia-positives`, D-71): encyclopedia counts as a positive
+only for monosemous entries; triples and pairs will be re-exported. Until then,
+**filter `positive_id` ending in `:encyclopedia` out of `triples.jsonl`** if training
+starts before the re-export.
