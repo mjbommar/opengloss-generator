@@ -1259,3 +1259,11 @@ remaining wall-clock is the pair stages (queries ~05:30, contrasts ~09:00, qa-pa
 with all 8 styles, 1,264 rejected (surplus), 0 failures, 0 429s, cache hit rate 0.89.
 By style: question 227K, keyword 218K, conversational 179K, example_based 171K,
 directive 168K, constraint 131K, role/step_by_step ~112K each. Contrasts started 03:42.
+
+**Contrasts, whole store (03:42 → 05:15, 1h33m):** 24,674 calls, **$8.95**
+(extrapolation $25 — the reconcile had already removed most edges, so far fewer pairs;
+cap $38), **83,120 contrasts stored**, 357 rejected. Verdicts: related_as_typed
+58,693 (70.6%), **related_differently 24,183 (29.1%)**, unrelated 244. 12,112 edges
+over the per-call cap (a second sweep would cover them), 76,362 deferred to the far
+side, 116,219 skipped as unresolved. The post-pair reconcile will demote the 24,427
+`related_differently`/`unrelated` edges (D-68). QA-pairs started 05:15.
