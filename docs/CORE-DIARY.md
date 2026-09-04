@@ -1267,3 +1267,8 @@ cap $38), **83,120 contrasts stored**, 357 rejected. Verdicts: related_as_typed
 over the per-call cap (a second sweep would cover them), 76,362 deferred to the far
 side, 116,219 skipped as unresolved. The post-pair reconcile will demote the 24,427
 `related_differently`/`unrelated` edges (D-68). QA-pairs started 05:15.
+
+**2026-09-04 06:40 — pushed to GitHub.** Until now every commit (67 on `main`) was
+local only; `main` and the 19 merged feature branches are now on
+`github.com/mjbommar/opengloss-generator` (public). Secret scan of the tree: clean.
+Rule from here: push after every merge to `main`.
