@@ -756,3 +756,22 @@ it targets 15 corpus-wide 4-grams, and the judge's naturalness complaint is broa
 for the encoder (79,533 fewer near-identical sentence frames), but the naturalness
 lever is a register-aware rewrite of the D-53 sentences, not a phrase filter. Net over
 the three passes: **68.6 → 69.6**, relations 84% → 68%, domain 29% → 19%.
+
+## Iteration 10 — free structural scan while the pair stages run (2026-09-03 21:30)
+
+Read-only, 6,000 random entries / 15,718 live senses.
+
+| check | count | rate | action |
+|---|---|---|---|
+| canonical gloss uses the headword (circular) | 2,040 | **13% of senses** | new `circular_gloss` content-hygiene step (agent, D-70) |
+| stilted example ("the committee", "researchers", "the study") | 1,971 | 12.5% of senses | rerun `content-hygiene --only stilted_examples` after the pair stages (markers make it cheap) |
+| duplicate (type, target) edge | 854 | 5.4% | `dedup` step queued after the pair stages |
+| sense with zero relations | 377 | 2.4% (≈1,760 store-wide) | open: targeted relation regeneration |
+| example with no span | 240 | — | rerun `retrofit --only spans` after the pair stages |
+| contrast verdict `related_differently` / `unrelated` | 69 / 1 (pilot entries only) | — | new `verdicts` step in relation-reconcile (agent, D-68) |
+| synonym also antonym | 21 | 0.1% | covered by reconcile/verdicts |
+| qa answer meta-reference ("according to the sources") | 10 of the pilot's pairs | ≈ pilot's 7.9% | free post-check in `qa-pairs` before the whole-store run (agent, D-69) |
+| "label leak" regex hits in examples/queries | 203 / 20 | — | false positives ("college crews", "reading level" used legitimately); dropped as a check |
+
+The circular-gloss rate is the surprise: it is a defect the judge folds into
+`gloss_accurate` (14%), and it directly weakens the gloss-as-positive retrieval pairs.
