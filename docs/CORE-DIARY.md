@@ -1382,3 +1382,9 @@ first launch's structural stages exited in 2 s each on a usage error (stderr was
 the per-stage error files, not the log). Killed before the paid stages, fixed to
 store-wide runs (`retrofit --only <pass>`, `resolve --all`; markers skip the
 enriched 42K), relaunched 14:22.
+
+**Tier 3 structural stages (14:22 → 15:32):** classify_kind $0.01 (94% deterministic),
+hygiene $0.07 (12,874 entries), tag_domain (luna) **$1.10** (30,203 senses), spans
+$0.10, repair $0.01, resolve **$4.12** (18,958 calls, completed under the $8 cap).
+Structural total **$5.41** vs the $5 expected. Graph-hygiene, then the three luna
+rendition stages.
