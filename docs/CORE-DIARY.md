@@ -1366,3 +1366,12 @@ Final integrity check: every store file validates; every export file well-formed
 
 **Goal 2 closed at 13:31 on 2026-09-04.** Total for the goal $114.42; the fix and
 re-export cost nothing.
+
+## Goal 3 — tier 3 (docs/TIER3-PLAN.md, recipe A) — 2026-09-04 14:05
+
+Inflection fold: 21,061 of the 33,899 ranked-remainder words are inflected forms of
+already-enriched lemmas (v1.3 stored them as separate lexemes with mirrored senses);
+folded. **12,838 new lemmas** in `data/core/tier3_final.tsv`. Migrating them from the
+v1.3 source (free), then the recipe-A chain: retrofit passes, resolve, gloss × 4
+levels, examples × 4 levels, encyclopedia grade_5 + college, hygiene block, reconcile,
+judge sample, audit. Caps sum $96; expected ≈ $66.

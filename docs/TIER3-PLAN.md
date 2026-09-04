@@ -25,9 +25,14 @@ total_senses), in ranking order. Its median in-degree is 0: almost nothing else 
 graph points at these words, so `resolve` will find fewer targets and relation lists
 will be thinner than tier 2's. That is expected and does not affect the text fields.
 
-The list carries inflected forms that v1.3 stored as their own lexemes (`evolved`,
-`spoiled`, `pursuing`, `dispersed`). Step 0 below folds those whose lemma is already
-enriched; the count after folding is the real tier size.
+**Inflection fold (measured 2026-09-04):** 21,061 of the 33,899 are inflected forms
+that v1.3 stored as their own lexemes (`evolved`, `abbeys`, `abandons`, `abating`),
+with senses mirrored from the lemma; schema v3 carries inflections on the lemma's
+morphology instead. Folding every form whose lemma is already enriched leaves
+**12,838 true new lemmas** (`data/core/tier3_final.tsv`), and recipe A drops to
+**~$66** (caps $96). 7,408 of the folded forms carry an adjective POS (participial
+adjectives such as `abashed`, `abiding`) and may deserve their own senses; they are a
+candidate second batch after the judge sample, not part of this run.
 
 ## 2. Measured unit costs (tier 2, 31,886 entries, 76,855 live senses)
 
@@ -52,7 +57,7 @@ senses.
 
 | recipe | fields | est. cost for 33,899 entries |
 |---|---|---|
-| **A. text-only (recommended start)** | structural + encyclopedia levels + gloss levels + example levels + one judge sample | **~$175** |
+| **A. text-only (recommended start)** | structural + encyclopedia levels + gloss levels + example levels + one judge sample | **~$66** for the 12,838 lemmas (was ~$175 before the inflection fold) |
 | B. full renditions | A + gloss registers + per-sense examples | ~$220 |
 | C. everything tier 2 got | B + rewrites + the three pair stages + judges | ~$340 |
 
@@ -115,3 +120,10 @@ No writer rotation on the text stages (luna only; the rotation stays configured 
 RENDITIONS/EXAMPLES policies but tier 3 runs with the luna-only override until the
 cost question is settled). No pair stages. No HF export — that is the v2.0 release
 step in the paper plan and should wait until the 42K + tier 3 are judged together.
+
+## 8. Execution log
+
+- 2026-09-04 14:05 — goal set; inflection fold measured (33,899 → 12,838); the
+  12,838 v1.3 files staged and migrated (free); recipe-A chain launched with caps
+  scaled to 12,838 × 1.5 × tier-2 unit cost (sum $96, expected ~$66). Progress and
+  per-stage costs in `docs/CORE-DIARY.md`.
