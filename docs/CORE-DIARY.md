@@ -1314,3 +1314,8 @@ listwise JSONL. All four exports now on disk (≈ 8 GB).
 (extrapolation $1.3–2.2; cap $3.5), **21,379 canonical glosses rewritten** across
 13,484 entries, 992 refused (still circular / drifted / collision), completed. Sweep 2
 (cap $1) running for the refusals' second attempt, then stilted rerun and spans.
+
+**Final hygiene complete (`DONE-FINAL-HYGIENE` 12:11):** circular_gloss $1.93 + $0.05,
+stilted rerun $0.02, spans $0.01, judge $3.40. Audit: `gloss_starts_with_headword`
+39 → **0**; relations 386K; 0 cycles. Closing reconcile sweep + graph-hygiene + audit
+running.
