@@ -790,6 +790,55 @@ _PAYLOADS.update(
     }
 )
 
+# Marker headwords for the ``circular_gloss`` step, one per refusal reason: a rewrite
+# that still contains the headword (``still_circular``), one that opens by naming the
+# headword (``headword_initial``), one that reproduces a sibling rendition's exact text
+# (``collision``, paired with :data:`CIRCULAR_COLLISION_TEXT`), and one that keeps clear
+# of the headword but shares nothing with the gloss it replaced (``drifted``). Everything
+# else gets a usable rewrite: the headword (and anything glued to it, so an inflected
+# form like "lilting" is caught too) is deleted from the offending gloss wholesale, which
+# both removes the circularity and leaves most of the original wording -- and therefore
+# most of its content words -- in place.
+CIRCULAR_STILL_HEADWORD = "circularstillword"
+CIRCULAR_INITIAL_HEADWORD = "circularinitialword"
+CIRCULAR_COLLIDE_HEADWORD = "circularcollideword"
+CIRCULAR_DRIFT_HEADWORD = "circulardriftword"
+CIRCULAR_COLLISION_TEXT = "A sibling rendition's own wording, reused word for word."
+
+_CIRCULAR_HEADWORD_RE_CACHE: dict[str, re.Pattern[str]] = {}
+
+
+def _circular_gloss_rewrite_payload(prompt: str) -> dict[str, Any]:
+    """Rewrite every circular canonical gloss the pass listed.
+
+    See the marker headwords above for the four scripted refusals; anything else gets a
+    rewrite built by deleting the headword (and whatever letters follow it, so an
+    inflected form is stripped too) from the original text, which keeps the rewrite
+    honest about sharing most of its wording -- and therefore its content words -- with
+    what it replaces.
+    """
+    headword = _headword(prompt)
+    rewrites = []
+    for number, item in _numbered(prompt):
+        if headword == CIRCULAR_STILL_HEADWORD:
+            text = f"It has to do with being quite {headword}, generally speaking."
+        elif headword == CIRCULAR_INITIAL_HEADWORD:
+            text = f"{headword.capitalize()} is how people describe this quality."
+        elif headword == CIRCULAR_COLLIDE_HEADWORD:
+            text = CIRCULAR_COLLISION_TEXT
+        elif headword == CIRCULAR_DRIFT_HEADWORD:
+            text = "A completely different idea, unconnected to what came before it."
+        else:
+            pattern = _CIRCULAR_HEADWORD_RE_CACHE.setdefault(
+                headword, re.compile(rf"\b{re.escape(headword)}\w*\b", re.IGNORECASE)
+            )
+            text = " ".join(pattern.sub("", item).split()) or "A brief way of putting it."
+        rewrites.append({"ref": number, "text": text})
+    return {"rewrites": rewrites}
+
+
+_PAYLOADS.update({"_draftcircularglossrewrites": _circular_gloss_rewrite_payload})
+
 
 # --------------------------------------------------------------------------------------
 # workflows/relation_hygiene.py contracts

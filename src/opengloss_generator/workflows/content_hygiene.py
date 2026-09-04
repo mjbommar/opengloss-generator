@@ -4,8 +4,9 @@
 repairs it. This workflow is for the defects that are not shape at all but **content**:
 two relation types asserted about the same target that cannot both be true, an example
 sentence that is not a sentence, a canonical example written in a register no one speaks
-in, and a rendition set whose members are word-for-word the same text. Every one of them
-was counted on the 10K core store, not guessed at (``docs/CORE-DIARY.md`` Iteration 8):
+in, a definition that defines its headword using the headword itself, and a rendition set
+whose members are word-for-word the same text. Every one of them was counted on the 10K
+core store, not guessed at (``docs/CORE-DIARY.md`` Iteration 8):
 
 ============================  ======  ==================================================
 Defect                        Count   Shape
@@ -19,8 +20,20 @@ degenerate renditions       592 + 87  two targets sharing one text; a copy of th
 garbage examples                 21   ``'hypernyms(['``, ``'?'``, bare single words
 ============================  ======  ==================================================
 
-Eight steps, selectable by name through ``only=``, each idempotent, each run as its own
-pooled sweep over the id list. Three are free; five make one model call per entry.
+A ninth defect, ``circular_gloss``, was not counted on the 10K core sweep above: it was
+found by a separate, read-only overnight scan of the *live* core store, sampling 15,718
+of its senses, of which 2,040 (13.0%) defined their own headword using the headword
+itself or one of its inflected or derived forms — ``stubborn:adjective:0`` "Marked by a
+**stubborn** unwillingness to change…", ``lilting:noun:0`` "…produced by **lilting**
+prosody" (``docs/DECISIONS.md`` D-70). It is listed separately because the sampling
+methodology differs from the table above's full sweep, not because the defect is any
+less real: a circular canonical gloss is the classic lexicographic failure, and it is
+worse than merely unhelpful for this project specifically, because the canonical gloss is
+used as the positive example for its own headword's retrieval query — a circular
+definition makes the query and its positive share the headword verbatim.
+
+Nine steps, selectable by name through ``only=``, each idempotent, each run as its own
+pooled sweep over the id list. Three are free; six make one model call per entry.
 
 ``self_synonym`` (free)
     A ``synonym`` whose ``target.lexeme_id`` is the entry's own is demoted to
@@ -100,6 +113,31 @@ pooled sweep over the id list. Three are free; five make one model call per entr
     same non-negotiable ``stilted_examples`` holds every rewrite to. The old text is kept
     in a zero-cost note reading ``superseded fragment example: <text>``.
 
+``circular_gloss``
+    2,040 of 15,718 live senses sampled (13.0%, see the module-level note above)
+    define their own headword using the headword itself or one of its inflected or
+    derived forms. Detection is free: :func:`~opengloss_generator.spans.find_span` runs
+    over the canonical gloss with the same candidate forms :func:`_forms_for` builds for
+    every other step's example checks, so a multi-word headword ("ice axe") only counts
+    when the *whole* headword appears, never one of its content words in isolation.
+    Proper nouns are exempt (D-30): "Larsen is a surname" legitimately names its own
+    entity. One luna call per entry covers every offending sense's canonical gloss at
+    once, asking for a same-meaning definition that names neither the headword nor any
+    form of it. A rewrite is adopted only when all four free checks pass: it must not
+    still contain the headword or a form of it (counted ``still_circular`` when it does),
+    it must not be headword-initial (:func:`~opengloss_generator.hygiene.is_headword_initial`,
+    the same D-30 exemption), it must not collide with a sibling gloss rendition — which
+    would only relocate the defect ``degenerate_renditions`` exists to catch — and it must
+    share at least two content words with the gloss it replaces, this module's free proxy
+    for "still means the same thing" (counted ``drifted`` when it does not). This step
+    runs before ``degenerate_renditions`` because that step's own duplicate check reads
+    the canonical gloss this step may just have rewritten. The sense's graded and register
+    renditions are deliberately left untouched: they were generated independently from
+    the old canonical text (``workflows/enrich.py``) and remain valid definitions of the
+    same sense in their own right, so regenerating all nine of them at roughly
+    $0.0003/sense each to keep them "in sync" with a reworded canonical would spend real
+    money re-fixing something that was never broken.
+
 ``degenerate_renditions``
     A rendition set exists so each ``(level, register)`` target says the same thing
     differently. Two members carrying identical text carry one member's worth of
@@ -135,7 +173,7 @@ Idempotence
 
 The three free steps are idempotent because they leave nothing behind for themselves to
 find: a demoted relation is no longer a synonym/antonym/hypernym, and a removed example
-is gone. The four model steps cannot be, so each writes a sentinel to the ``note`` of
+is gone. The six model steps cannot be, so each writes a sentinel to the ``note`` of
 its own call's provenance record, in D-47's form — ``<prefix>:<digest>;attempts=<n>``,
 where the digest is a hash of the *set of things the call answered for*. An entry is
 skipped only when what offends now hashes to what its last marker was written for; a set
@@ -176,7 +214,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from opengloss_generator import prompts, spans
 from opengloss_generator.errors import BudgetExceededError, GenerationError
-from opengloss_generator.hygiene import is_headword_initial
+from opengloss_generator.hygiene import content_words, is_headword_initial
 from opengloss_generator.identity import rendition_id
 from opengloss_generator.log import get_logger
 from opengloss_generator.prompts import PROMPT_VERSION
@@ -229,6 +267,7 @@ PROPER_NOUN_DEMOTE_NOTE = "demoted: proper noun instance"
 GARBAGE_EXAMPLE_NOTE = "removed garbage example: "
 FRAGMENT_EXAMPLE_NOTE = "superseded fragment example: "
 FILLER_EXAMPLE_NOTE = "superseded filler example: "
+CIRCULAR_GLOSS_NOTE = "superseded circular gloss: "
 
 #: The academic-register tell in a canonical example. Measured on the 10K core: 5,401
 #: canonical examples match it ("Two researchers formed a duo to complete the project."),
@@ -261,6 +300,13 @@ _FRAGMENT_QUOTE_CHARS = "\"'\u201c\u201d\u2018\u2019"
 #: to traffic" — ``docs/QA-DIARY.md``, iteration 3's after-sample).
 _FRAGMENT_TERMINAL_CHARS = frozenset('.!?"\u201d)')
 
+#: How many content words a circular-gloss rewrite must share with the gloss it replaces
+#: to count as still meaning the same thing, rather than having drifted. Two is a floor,
+#: not a target: it catches a rewrite that changed the subject entirely while leaving
+#: ordinary paraphrase \u2014 which shares most of its content words with the original \u2014 free
+#: to pass.
+_MIN_SHARED_CONTENT_WORDS = 2
+
 #: How many attempts a model step makes on one entry before leaving what still offends
 #: alone rather than billing a third answer for it (D-47's bound, per entry).
 _MAX_ATTEMPTS = 2
@@ -274,6 +320,7 @@ _ATTEMPTS_SEPARATOR = ";attempts="
 _SYNONYM_HYPERNYM_PREFIX = "content_hygiene:synonym_hypernym"
 _STILTED_PREFIX = "content_hygiene:stilted_examples"
 _FRAGMENT_PREFIX = "content_hygiene:fragment_examples"
+_CIRCULAR_PREFIX = "content_hygiene:circular_gloss"
 _DEGENERATE_PREFIX = "content_hygiene:degenerate_renditions"
 _FILLER_PREFIX = "content_hygiene:filler_examples"
 
@@ -290,6 +337,7 @@ class ContentHygieneStep:
     GARBAGE_EXAMPLES = "garbage_examples"
     STILTED_EXAMPLES = "stilted_examples"
     FRAGMENT_EXAMPLES = "fragment_examples"
+    CIRCULAR_GLOSS = "circular_gloss"
     DEGENERATE_RENDITIONS = "degenerate_renditions"
     FILLER_EXAMPLES = "filler_examples"
 
@@ -300,10 +348,14 @@ class ContentHygieneStep:
     #: ``stilted_examples`` because both rewrite canonical examples: it sees each entry's
     #: examples as ``stilted_examples`` left them, not as the store held them before that
     #: step ran, so a stilted rewrite that happens to still read as a fragment is caught
-    #: here rather than surviving the sweep. ``filler_examples`` runs last: unlike every
-    #: other step, its offenders are decided entirely upstream by ``qc filler --flag``
-    #: (D-60/D-66), not by re-deriving them from the text each sweep, so its ordering
-    #: relative to the others has no correctness consequence either way.
+    #: here rather than surviving the sweep. ``circular_gloss`` runs next, before
+    #: ``degenerate_renditions``, because that step's own duplicate check reads the
+    #: canonical gloss ``circular_gloss`` may just have rewritten — running it first means
+    #: ``degenerate_renditions`` never has to spend a call comparing a sibling against a
+    #: canonical text that is about to change out from under it. ``filler_examples`` runs
+    #: last: unlike every other step, its offenders are decided entirely upstream by
+    #: ``qc filler --flag`` (D-60/D-66), not by re-deriving them from the text each sweep,
+    #: so its ordering relative to the others has no correctness consequence either way.
     ALL: tuple[str, ...] = (
         SELF_SYNONYM,
         SYNONYM_ANTONYM,
@@ -311,6 +363,7 @@ class ContentHygieneStep:
         GARBAGE_EXAMPLES,
         STILTED_EXAMPLES,
         FRAGMENT_EXAMPLES,
+        CIRCULAR_GLOSS,
         DEGENERATE_RENDITIONS,
         FILLER_EXAMPLES,
     )
@@ -2142,7 +2195,345 @@ async def _fragment_examples_step(
 
 
 # --------------------------------------------------------------------------------------
-# Step 7 — degenerate_renditions
+# Step 7 — circular_gloss
+# --------------------------------------------------------------------------------------
+#
+# Detection is free, and reuses the same candidate-form union every other step's example
+# checks already build: :func:`_forms_for` (morphology's inflected/derived forms, plus
+# :func:`~opengloss_generator.spans.generate_forms`' rule-based ones). Passed to
+# :func:`~opengloss_generator.spans.find_span` against the canonical gloss instead of an
+# example sentence, it answers exactly the question this step needs: does the gloss name
+# its own headword, in any form, anywhere in the text — not only at the start, which is
+# ``is_headword_initial``'s narrower question. A multi-word headword's candidate list
+# still only ever contains the *whole* compound (and whole-compound inflections of it),
+# never its individual words, so "ice axe" is not flagged by a gloss that merely mentions
+# "ice" or "axe" on their own.
+
+
+#: Instructions for this step's one luna call per entry. Bespoke rather than sliced out of
+#: ``RENDITIONS_INSTRUCTIONS`` like the reading-level/register steps: this step only ever
+#: touches the one canonical target, so there is no reading-level or register axis to
+#: restate, only the headword-initial rule (:data:`_HEADWORD_RULE`), which a definition
+#: rewritten to drop the headword entirely is already most of the way to satisfying.
+CIRCULAR_GLOSS_INSTRUCTIONS = f"""\
+Rewrite each numbered definition below. Each is a dictionary's canonical definition for \
+the sense listed beside it, and each is circular: it defines the headword using the \
+headword itself or one of its inflected or derived forms -- "Marked by a stubborn \
+unwillingness to change" for the headword "stubborn" tells a reader who already knows \
+the word nothing, and sends a reader who does not in a circle.
+
+Write one replacement definition that means the same thing without using the headword or \
+any form of it anywhere in the text. Keep the meaning exactly, in plain dictionary \
+register, and keep the length within about 30% of the original -- neither a bare \
+restatement nor an essay.
+
+{_HEADWORD_RULE}
+
+Formatting: plain prose, no markdown. Write one sentence and nothing else.
+
+Answer every definition you are given, identified by the number it was listed under."""
+
+
+class _DraftCircularGlossRewrite(BaseModel):
+    """One replacement definition for a circular canonical gloss."""
+
+    model_config = ConfigDict(
+        extra="forbid", validate_by_name=True, validate_by_alias=True, serialize_by_alias=True
+    )
+
+    ref: Annotated[int, Field(ge=1)]
+    text: Annotated[str, Field(min_length=3, max_length=1000)]
+
+
+class _DraftCircularGlossRewrites(BaseModel):
+    """Replacements for every circular canonical gloss of one entry, produced together."""
+
+    model_config = ConfigDict(
+        extra="forbid", validate_by_name=True, validate_by_alias=True, serialize_by_alias=True
+    )
+
+    rewrites: Annotated[list[_DraftCircularGlossRewrite], Field(min_length=1)]
+
+
+@dataclass(slots=True)
+class _CircularGloss:
+    """One canonical gloss that defines its own headword.
+
+    Attributes:
+        rendition: The offending canonical gloss rendition, mutated in place once a
+            rewrite is adopted.
+        sense: The owning sense, whose other gloss renditions a rewrite must not collide
+            with.
+        pos_entry: The owning part-of-speech entry, for the headword's inflected and
+            derived forms.
+        ref_id: The rendition's derived identifier — stable across sweeps, unlike its
+            text or its position — which is what the digest is taken over.
+    """
+
+    rendition: Rendition[str]
+    sense: Sense
+    pos_entry: POSEntry
+    ref_id: str
+
+
+def _circular_glosses(entry: Lexeme) -> list[_CircularGloss]:
+    """Return every canonical gloss of an entry that names its own headword.
+
+    Proper nouns are exempt (D-30): "Larsen is a surname" legitimately names its own
+    entity, the same exemption :func:`~opengloss_generator.hygiene.is_headword_initial`
+    and ``degenerate_renditions`` both apply.
+
+    Args:
+        entry: The entry to inspect. Never mutated.
+
+    Returns:
+        One :class:`_CircularGloss` per offending sense, in document order — the order
+        the model is shown them in and refers to them by.
+    """
+    if entry.kind is LexemeKind.PROPER_NOUN:
+        return []
+    offenders: list[_CircularGloss] = []
+    for pos_entry, sense, sid in _live_senses(entry):
+        canonical = sense.gloss.canonical()
+        if canonical is None:
+            continue
+        forms = _forms_for(entry, pos_entry)
+        if spans.find_span(canonical.content, entry.headword, forms) is None:
+            continue
+        offenders.append(
+            _CircularGloss(
+                rendition=canonical,
+                sense=sense,
+                pos_entry=pos_entry,
+                ref_id=rendition_id(sid, canonical.reading_level.value, canonical.style.value),
+            )
+        )
+    return offenders
+
+
+def _build_circular_prompt(headword: str, offenders: Sequence[_CircularGloss]) -> str:
+    """Return the volatile half of this step's rewrite prompt.
+
+    Args:
+        headword: The lexeme's surface form.
+        offenders: The glosses to rewrite, in the order the model should answer them —
+            ``ref`` in the reply is a 1-based position into this sequence.
+
+    Returns:
+        The per-call prompt body.
+    """
+    lines = [
+        f"  {i + 1}. {' '.join(offender.rendition.content.split())}"
+        for i, offender in enumerate(offenders)
+    ]
+    listed = "\n".join(lines)
+    return f"Headword: {headword}\nDefinitions ({len(offenders)}):\n{listed}"
+
+
+def _circular_rewrite_is_usable(entry: Lexeme, offender: _CircularGloss, new_text: str) -> bool:
+    """Return whether a proposed canonical-gloss rewrite may be adopted.
+
+    Four conditions, all cheap and all deterministic. It must no longer contain the
+    headword or one of its forms — the rewrite's whole job — logged and refused as
+    ``still_circular`` when it does. It must not begin by naming its own headword either,
+    the same :func:`~opengloss_generator.hygiene.is_headword_initial` rule every other
+    rewriting step in this module holds a canonical definition to (proper nouns are
+    exempt, D-30, though a proper-noun entry never reaches this check in the first place —
+    see :func:`_circular_glosses`). It must not collide with a sibling gloss rendition,
+    which would only trade this defect for the one ``degenerate_renditions`` exists to
+    catch. And it must share at least :data:`_MIN_SHARED_CONTENT_WORDS` content words with
+    the gloss it replaces — this module's free proxy for "still means the same thing",
+    refused as ``drifted`` when it does not.
+
+    Args:
+        entry: The entry the gloss belongs to.
+        offender: The offending canonical gloss.
+        new_text: The markdown-stripped rewrite under consideration.
+
+    Returns:
+        Whether the rewrite may be adopted. A refusal is logged, since it is the outcome
+        a prompt change could reduce.
+    """
+    old_text = offender.rendition.content
+    forms = _forms_for(entry, offender.pos_entry)
+    if spans.find_span(new_text, entry.headword, forms) is not None:
+        _LOG.info(
+            "content_hygiene_circular_rejected_still_circular",
+            headword=entry.headword,
+            rendition=offender.ref_id,
+        )
+        return False
+    if entry.kind is not LexemeKind.PROPER_NOUN and is_headword_initial(new_text, entry.headword):
+        _LOG.info(
+            "content_hygiene_circular_rejected_headword_initial",
+            headword=entry.headword,
+            rendition=offender.ref_id,
+        )
+        return False
+    key = _normalised(new_text)
+    for other in offender.sense.gloss:
+        if other is offender.rendition:
+            continue
+        if _normalised(other.content) == key:
+            _LOG.info(
+                "content_hygiene_circular_rejected_collision",
+                headword=entry.headword,
+                rendition=offender.ref_id,
+            )
+            return False
+    shared = content_words(old_text) & content_words(new_text)
+    if len(shared) < _MIN_SHARED_CONTENT_WORDS:
+        _LOG.info(
+            "content_hygiene_circular_rejected_drifted",
+            headword=entry.headword,
+            rendition=offender.ref_id,
+            shared=sorted(shared),
+        )
+        return False
+    return True
+
+
+def _apply_circular_rewrite(
+    entry: Lexeme,
+    offender: _CircularGloss,
+    drafted_text: str,
+    base_provenance: Provenance,
+) -> bool:
+    """Adopt one canonical-gloss rewrite, if it is usable, and re-measure what is stored.
+
+    Args:
+        entry: The entry the gloss belongs to, mutated in place.
+        offender: The offending canonical gloss.
+        drafted_text: The model's proposed replacement, before markdown stripping.
+        base_provenance: The call's own record, used to build the zero-cost note record
+            that keeps the superseded text.
+
+    Returns:
+        Whether the rewrite was adopted.
+    """
+    new_text = strip_markdown(drafted_text)
+    if not new_text or new_text == offender.rendition.content:
+        return False
+    if not _circular_rewrite_is_usable(entry, offender, new_text):
+        return False
+
+    old_text = offender.rendition.content
+    offender.rendition.content = new_text
+    offender.rendition.provenance_id = entry.add_provenance(
+        _note_provenance(base_provenance, f"{CIRCULAR_GLOSS_NOTE}{old_text}")
+    )
+    assessment = offender.rendition.assessment or Assessment()
+    assessment.readability_grade = round(
+        flesch_kincaid_grade(new_text, ignore=(entry.headword,)), 2
+    )
+    offender.rendition.assessment = assessment
+    return True
+
+
+async def _rewrite_circular(
+    entry: Lexeme,
+    offenders: Sequence[_CircularGloss],
+    runner: StageRunner,
+    tally: _Tally,
+    marker_note: str,
+) -> tuple[int, int]:
+    """Ask luna for definitions that keep the meaning but drop the headword.
+
+    Args:
+        entry: The entry whose canonical glosses need rewriting, mutated in place.
+        offenders: The glosses to rewrite, in the order the model was shown them.
+        runner: The stage runner.
+        tally: The step tally, for the call and its cost.
+        marker_note: The offending-set sentinel to stamp on the call's record.
+
+    Returns:
+        ``(rewrites adopted, rewrites refused)``.
+
+    Raises:
+        BudgetExceededError: A budget stop is a run-level condition and propagates.
+    """
+    try:
+        stage_result = await runner.run(
+            # Reuses the RENDITIONS policy (luna): this is prose for a reader that has to
+            # keep the meaning of the definition it replaces, not a structural verdict.
+            stage=StageName.RENDITIONS,
+            output_type=_DraftCircularGlossRewrites,
+            instructions=CIRCULAR_GLOSS_INSTRUCTIONS,
+            prompt=_build_circular_prompt(entry.headword, offenders),
+            prompt_version=PROMPT_VERSION,
+        )
+    except BudgetExceededError:
+        raise
+    except GenerationError as exc:
+        _LOG.warning("content_hygiene_circular_failed", headword=entry.headword, error=str(exc))
+        return 0, 0
+
+    await tally.call(stage_result.cost_usd)
+    entry.add_provenance(stage_result.provenance.model_copy(update={"note": marker_note}))
+
+    accepted = rejected = 0
+    for drafted in stage_result.output.rewrites:
+        position = drafted.ref - 1
+        if not 0 <= position < len(offenders):
+            rejected += 1
+            continue
+        if _apply_circular_rewrite(
+            entry, offenders[position], drafted.text, stage_result.provenance
+        ):
+            accepted += 1
+        else:
+            rejected += 1
+    return accepted, rejected
+
+
+async def _circular_gloss_step(
+    store: LexemeStore,
+    runner: StageRunner,
+    ids: Sequence[str],
+    *,
+    workers: int,
+    stop_event: asyncio.Event | None,
+    changed_ids: set[str],
+) -> StepResult:
+    """Rewrite every canonical gloss that defines its own headword.
+
+    Args:
+        store: The store to clean. Each entry is read, cleaned — including its one call
+            when one is due — and written inside one hold of its own lock.
+        runner: The stage runner.
+        ids: The entry ids to visit.
+        workers: Pool size.
+        stop_event: Shared stop event.
+        changed_ids: Run-level set of entries written by any step.
+
+    Returns:
+        The step's :class:`StepResult`.
+    """
+    tally = _Tally(ContentHygieneStep.CIRCULAR_GLOSS, changed_ids)
+
+    async def clean(lexeme_id: str) -> None:
+        accepted = rejected = 0
+        async with store.locked(lexeme_id):
+            entry = store.read(lexeme_id)
+            if entry is None:
+                return
+            offenders = _circular_glosses(entry)
+            marker = _attempt_due(entry, _CIRCULAR_PREFIX, [o.ref_id for o in offenders])
+            if marker is not None:
+                accepted, rejected = await _rewrite_circular(
+                    entry, offenders, runner, tally, marker
+                )
+                # Written even when nothing was adopted: the sentinel is the only thing
+                # that call bought, and losing it re-bills the same answer.
+                store.write(entry)
+        await tally.entry(lexeme_id, rewritten=accepted, accepted=accepted, rejected=rejected)
+
+    await _drive(ids, clean, tally, workers=workers, stop_event=stop_event)
+    return tally.result
+
+
+# --------------------------------------------------------------------------------------
+# Step 8 — degenerate_renditions
 # --------------------------------------------------------------------------------------
 
 
@@ -2475,7 +2866,7 @@ async def _degenerate_renditions_step(
 
 
 # --------------------------------------------------------------------------------------
-# Step 8 — filler_examples
+# Step 9 — filler_examples
 # --------------------------------------------------------------------------------------
 #
 # The one step in this module whose offenders are not derived from the text at all: they
@@ -2845,6 +3236,7 @@ _STEP_FUNCTIONS: dict[str, _StepFn] = {
     ContentHygieneStep.GARBAGE_EXAMPLES: _garbage_examples_step,
     ContentHygieneStep.STILTED_EXAMPLES: _stilted_examples_step,
     ContentHygieneStep.FRAGMENT_EXAMPLES: _fragment_examples_step,
+    ContentHygieneStep.CIRCULAR_GLOSS: _circular_gloss_step,
     ContentHygieneStep.DEGENERATE_RENDITIONS: _degenerate_renditions_step,
     ContentHygieneStep.FILLER_EXAMPLES: _filler_examples_step,
 }
@@ -2859,11 +3251,11 @@ async def run_content_hygiene(
     only: set[str] | None = None,
     lexeme_ids: Sequence[str] | None = None,
 ) -> ContentHygieneOutcome:
-    """Repair the content defects measured on the 10K core store.
+    """Repair the content defects described in the module docstring.
 
-    Eight steps, described in full in the module docstring: three free ones that demote
+    Nine steps: three free ones that demote
     relations no sense can consistently assert and remove examples that are not
-    sentences, and five that ask a model the questions no rule can answer (four derive
+    sentences, and six that ask a model the questions no rule can answer (five derive
     their own offenders from the text; ``filler_examples`` acts on what ``qc filler
     --flag`` already found). Every step is idempotent, every entry is read and written
     inside one hold of its own lock, and nothing is deleted except an unusable example
@@ -2872,9 +3264,9 @@ async def run_content_hygiene(
     Args:
         store: The store to repair.
         runner: The stage runner. Used by ``synonym_hypernym`` (nano, ``HYGIENE`` policy)
-            and by ``stilted_examples``, ``fragment_examples``, ``degenerate_renditions``
-            and ``filler_examples`` (luna, ``RENDITIONS`` policy); the three free steps
-            never touch it.
+            and by ``stilted_examples``, ``fragment_examples``, ``circular_gloss``,
+            ``degenerate_renditions`` and ``filler_examples`` (luna, ``RENDITIONS``
+            policy); the three free steps never touch it.
         workers: Pool size for every step.
         stop_event: Shared stop event. A budget stop sets it; a caller may also set it
             from outside (the CLI passes its session's event, which ``SIGINT`` sets).

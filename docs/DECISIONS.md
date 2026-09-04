@@ -4267,3 +4267,219 @@ when the sense's own gloss is about a physical passage) would close it, but shou
 measured on its own pilot rather than folded into this change sight-unseen. `procedural`
 degrading into `factual` when a sense describes no procedure (D-58's third recorded
 defect) is still untouched, and is not a regex-shaped fix in the first place.
+
+## D-70 (2026-09-03) — `circular_gloss`, a ninth `content_hygiene` step, for definitions that define their own headword
+
+**Context.** A read-only overnight scan of the live core store (41,886 entries) sampled
+15,718 senses and found 2,040 (13.0%) whose canonical gloss uses the headword itself —
+`stubborn:adjective:0` "Marked by a **stubborn** unwillingness to change…",
+`lilting:noun:0` "…produced by **lilting** prosody". A circular definition is the
+classic lexicographic defect, and it is worse than merely unhelpful for this project
+specifically: the canonical gloss is used as the positive example for its own headword's
+retrieval query (`workflows/queries.py`), so a circular gloss makes the query and its
+positive share the headword verbatim — training the retriever to reward lexical overlap
+with the query rather than semantic match. This closes it with a ninth
+`content_hygiene` step, following the shape D-49/D-66 already established for that
+module: free detection, one luna call per entry batching every offender, free
+post-checks that refuse a rewrite rather than trust it blind.
+
+**Decision.**
+
+1. **Detection is free.** `_circular_glosses(entry)` (`workflows/content_hygiene.py`)
+   runs `spans.find_span` (already the project's headword-in-text finder) over each live
+   sense's canonical gloss, with `_forms_for(entry, pos_entry)` supplying candidates —
+   the same morphology-inflected-forms-plus-`generate_forms` union `stilted_examples`,
+   `fragment_examples` and `degenerate_renditions` already build for their own example
+   and rendition checks (spans.py, "reuse it" was the brief, not "write a second one").
+   This is what catches `lilt` -> "…produced by **lilting** prosody" as well as the
+   literal case: `generate_forms("lilt")` already derives "lilting" as a rule-based
+   `-ing` form, and a stored `Morphology.derivations` block (e.g. "annually" ->
+   "annual") is unioned in the same way. Proper nouns are exempt (D-30, `Lexeme.kind`):
+   "Larsen is a common Scandinavian surname" legitimately names its own entity. A
+   multi-word headword ("ice axe") only counts when `find_span` matches the *whole*
+   compound (its own separator-flexible multi-word matching, already built for exactly
+   this) — a gloss that merely mentions "ice" or "axe" alone is not an offender, because
+   no single-word candidate is ever added to the form list for a multi-word headword.
+
+2. **One luna call per entry, all offending senses at once.** `CIRCULAR_GLOSS_INSTRUCTIONS`
+   is bespoke prose (not sliced from `RENDITIONS_INSTRUCTIONS` the way the
+   reading-level/register steps are, since this step only ever touches the one canonical
+   target — no reading-level or register axis to restate) asking for a same-meaning
+   definition that names neither the headword nor any form of it, plain register, length
+   within about 30% of the original. `StageName.RENDITIONS` (luna): this is prose held to
+   a meaning, not a structural verdict.
+
+3. **Four free post-checks, mirroring `degenerate_renditions`' shape.** A rewrite is
+   adopted only if all four pass, else the old text is kept and the reason logged
+   (`content_hygiene_circular_rejected_<reason>`):
+   - **`still_circular`** — `find_span` still places the headword or a form of it in the
+     rewrite. Caught a real case in the pilot: `broadcaster:noun:1`'s rewrite kept using
+     "broadcast" (a derived form of the headword).
+   - **`headword_initial`** — `is_headword_initial` (D-30 exemption applies).
+   - **`collision`** — the rewrite is identical (case/whitespace/trailing-period
+     insensitive, `_normalised`) to a sibling gloss rendition, which would only relocate
+     this defect into the one `degenerate_renditions` exists to catch.
+   - **`drifted`** — the rewrite shares fewer than `_MIN_SHARED_CONTENT_WORDS` (2) content
+     words (`hygiene.content_words`) with the gloss it replaces — this module's free
+     proxy for "still means the same thing." Caught `silliness:noun:1` "An act or
+     instance of silly behavior." rewritten to something sharing *no* content word with
+     the original at all.
+
+   Superseded text goes to a zero-cost `Provenance.note` (`CIRCULAR_GLOSS_NOTE =
+   "superseded circular gloss: "`), and the D-47 marker
+   (`content_hygiene:circular_gloss:<digest>;attempts=<n>`) bounds retries at two per
+   entry, same as every other model step in this module.
+
+4. **Runs before `degenerate_renditions`, after `fragment_examples`.**
+   `ContentHygieneStep.ALL` gains `CIRCULAR_GLOSS` in that slot: `degenerate_renditions`
+   compares a sense's renditions against its *canonical* gloss, so it must see the
+   canonical text `circular_gloss` may just have rewritten, not the circular text that
+   preceded it — running `circular_gloss` first means `degenerate_renditions` never
+   spends a call comparing a sibling against a canonical that is about to change out from
+   under it. Selectable on its own via `content-hygiene --only circular_gloss`.
+
+5. **The sense's graded and register renditions are left untouched, on purpose.** They
+   were generated independently from the old canonical text (`workflows/enrich.py`
+   issues one call per `(owner, field)` covering every target rendition from the
+   canonical it was told to hold to) and remain valid definitions of the same sense in
+   their own right — a `grade_1` or `technical` rendition that happens not to repeat the
+   headword is not wrong just because the canonical it was drafted from has since been
+   reworded. Regenerating all nine non-canonical `(level, register)` targets at
+   ~$0.0003/sense each to keep them "in sync" would spend roughly triple this whole
+   pilot's cost on rewriting text that was never the defect. If a rendition *is* itself
+   circular, `enrich.py`'s own generation-time check and `retrofit.py`'s
+   `rendition_hygiene` pass (D-39) already cover it independently — this step's job is
+   the canonical field alone.
+
+**Measured on `data/sample-circular`** (300 fresh entries, seed 21, sampled uniformly
+from every lexeme id in the production store — not a `tier2_50k.tsv` frequency window,
+since circular glosses are not concentrated in any frequency band; copied read-only via
+`scripts/build_sample_circular.py`, never written back).
+
+Free detection (`scripts/circular_gloss_baseline_scan.py`), before any rewrite:
+
+| | value |
+|---|---|
+| entries scanned | 300 |
+| senses scanned | 826 |
+| circular senses (full detector: headword + inflected/derived forms) | 181 (**21.9%**) |
+| — of which, literal headword substring alone | 111 (13.4%) |
+| — of which, only via an inflected/derived form | 70 (8.5%) |
+| entries with >=1 circular sense | 128 / 300 (42.7%) |
+
+The literal-only sub-rate (13.4%) lands almost exactly on the overnight scan's 13.0%
+(2,040/15,718) — good agreement given the sample sizes, and evidence the overnight scan
+was counting literal headword occurrences, not inflected/derived forms. This step's
+broader detector (as designed, D-70 point 1) finds 63% more offenders than a literal-only
+scan would, on this sample.
+
+`content-hygiene --only circular_gloss --budget 1.00`, run to convergence (three sweeps —
+the third made 0 calls, confirming the D-47 bound rather than an accident of scheduling):
+
+| | value |
+|---|---|
+| calls (cumulative) | 135 (128 + 7 + 0) |
+| rewritten (accepted, cumulative) | 179 |
+| refused, final (2 attempts exhausted) | 2 — `rays:verb:0`, `shamed:adjective:0` |
+| refused, by reason (attempt-events, cumulative) | `still_circular` 3, `collision` 3, `drifted` 3, `headword_initial` 0 |
+| cost (cumulative) | $0.017554 |
+| cost per rewrite | **$0.0000981** |
+| cost per call | $0.0001300 |
+
+179 of 181 (98.9%) offenders found were fixed within the two-attempt bound; the 2 that
+were not (`rays:verb:0` "To emit or project rays or beams of light…", `shamed:adjective:0`
+"Affective state of feeling shame or embarrassment…") keep their original text, carry a
+marker recording two exhausted attempts, and cost nothing more on a third sweep — the
+`test_the_attempt_bound_stops_at_two` behavior verified in isolation by unit test, here
+confirmed against the real model on real refusals rather than a scripted one.
+
+**Whole-store extrapolation** (labelled as such: both numbers below are estimates from
+this one 300-entry pilot, not a measurement of the whole store). 110,869 live senses,
+two ways to project the offender count:
+
+- From the overnight scan's own rate (13.0%, the larger and more reliable sample):
+  ~14,413 circular senses store-wide, ~10,222 entries (at this pilot's 1.41
+  senses-per-offending-entry ratio) needing a call, **~$1.33** at this pilot's cost/call.
+- From this pilot's own full-detector rate (21.9%, catching inflected/derived forms the
+  overnight scan's literal-only count did not): ~24,291 circular senses, ~17,228 entries,
+  **~$2.24**.
+
+Both land comfortably under a $5 budget; a full-store run is a reasonable next step
+rather than a further pilot.
+
+**Before/after, read by hand (10 pairs):**
+
+- `afire:adjective:0`: "Literal sense: afire denotes a state of burning or emitting
+  flames, typically as the result of combustion." -> "Burning or emitting flames,
+  typically as a result of combustion." — clean, meaning intact, shorter.
+- `ampere:noun:1`: "The magnitude of electric current in a circuit, expressed in
+  **amperes**, representing the rate of flow of electric charge." -> "The SI base unit of
+  electric current, measuring the rate at which electric charge flows through a
+  circuit." — better than the original: adds "SI base unit," which the circular original
+  never actually said.
+- `annually:adverb:0`: "…typically used when describing schedules, budgets, or **annual**
+  events." (caught via the derived form "annual," not the headword itself) -> "Once each
+  year, especially when referring to schedules, budgets, or recurring events." — correct
+  catch, clean fix.
+- `backhoe:noun:0`: "…combines a loader at the front with a rear **backhoe** excavating
+  arm and bucket…" -> "…combining a front loader with a rear excavating arm and bucket,
+  used for digging and moving earth." — meaning fully preserved.
+- `clever:adjective:2`: "Of behavior or tactics: marked by guile or deception; using
+  **clever** schemes or manipulation." -> "Marked by guile or deception; using ingenious
+  schemes or manipulation." — good substitution, register held.
+- `cosmological:adjective:0`: "Relating to **cosmology**, the scientific study of the
+  origin, evolution, and large-scale structure of the universe." -> "Relating to the
+  scientific study of the universe's origin, evolution, and large-scale structure." —
+  clean.
+- `diagnosed:verb:0`: "…evaluation of symptoms history and diagnostic tests resulting in
+  a clinical **diagnosis**." -> "…evaluation of symptoms, history, and clinical tests." —
+  fixed and, incidentally, better punctuated than the original.
+- `gaze:noun:3`: "…the **gaze** denotes the act of looking as a social practice…" -> "…the
+  act of looking is understood as a social practice…" — meaning fully preserved,
+  passive-voice workaround is a little flat but not wrong.
+- `vanilla:noun:0`: "The flavoring extract derived from the cured seed pods of the
+  **vanilla** orchid…" -> "A flavoring extract derived from the cured seed pods of an
+  orchid…" — correct fix; loses the specific orchid name, which is an acceptable trade
+  for a one-sentence dictionary gloss.
+- `wormwood:noun:0`: "The plant Artemisia absinthium, commonly known as **wormwood**, a
+  perennial herb…" -> "A perennial herb of the Asteraceae family, native to Europe and
+  western Asia, with bitter-tasting leaves and a history of use in medicine and
+  flavoring." — the Latin binomial (`Artemisia absinthium`) survives; only the headword
+  itself is gone.
+
+All 10 read as legible, meaning-preserving improvements; none worse than the original.
+The two free checks caught the two real failure modes actually seen in this sample: a
+rewrite that swapped the headword for one of its own derived forms
+(`broadcaster` -> "broadcast"), and one that paraphrased its way into a different
+sentence rather than a rewritten one (`silliness:noun:1`, zero shared content words).
+
+**Consequence.** `workflows/content_hygiene.py`: `ContentHygieneStep.CIRCULAR_GLOSS`,
+`CIRCULAR_GLOSS_NOTE`, `_CIRCULAR_PREFIX`, `_MIN_SHARED_CONTENT_WORDS`,
+`CIRCULAR_GLOSS_INSTRUCTIONS`, `_DraftCircularGlossRewrite(s)`, `_CircularGloss`,
+`_circular_glosses`/`_build_circular_prompt`/`_circular_rewrite_is_usable`/
+`_apply_circular_rewrite`/`_rewrite_circular`/`_circular_gloss_step`, wired into
+`ContentHygieneStep.ALL` (before `degenerate_renditions`) and `_STEP_FUNCTIONS`; module
+docstring gains a `circular_gloss` section and the step count moves 8 -> 9. `content
+hygiene --only circular_gloss` already worked with no `cli.py` change, since that command
+already accepts an arbitrary comma list of step names. Nothing here touches
+`/home/mjbommar/projects/personal/opengloss-generator/data/core-store`; the pilot ran
+only against this worktree's own `data/sample-circular`
+(`scripts/build_sample_circular.py`, `scripts/circular_gloss_baseline_scan.py`,
+`scripts/circular_gloss_pairs.py`). Tests: **+13** in `tests/test_content_hygiene.py` —
+five pure detection tests (literal headword, inflected form via `generate_forms` alone
+with no stored `Morphology`, proper-noun exemption, multi-word headword scoping both
+ways), the accept path, one refusal test per free check (`still_circular`,
+`headword_initial`, `collision`, `drifted`), zero-cost-when-clean, idempotence
+(second sweep makes no calls), and step-selection in isolation; `tests/conftest.py`
+gains one payload builder, `_circular_gloss_rewrite_payload`, and four marker headwords,
+appended in the file's existing append-only block. `uv run ruff check`/`format`,
+`uv run ty check`, `uv run pytest` are clean on `hygiene/circular-gloss`.
+
+**Left undone.** The whole-store run itself: this decision pilots and ships the step,
+but does not run it against `data/core-store`, which is outside this worktree's
+permissions and is currently being read by the pair stages. The two extrapolations above
+bound its cost comfortably under $5; a follow-up should run it for real and record the
+actual count against this pilot's projection. Separately, the `drifted` check's floor
+(2 shared content words) is a cheap proxy, not a meaning check — a rewrite that swaps two
+content words for two synonyms and drops none would pass it while a human reviewer might
+still flag drift; the pilot did not surface a case like that, but a larger run might.
