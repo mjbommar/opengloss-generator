@@ -1207,3 +1207,9 @@ headwords (core + tier 2). Then a final audit and the four free exports
 **80,055 flagged** (6.5%, matching the calibration) across 30,772 entries; 15 over-
 threshold 4-grams ("the museum displayed a" ×1,221, "reappraise…" ×465 …), no
 over-threshold openers at the chosen threshold. Rewrite pass started 19:57 (cap $6.5).
+
+**Filler rewrite, whole store (19:57 → 21:02, 65m):** 30,772 calls (one per flagged
+entry), **$4.77**, 79,533 of 80,055 flagged example renditions rewritten, 522 refused
+(headword dropped or sibling collision), 0 failures, completed under the $6.5 cap.
+$0.00006 per rewrite, matching the pilot. Re-judge running, then the final audit and
+`DONE-QUALITY` hands over to the pair stages.
