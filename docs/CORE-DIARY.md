@@ -1233,3 +1233,9 @@ hypernym/hyponym (falcon→peregrine, dictator→pharaoh). Demoting to `see_also
 that information; a retype-by-reading-the-paragraph step is the named follow-up. The
 post-pair waiter now runs the full reconcile twice after the contrasts stage covers
 the whole store.
+
+**22:05 — qa-pairs meta-reference post-check merged (D-69)**, ahead of the whole-store
+qa-pairs run: 8 patterns ("according to the sources", "the passage", …), repair-then-
+drop; on the pilot's 6,090 pairs: 116 matches (1.9%), 14 repairable, 4 false positives
+(all "the passage" on senses that *are* passages). `echoes_gloss` (first-60-char rule)
+matched 0 on this sample — the pilot's 11.6% were paraphrased restatements, not verbatim.
