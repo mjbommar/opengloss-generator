@@ -775,3 +775,24 @@ Read-only, 6,000 random entries / 15,718 live senses.
 
 The circular-gloss rate is the surprise: it is a defect the judge folds into
 `gloss_accurate` (14%), and it directly weakens the gloss-as-positive retrieval pairs.
+
+## Iteration 11 — free QC over the new pair data (2026-09-04 07:30, qa-pairs 40% done)
+
+3,000 random entries: 20,992 QA pairs, 95,236 queries, 6,131 contrasts.
+
+| check | count | rate |
+|---|---|---|
+| answer still carries a meta-reference ("according to the sources") | 4 | 0.02% (D-69 post-check working; pilot was 7.9%) |
+| very short answer (< 6 words) | 549 | 2.6% — grounded factual answers ("They returned to the harbor."), acceptable |
+| question without a question mark | 4 | 0.02% |
+| duplicate query within a sense | 0 | — |
+| one-word query | 0 | — |
+| contrast verdicts | related_as_typed 70%, related_differently 30%, unrelated 0.3% | to be applied by the post-pair reconcile |
+
+Read 12 pairs by hand (harbor, reluctant, mortgage): grounded, varied across the seven
+types, the comparison answers ("harbor emphasizes the sheltered water; port the
+facilities") are the best retrieval negatives in the set. One caveat: some factual
+pairs quote the entry's own example ("What was Mia reluctant to do?" → "to go down the
+slide") — grounded but not general knowledge; fine for retrieval pairs, weak for QA
+evaluation. Worth a `question_type`-aware filter at export time rather than a change to
+the generator.
