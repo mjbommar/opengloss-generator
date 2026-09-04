@@ -43,6 +43,7 @@ from opengloss_generator.workflows.relation_reconcile import (
     ASYMMETRIC_NOTE_PREFIX,
     CAP_LINE_PREFIX,
     CAP_RECORD_PREFIX,
+    DEDUP_RECORD_PREFIX,
     MARKER_PREFIX,
     TOMBSTONE_LINE_PREFIX,
     TOMBSTONE_RECORD_PREFIX,
@@ -897,3 +898,36 @@ async def test_a_stopped_sweep_reports_that_it_stopped(store):
 
     assert outcome.stopped_reason == "stopped"
     assert outcome.entries_changed == 0
+
+
+async def test_dedup_removes_exact_duplicate_edges_and_records_them(session):
+    entry = _entry(
+        "famine",
+        relations=[
+            _relation(RelationType.ENTAILS, "hunger", sense_id="hunger:noun:0"),
+            _relation(RelationType.HYPERNYM, "shortage", sense_id="shortage:noun:0"),
+            _relation(RelationType.ENTAILS, "hunger", sense_id="hunger:noun:0"),
+            _relation(RelationType.ENTAILS, "hunger"),  # unresolved: a different key, kept
+        ],
+    )
+    session.store.write(entry)
+
+    outcome = await run_relation_reconcile(
+        session.store, workers=2, only={RelationReconcileStep.DEDUP}
+    )
+
+    stored = session.store.read("famine")
+    relations = stored.pos_entries[0].senses[0].relations
+    assert [(r.type, r.target.term, r.target.sense_id) for r in relations] == [
+        (RelationType.ENTAILS, "hunger", "hunger:noun:0"),
+        (RelationType.HYPERNYM, "shortage", "shortage:noun:0"),
+        (RelationType.ENTAILS, "hunger", None),
+    ]
+    step = outcome.steps[RelationReconcileStep.DEDUP]
+    assert step.removed == 1
+    assert any((p.note or "").startswith(DEDUP_RECORD_PREFIX) for p in stored.provenance_in_order())
+    # Idempotent.
+    again = await run_relation_reconcile(
+        session.store, workers=2, only={RelationReconcileStep.DEDUP}
+    )
+    assert again.steps[RelationReconcileStep.DEDUP].removed == 0

@@ -227,6 +227,9 @@ TOMBSTONE_RECORD_PREFIX = "reconcile:tombstone "
 
 #: One removed-edge line inside that record: ``<prefix><type> -> <term> [<note>]``.
 TOMBSTONE_LINE_PREFIX = "reconcile:tombstone: "
+#: ``dedup``'s removal records and lines, same shape as ``tombstone``'s.
+DEDUP_RECORD_PREFIX = "reconcile:dedup "
+DEDUP_LINE_PREFIX = "reconcile:dedup: "
 
 #: Header line of the provenance record ``cap`` writes for one sense, completed with the
 #: sense id.
@@ -291,12 +294,13 @@ class RelationReconcileStep:
 
     ASYMMETRIC = "asymmetric"
     TOMBSTONE = "tombstone"
+    DEDUP = "dedup"
     CAP = "cap"
 
     #: The order the steps are applied in, whatever order ``--only`` lists them: a
     #: tombstone must be able to see what ``asymmetric`` just demoted, and a cap must
     #: count what ``tombstone`` has already taken out of the list.
-    ALL: tuple[str, ...] = (ASYMMETRIC, TOMBSTONE, CAP)
+    ALL: tuple[str, ...] = (ASYMMETRIC, TOMBSTONE, DEDUP, CAP)
 
 
 # --------------------------------------------------------------------------------------
@@ -472,6 +476,7 @@ class _EntryEdits:
 
     demoted: dict[str, int] = field(default_factory=dict)
     tombstoned: dict[str, int] = field(default_factory=dict)
+    deduped: dict[str, int] = field(default_factory=dict)
     capped: dict[str, int] = field(default_factory=dict)
     senses_capped: int = 0
     far_side: list[_FarSideRemoval] = field(default_factory=list)
@@ -479,7 +484,7 @@ class _EntryEdits:
     @property
     def changed(self) -> bool:
         """Return whether any step edited this entry."""
-        return bool(self.demoted or self.tombstoned or self.capped)
+        return bool(self.demoted or self.tombstoned or self.deduped or self.capped)
 
 
 def _add(counts: dict[str, int], relation_type: RelationType, amount: int = 1) -> None:
@@ -571,6 +576,7 @@ class _Tally:
         """Apply one entry's edits to the results. Caller holds the lock."""
         self._apply(RelationReconcileStep.ASYMMETRIC, edits.demoted, demoted=True)
         self._apply(RelationReconcileStep.TOMBSTONE, edits.tombstoned)
+        self._apply(RelationReconcileStep.DEDUP, edits.deduped)
         self._apply(RelationReconcileStep.CAP, edits.capped)
         cap = self._results.get(RelationReconcileStep.CAP)
         if cap is not None:
@@ -1035,6 +1041,37 @@ def _tombstone(entry: Lexeme, editor: _Editor, edits: _EntryEdits) -> None:
             sense.relations = kept
 
 
+def _dedup(entry: Lexeme, editor: _Editor, edits: _EntryEdits) -> None:
+    """Drop exact duplicate edges — same type, same target lexeme, same target sense.
+
+    A 4,000-entry sample after the first whole-store reconcile (2026-09-03) had exact
+    duplicates on 5.2% of live senses (mostly the same resolved edge twice, left by
+    reciprocity re-adds meeting an edge that was already there). The first occurrence is
+    kept, so positional edge ids of everything before it are unchanged; the removed copy
+    is written down like a tombstone so the count is auditable.
+
+    Args:
+        entry: The entry being edited, mutated in place.
+        editor: The entry's provenance editor.
+        edits: The running per-entry counts, extended in place.
+    """
+    for _, sense, sense_id in _live_senses(entry):
+        seen: set[tuple[str, str, str | None]] = set()
+        kept: list[Relation] = []
+        lines: list[str] = []
+        for relation in sense.relations:
+            key = (relation.type.value, relation.target.lexeme_id, relation.target.sense_id)
+            if key in seen:
+                lines.append(_removal_line(DEDUP_LINE_PREFIX, relation))
+                _add(edits.deduped, relation.type)
+                continue
+            seen.add(key)
+            kept.append(relation)
+        if lines:
+            editor.record_removals(DEDUP_RECORD_PREFIX, sense_id, lines)
+            sense.relations = kept
+
+
 # --------------------------------------------------------------------------------------
 # Step 3 — cap
 # --------------------------------------------------------------------------------------
@@ -1307,6 +1344,8 @@ def _reconcile_entry(
         _demote_asymmetric(entry, editor, index, edits)
     if RelationReconcileStep.TOMBSTONE in steps:
         _tombstone(entry, editor, edits)
+    if RelationReconcileStep.DEDUP in steps:
+        _dedup(entry, editor, edits)
     if RelationReconcileStep.CAP in steps:
         _cap(entry, editor, caps, edits)
     return edits
