@@ -1252,3 +1252,10 @@ Queued behind the post-pair reconcile (`final_hygiene.sh`): circular_gloss (cap 
 re-judge, final audit. Everything for this goal is now merged on `main` and queued; the
 remaining wall-clock is the pair stages (queries ~05:30, contrasts ~09:00, qa-pairs
 ~19:00 on 2026-09-04), then ≈ 1.5 h of free/cheap passes.
+
+**Queries, whole store (2026-09-03 21:07 → 2026-09-04 03:42, 6h35m):** 109,980 calls
+(one per live sense), **$26.67** (extrapolation $27; cap $41), 41,581 entries changed,
+**1,319,632 queries stored** (12/sense), 76.8% headword-free, 109,168/110,870 senses
+with all 8 styles, 1,264 rejected (surplus), 0 failures, 0 429s, cache hit rate 0.89.
+By style: question 227K, keyword 218K, conversational 179K, example_based 171K,
+directive 168K, constraint 131K, role/step_by_step ~112K each. Contrasts started 03:42.
