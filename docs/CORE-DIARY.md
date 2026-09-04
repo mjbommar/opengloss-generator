@@ -1319,3 +1319,39 @@ listwise JSONL. All four exports now on disk (≈ 8 GB).
 stilted rerun $0.02, spans $0.01, judge $3.40. Audit: `gloss_starts_with_headword`
 39 → **0**; relations 386K; 0 cycles. Closing reconcile sweep + graph-hygiene + audit
 running.
+
+## Goal 2 complete — 2026-09-04 12:14 (`DONE-CLOSING`)
+
+Closing sweep changed 111 entries; graph-hygiene 0. Closing audit: relations 385,949
+(from 948K at the start of the day); synonym reciprocity 97.6%, antonym 98.7% — the
+residual ~1,000 one-sided pairs are ones whose far side is unresolved or retired, which
+the reconcile cannot match (open item); 0 cycles; `gloss_starts_with_headword` 0;
+`senses_zero_relations` 2,143 (open item: targeted relation regeneration).
+
+**Ledger for goal 2** (all from run summaries):
+
+| stage | cost |
+|---|---|
+| domain retag (luna, whole store) | $3.90 |
+| relation reconcile ×4 sweeps, dedup, verdicts | $0 |
+| filler rewrite (79,533 examples) | $4.77 |
+| queries (1.32M) | $26.67 |
+| contrasts (83,120) | $8.95 |
+| qa-pairs (744,258) | $47.92 |
+| circular-gloss rewrite (21,613 glosses) | $1.98 |
+| stilted rerun + spans | $0.03 |
+| six Opus re-judges | $20.20 |
+| **total** | **$114.42** |
+
+No stage exceeded its 1.5× pilot-derived cap; the three pair stages came in at 56% of
+their caps. Judge on the fixed 40-entry sample: **68.6 → 70.2**; relations defect
+84% → 60%; domain 29% → 21%; gloss accuracy 14% → 12%. Writer rotation: enabled on
+RENDITIONS and EXAMPLES (D-63); the three pair stages ran luna-only after the
+measured 4× cost of haiku's share was reported and no reply arrived before launch.
+Exports for the encoder in `data/exports/` (≈ 8 GB). Everything on `main`, pushed.
+
+Open items carried forward: (1) regenerate relations for the 2,143 senses left with
+none; (2) a retype-by-reading-the-contrast step so `related_differently` edges become
+hypernym/hyponym instead of `see_also`; (3) the ~1,000 unmatched one-sided pairs; (4)
+`examples_fit_sense` / `distinct_from_other_senses` have not moved — strengthen the
+nano sense-check; (5) Haiku prompt caching needs a ≥ 4,096-token prefix to engage.
