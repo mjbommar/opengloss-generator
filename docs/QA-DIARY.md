@@ -867,3 +867,21 @@ senses but its example_fit step is still running in follow-up 2). Decision point
 the plan: 3.5 points below tier 2's final score, so recipe B ($45: registers + D-53
 per-sense examples, which is what moved naturalness on tier 2) is justified, after the
 follow-ups and a second judge read. Recorded, not launched.
+
+## Iteration 15 — tier-3 structural scan (2026-09-04 23:50)
+
+4,000 random tier-3 entries, 8,301 live senses (2.08/entry after sense-hygiene; tier 2
+had 2.41). Kinds: simplex 79%, **proper noun 20%** (tier 2: ~5%), abbreviation 0.4%.
+Relations per sense mean 5.5 (tier 2: 5.5 after reconcile).
+
+| check | rate of senses | note |
+|---|---|---|
+| example rendition without a span | 7.9% | the spans pass ran before the level renditions existed and generation-time span finding missed these; a $0.10 `retrofit --only spans` rerun is queued after the export |
+| stilted example | 2.2% | vs 12.5% on the pre-hygiene tier-2 scan |
+| sense with zero relations | 2.0% | tier 3's thin graph |
+| duplicate edge | 0.2% | |
+| circular canonical gloss | 0.2% | content-hygiene's `circular_gloss` step ran in the chain |
+| gloss missing a level | 0.1% | |
+
+The proper-noun share is the notable difference from tier 2 and should be stated on
+the v2.0 cards' tier description.
