@@ -50,6 +50,9 @@ uv run opengloss stats
 uv run opengloss resolve --headword abseil            # fill in relation target sense ids
 uv run opengloss retrofit --only classify_kind        # bring a migrated store to v3 parity
 uv run opengloss migrate --from /path/to/v13/store    # v1.3 or v2.0 payloads -> schema v3
+
+# build the v2.0 HuggingFace release family locally (free, offline, uploads nothing)
+uv run opengloss export-hf --store data/core-store --out data/hf --tiers-dir data/core
 ```
 
 Every command that spends money accepts `--budget`, `--concurrency`, and `--dry-run`, and
@@ -76,6 +79,7 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Contrast | `contrasts` | One "X vs Y" paragraph per synonym / antonym / confusable edge, saying how the two terms actually differ, plus a verdict on whether they are related the way the edge claims. One call per entry covers up to eight pairs; a pair whose two ends are both in the store is written once, on the smaller end; verdicts are recorded, never acted on (D-50). |
 | Queries (doc2query) | `queries` | One call per live sense writes N synthetic search queries across the eight `QueryStyle` registers, with the entry's other senses in the prompt so the queries discriminate between them and at least half of them asked to describe the meaning without naming the headword. Duplicates and over-long queries are dropped for free; the achieved headword-free share is reported. Idempotent per sense (D-55). |
 | Reconcile relations | `relation-reconcile` | Free: demote every edge a stored `contrasts` verdict says is not what it claims (both sides of a symmetric pair), apply the stricter of two disagreeing directional verdicts on a symmetric pair, take every demoted `see_also` out of the sense's relation list (recorded to provenance, so nothing is lost), drop exact duplicates and cap each sense's per-type runs. This is what shortens the list the QA judge is shown; reciprocity goes up, not down. Idempotent; `--dry-run` computes every edit and writes nothing (D-65, D-68). |
+| Export the release | `export-hf` | Free: build the v2.0 Hugging Face release family — fifteen dataset repos (two nested canonical ones, nine flat one-row-per-item views, four derived training sets) as ≤300 MB parquet shards, each with a `README.md` dataset card whose every statistic, fields table and example row is generated from the rows the run actually wrote. `--repos` selects a subset; `--push` (never the default) uploads with `HfApi.upload_large_folder`. See D-72. |
 
 ## Cost defaults
 
@@ -124,6 +128,6 @@ v0.1 — schema v3 (`docs/SCHEMA-V3.md`) is implemented end to end: `schema.py`,
 `config.py`, `stages.py`, and every workflow (`generate`, `walk`, `enrich`, `resolve`,
 `retrofit`) consume the v3 contract, with deviations from the contract text recorded in
 `docs/DECISIONS.md` (D-10 onward) and cross-indexed from `docs/SCHEMA-V3.md` § 8. All
-acceptance criteria in `docs/REQUIREMENTS.md` § 5 pass offline. Not yet included: the
-HuggingFace export step and the Batch-API submission path (the config threshold exists;
-the submitter does not).
+acceptance criteria in `docs/REQUIREMENTS.md` § 5 pass offline. The HuggingFace export
+step landed as `export-hf` (D-72). Not yet included: the Batch-API submission path (the
+config threshold exists; the submitter does not).

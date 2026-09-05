@@ -16,10 +16,13 @@ dependencies = [
     "structlog>=26.1.0",
     "orjson>=3.11.0",
     "httpx2>=0.29.0",
+    "pyarrow>=22.0.0",
 ]
 
 [project.optional-dependencies]
 batch = ["openai>=3.7.0"]
+# Only the `export-hf --push` path imports this; the export itself is offline.
+hf = ["huggingface-hub>=1.2.0"]
 
 [project.scripts]
 opengloss = "opengloss_generator.cli:app"
@@ -89,6 +92,14 @@ ignore = [
 "tests/**" = ["S101", "D103", "D100", "D104", "ANN201", "ANN001", "PLR2004", "PLR0911"]
 # Typer builds its interface from the signature, so options must stay positional.
 "src/opengloss_generator/cli.py" = ["PLR0917"]
+# These three modules are mostly *published prose*: the field descriptions, blurbs and
+# dataset-card templates that end up in a Hugging Face README. Typographic dashes and
+# quotes are correct there, so RUF001-003 ("ambiguous unicode character in a string")
+# would flag correct output; the SQL in a code sample is a string shown to a reader, not
+# a query this package executes, so S608 does not apply either.
+"src/opengloss_generator/export/hf_cards.py" = ["RUF001", "RUF002", "RUF003", "S608"]
+"src/opengloss_generator/export/hf_schemas.py" = ["RUF001", "RUF002", "RUF003"]
+"src/opengloss_generator/export/hf_rows.py" = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
