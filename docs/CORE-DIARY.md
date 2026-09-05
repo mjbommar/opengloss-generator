@@ -1409,3 +1409,18 @@ Encyclopedia grade_5 + college started 18:51 (cap $28).
 **Tier 3 encyclopedia grade_5 + college (18:51 → 20:57, 2h05m):** 14,905 calls,
 **$10.35** (expected $19; cap $28), all 12,838 entries, 25,676 renditions, 0 failures,
 0 downgrades. Tier-3 text stages total $32.57. Hygiene block started 20:57.
+
+**Tier 3 hygiene block (20:57 →):** content-hygiene $1.49 (6,471 circular glosses
+rewritten, 307 filler examples, 65 degenerate renditions); relation-hygiene stopped on
+its $8 cap (12,399 validity calls; headword_phrases demoted 16,869, inflections 1,473);
+sense-hygiene stopped on its $5 cap: distinctness complete (5,130 merges, 5,918 senses
+retired), example_fit reached entry 46,965 of 54,724 (1,751 moved, 2,331 removed, 751
+senses emptied). Two follow-ups queued behind `DONE-TIER3`: (1) validity remainder by
+list ($10) + reconcile ×2 + graph-hygiene + audit; (2) example_fit remainder ($4) +
+repair + example catch-up ($3) + audit.
+
+**HF v2.0 release (goal 3b):** an Opus agent is building `export-hf` — a family of
+datasets (nested lexicon + senses; flat definitions, examples, encyclopedia, relations
+incl. tombstones, queries, qa-pairs, contrasts, provenance; retrieval-pairs, triples,
+qrels, pretrain), each with a generated card (live statistics, fields table, example
+row, code samples, family index). Upload is a separate reviewed step.
