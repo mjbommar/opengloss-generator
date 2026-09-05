@@ -1483,3 +1483,7 @@ free. Total enrichment spend across all goals ≈ $500.
 fragments and 2 non-ASCII); 63% multiword. Sources staged from the v1.3 lexicon and
 migrating (free); recipe-A chain queued behind it with caps summing $345, expected
 ≈ $271. Details in `docs/TIER3-PLAN.md` § 9.
+
+**Tier 4 migration (06:12 → 07:08, free):** 55,352 files, 54,909 migrated, 443
+skipped as already present (slug collisions with enriched entries — case or spacing
+variants of words we have), 0 failures. Store: **109,633 lexemes.** Chain started 07:08.
