@@ -1465,3 +1465,14 @@ below sense level are new"), and the limitations numbers were frozen from the
 pre-tier-3 audit (now the 2026-09-05 store-wide audit: synonym reciprocity 98.0%,
 antonym 99.1%, 3,709 of 137,314 senses without relations; both judge samples cited).
 A $0.04 spans rerun fixed 1,162 span-less tier-3 examples between runs.
+
+## OpenGloss v2.0 published — 2026-09-05 01:30
+
+15 datasets uploaded to Hugging Face under `mjbommar/opengloss-v2.0-*` (public,
+CC-BY 4.0), 2.0 GB of parquet, each with a generated card (live statistics, per-tier
+coverage table, fields table with types, one real row, `load_dataset` / polars /
+duckdb / task-specific code samples, identifier and rendition tables, family index,
+limitations, citation). Verified via the Hub API: 15/15 public with README and parquet;
+`load_dataset` streaming works on senses, queries, and the relations `tombstoned` config.
+Goal 3 complete. Cost of goal 3: tier 3 $62.76 + spans rerun $0.04; export and upload
+free. Total enrichment spend across all goals ≈ $500.
