@@ -1446,3 +1446,9 @@ reciprocity 99.9%, headword-initial 0.01%, 288 senses with zero relations. Judge
 Audit: 0 cycles, synonym reciprocity 99.1%, antonym 99.7%, `senses_zero_relations`
 521 (tier 3's thin graph). Tier-3 total so far **$61.94**. Follow-up 2 (example_fit
 remainder, repair, catch-up) started.
+
+**Tier 3 follow-up 2 (23:38 → 23:45):** example_fit remainder $0.75, repair $0.01,
+catch-up $0.06. Final tier-3 audit: all text fields 100% (gloss 4 levels, examples 4
+levels, encyclopedia 3 levels, explanation); 26,444 live senses. **Tier 3 total
+$62.76** (plan ~$66, caps $96+$14 follow-ups). **Goal 3a complete 23:45.** Store:
+54,724 lexemes. The v2.0 export started.
