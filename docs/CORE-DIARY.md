@@ -1452,3 +1452,16 @@ catch-up $0.06. Final tier-3 audit: all text fields 100% (gloss 4 levels, exampl
 levels, encyclopedia 3 levels, explanation); 26,444 live senses. **Tier 3 total
 $62.76** (plan ~$66, caps $96+$14 follow-ups). **Goal 3a complete 23:45.** Store:
 54,724 lexemes. The v2.0 export started.
+
+**2026-09-05 00:25 — v2.0 export, third run (final).** Run 1 (23:46 → 00:20) produced
+the family (15 repos, 1.9 GB): lexicon 54,724, senses 137,314, definitions 1,129,975,
+examples 1,398,297, encyclopedia 184,172 + explanation 54,724, etymology 54,684,
+relations 735,318 + tombstoned 1,153,444, queries 1,330,311, qa-pairs 750,348,
+contrasts 84,578, provenance 2,781,035, retrieval-pairs 8,208,898, triples 2,693,616,
+qrels listwise 1,356,755 + docs 192,025, pretrain 617,175. Card review found two
+things to fix before publishing: the "what's new" point claimed v1.3 minted random
+UUIDs (false — v1.3 rows carry positional `word_pos_index` ids; corrected to "ids
+below sense level are new"), and the limitations numbers were frozen from the
+pre-tier-3 audit (now the 2026-09-05 store-wide audit: synonym reciprocity 98.0%,
+antonym 99.1%, 3,709 of 137,314 senses without relations; both judge samples cited).
+A $0.04 spans rerun fixed 1,162 span-less tier-3 examples between runs.
