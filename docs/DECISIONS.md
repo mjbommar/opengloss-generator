@@ -4585,3 +4585,103 @@ Counts drop: any downstream trainer or dataset snapshot built from a store with
 polysemous encyclopedia entries will see fewer `example_encyclopedia` pairs and fewer
 encyclopedia-sourced triple positives than before this fix — that is the fix working,
 not a regression to chase.
+
+## D-72 (2026-09-04) — The v2.0 release is a *family* of Hugging Face repos, two nested and thirteen flat
+
+**Context.** `README.md`'s Status section listed "the HuggingFace export step" as the one
+piece the v3 pipeline did not have. The question was not how to write parquet; it was
+what shape the release should take. Two facts decided it.
+
+First, **v1.3 shipped seven repos, and its flattest one was its most downloaded.** The
+definition-level set — one row per sense definition, every column a scalar — outdrew the
+nested dictionary set. That is the ordinary shape of dataset consumption: someone wants
+*the definitions*, or *the examples*, or *the queries*, and wants to `load_dataset`,
+`filter`, and train, not to explode a `list<struct>` first.
+
+Second, **v2.0's content is genuinely nested.** A sense holds nine gloss renditions,
+several example renditions, a relation list, twelve queries and seven QA pairs. Flatten
+it once and you get a table with one row per gloss rendition; flatten it a different way
+and you get one row per query. There is no single flat table that is not either lossy or
+a cross-product.
+
+**Decision.** Publish **fifteen** repos, registered once in
+`src/opengloss_generator/export/hf_schemas.py`:
+
+| | Repos |
+|---|---|
+| **Canonical, nested** | `lexicon` (one row per lexeme), `senses` (one row per live sense) |
+| **Flat per-item views** | `definitions`, `examples`, `encyclopedia` (configs `encyclopedia` + `explanation`), `etymology`, `relations` (configs `relations` + `tombstoned`), `queries`, `qa-pairs`, `contrasts`, `provenance` |
+| **Derived training sets** | `retrieval-pairs`, `retrieval-triples`, `qrels` (configs `listwise` + `docs`, plus `qrels.trec`), `pretrain` |
+
+Every repo name is `opengloss-v2.0-<slug>`. **Every flat repo carries the join keys**
+(`lexeme_id`, `sense_id`, `headword`, `pos`, `tier`) so it stands alone; the two nested
+repos are the lossless view and the place a consumer goes when a flat one is not enough.
+
+**Why the flat views are not redundant with the nested ones.** They are the same values
+projected differently, and the exporter guarantees they agree by *construction*: the flat
+row is built once and the nested `list<struct>` member is a key-subset of it
+(`hf_rows._strip`), so a bug that gave the two different content would have to be a bug
+in the projection helper, not a divergence between two builders. The cost is duplicated
+bytes on the Hub, which is cheap; the benefit is that a consumer of `definitions` never
+learns what a `Renditions[T]` is.
+
+**Three judgement calls worth writing down.**
+
+1. **Etymology is its own repo, not columns on the encyclopedia rows.** An etymology is
+   one structured record per *entry* (a summary plus an ordered segment list); the
+   encyclopedia table is *rendition*-grained, five rows per entry. Bolting the etymology
+   onto it would repeat the whole structure once per reading level. The lexical
+   explanation, by contrast, *is* rendition-grained, so it is a second config of
+   `encyclopedia` rather than a repo of its own.
+2. **Tombstoned relations are a config of `relations`, reconstructed from provenance.**
+   D-65/D-68's reconcile steps remove edges from `Sense.relations` and write what they
+   took out into the entry's provenance table, one line per edge. The exporter parses
+   those records — using the prefixes imported from `relation_reconcile` itself, never a
+   restated copy — into a `tombstoned` config with the type the edge carried *when it was
+   removed* and the reason on it. The pre-demotion type is not invented, for D-65's
+   reason: it was already gone before that pass ran.
+3. **`tier` is a column on every row, and `unknown` is a real value.** Core and tier 2
+   received every stage; tier 3 received the text stages only. Publishing that as a
+   footnote would make the difference invisible to a `filter`. An entry on none of the
+   three rank lists gets `tier = "unknown"` rather than a null, so a consumer filtering
+   by tier never silently loses rows, and the coverage table in every card reports the
+   share per field *per tier* rather than an average that hides the gap.
+
+**Cards are generated, never written.** `export/hf_cards.py` renders each `README.md`
+from f-string templates (no Jinja, no template files to keep in step with the package)
+against the `Stats` the export just produced: every row count, coverage percentage,
+histogram and example row in a card is counted from the rows that were actually written.
+The fields table is rendered from the same `FieldSpec` tuples the `pyarrow` schema is
+built from, so a column cannot exist in the parquet file and be missing from the card.
+The prose that no export can compute — what the release is, how ids compose, what the
+reading levels mean, what is wrong with it, the whole family table — lives once in that
+module, so fifteen cards cannot disagree.
+
+**Schemas are explicit.** Every column's `pyarrow` type is spelled out, nested columns
+included; rows are projected onto the config's column list before writing and a row
+carrying an unknown column raises rather than being silently dropped. Shards roll at
+`--shard-rows` or `--max-shard-mb` (default 300 MB), whichever comes first, and a config
+that wrote nothing still gets one empty, correctly-typed shard so a consumer's
+`load_dataset` does not fail because a stage never ran.
+
+**Uploading is a separate, explicit act.** `export-hf` is offline and free like every
+other exporter. `--push` calls `HfApi.upload_large_folder` per repo (creating the repo
+if absent, `--private` optional); `huggingface_hub` is an optional `hf` extra imported
+only on that path, and the upload is unit-tested against a fake API rather than executed.
+
+**Measured on `data/sample-300`** (300 entries, all core; 6.8 s, 10 MB across fifteen
+repos): 300 lexemes, 1,041 live senses (168 retired senses skipped), 9,369 gloss
+renditions, 6,655 examples, 17,111 relations (12,675 resolved), 2,784 queries, 6,289 QA
+pairs, 5 contrasts, 14,258 provenance records ($2.90 of recorded generation), 24,590
+retrieval pairs, 7,043 triples, 3,593 listwise queries over 1,341 docs, 3,600 pretraining
+documents. The sample store predates the reconcile pass, so its `tombstoned` config is
+empty — one shard, correct schema, zero rows, which is exactly the case the empty-shard
+rule exists for.
+
+**Consequence.** New: `export/hf_schemas.py` (the registry), `export/hf_rows.py` (the
+projection and the statistics), `export/hf_cards.py` (the templates), `export/hf.py` (the
+orchestration, sharding and push), `cli.py`'s `export-hf`, `tests/test_export_hf.py`
+(+42). `pyproject.toml` gains `pyarrow` as a dependency, `huggingface-hub` as the `hf`
+extra, and a `per-file-ignores` entry for the three card modules: their string literals
+are *published prose*, so RUF001-003 would flag correct typography, and the SQL in a code
+sample is shown to a reader rather than executed, so S608 does not apply.

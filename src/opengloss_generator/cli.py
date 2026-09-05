@@ -18,6 +18,14 @@ import typer
 from opengloss_generator.audit import AuditReport, audit_store
 from opengloss_generator.config import AppConfig, load_config
 from opengloss_generator.errors import BudgetExceededError, OpenGlossError
+from opengloss_generator.export.hf import (
+    DEFAULT_MAX_SHARD_BYTES,
+    DEFAULT_PRETRAIN_LEVELS,
+    DEFAULT_SHARD_ROWS,
+    export_hf,
+    push_repos,
+)
+from opengloss_generator.export.hf_schemas import ALL_REPO_SLUGS, DEFAULT_OWNER, resolve_repos
 from opengloss_generator.export.pairs import export_pairs as _export_pairs
 from opengloss_generator.export.pretrain import TEMPLATES as PRETRAIN_TEMPLATES
 from opengloss_generator.export.pretrain import export_pretrain
@@ -1683,6 +1691,90 @@ def export_pretrain_cmd(
         lexeme_ids=lexeme_ids,
     )
     _echo_summary({"out": str(out), **summary.as_dict()})
+
+
+@app.command("export-hf")
+def export_hf_cmd(
+    out: Annotated[
+        Path, typer.Option("--out", help="Directory to write one subdirectory per repo into.")
+    ],
+    repos: Annotated[
+        str,
+        typer.Option("--repos", help=f"`all` or a comma list of: {','.join(ALL_REPO_SLUGS)}."),
+    ] = "all",
+    from_list: Annotated[
+        Path | None, typer.Option("--from-list", help="Restrict the export to these headwords.")
+    ] = None,
+    shard_rows: Annotated[
+        int, typer.Option("--shard-rows", help="Rows per parquet shard before rolling over.")
+    ] = DEFAULT_SHARD_ROWS,
+    max_shard_mb: Annotated[
+        int, typer.Option("--max-shard-mb", help="Approximate byte ceiling per shard, in MB.")
+    ] = DEFAULT_MAX_SHARD_BYTES // 1_000_000,
+    tiers_dir: Annotated[
+        Path,
+        typer.Option("--tiers-dir", help="Directory holding core_10k/tier2_50k/tier3_final TSVs."),
+    ] = Path("data/core"),
+    levels: Annotated[
+        str | None,
+        typer.Option("--levels", help="Reading levels for the pretraining corpus."),
+    ] = None,
+    seed: Annotated[int, typer.Option("--seed", help="Seed for deterministic sampling.")] = 0,
+    easy_negatives: Annotated[
+        int, typer.Option("--easy-negatives", help="Easy negatives per query in the triples repo.")
+    ] = 1,
+    pair_easy_negatives: Annotated[
+        int,
+        typer.Option(
+            "--pair-easy-negatives", help="Sampled negatives per sense in the pairs repo."
+        ),
+    ] = 3,
+    owner: Annotated[
+        str, typer.Option("--owner", help="Hugging Face namespace used in card cross-links.")
+    ] = DEFAULT_OWNER,
+    push: Annotated[
+        bool, typer.Option("--push", help="Upload each repo to the Hub after writing it.")
+    ] = False,
+    private: Annotated[
+        bool, typer.Option("--private", help="Create a newly pushed repo as private.")
+    ] = False,
+    store: _StoreOpt = None,
+    config_path: _ConfigOpt = None,
+) -> None:
+    """Build the v2.0 Hugging Face release family: parquet shards plus a dataset card (D-72).
+
+    Free: makes no model call and never writes to the store. One streaming pass produces
+    the eleven store-derived repos (the two nested canonical ones, `lexicon` and `senses`,
+    and the flat one-row-per-item views), and the four free retrieval exporters produce
+    the rest. Every column has an explicit type, every card's statistics are counted from
+    the rows actually written, and shards roll at `--shard-rows` or `--max-shard-mb`,
+    whichever comes first.
+
+    Nothing is uploaded unless `--push` is given, which is also the only path that needs
+    `huggingface_hub` installed or a token in the environment.
+    """
+    cfg = _build_config(config_path, store, None, None)
+    lexeme_store = LexemeStore(cfg.store)
+    lexeme_ids = _read_word_list(from_list) if from_list is not None else None
+    selected_levels = _parse_levels(levels) or list(DEFAULT_PRETRAIN_LEVELS)
+    result = export_hf(
+        lexeme_store,
+        out,
+        repos=repos,
+        lexeme_ids=lexeme_ids,
+        tiers_dir=tiers_dir,
+        shard_rows=shard_rows,
+        max_shard_bytes=max_shard_mb * 1_000_000,
+        seed=seed,
+        easy_negatives=easy_negatives,
+        pair_easy_negatives=pair_easy_negatives,
+        pretrain_levels=selected_levels,
+        owner=owner,
+    )
+    summary = {"store": str(lexeme_store.root), **result.as_summary()}
+    if push:
+        summary["pushed"] = push_repos(out, resolve_repos(repos), owner=owner, private=private)
+    _echo_summary(summary)
 
 
 @app.command()
