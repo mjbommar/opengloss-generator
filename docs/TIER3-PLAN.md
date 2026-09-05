@@ -127,3 +127,9 @@ step in the paper plan and should wait until the 42K + tier 3 are judged togethe
   12,838 v1.3 files staged and migrated (free); recipe-A chain launched with caps
   scaled to 12,838 × 1.5 × tier-2 unit cost (sum $96, expected ~$66). Progress and
   per-stage costs in `docs/CORE-DIARY.md`.
+- 2026-09-04 23:45 — **recipe A complete**: 12,838 lemmas, all text fields at 100%,
+  **$62.76** all-in (chain $57.00 + follow-ups $5.76) against $110 of caps. Judge
+  sample (QA-DIARY it. 14): 66.7, i.e. where tier 2 stood before its quality passes;
+  domain-fit best of any tier (14%), example naturalness (48%) and sense distinctness
+  (20%) worst. **Decision point 2 → recipe B is justified ($45) but not launched**: the
+  v2.0 export/upload runs first so the release does not wait on it.
