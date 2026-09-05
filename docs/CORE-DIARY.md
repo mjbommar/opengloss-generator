@@ -1492,3 +1492,10 @@ variants of words we have), 0 failures. Store: **109,633 lexemes.** Chain starte
 multiword entries need the model), hygiene $0.37 (134,578 domains cleared, 8,346
 glosses rewritten), tag_domain (luna) **$5.47** (51,738 calls, 175,481 senses tagged,
 1h47m, cache 0.93). Spans running at 09:15.
+
+**Tier 4 spans + repair + resolve (09:15 → 13:02):** spans $1.13 (35,882 spans),
+repair $0.02, resolve **stopped on its $25 cap** after 91,118 calls (3h10m): tier-4
+edges 1,710,475, resolved 813,417 (47.6%); 87,600 unresolved edges whose target is in
+the store remain for a remainder pass (queued after `DONE-TIER4`, cap $15). The rest
+point outside the store and cannot resolve. Structural total so far $32.36 (plan $25 —
+tier 4's multiword entries carry more edges per sense). Graph-hygiene, then gloss levels.
