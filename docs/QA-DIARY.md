@@ -841,3 +841,29 @@ progress (branch `fix/encyclopedia-positives`, D-71): encyclopedia counts as a p
 only for monosemous entries; triples and pairs will be re-exported. Until then,
 **filter `positive_id` ending in `:encyclopedia` out of `triples.jsonl`** if training
 starts before the re-export.
+
+## Iteration 14 — tier 3 judge sample (2026-09-04 23:12)
+
+40 tier-3 entries / 87 senses, seed 7, Opus, $2.78. Recipe A only (no registers, no
+per-sense examples, no pair stages, no writer rotation).
+
+| | tier 2 at the same point (it. 5) | tier 2 final (it. 12) | **tier 3 (it. 14)** |
+|---|---|---|---|
+| mean score | 66.0 | 70.2 | **66.7** |
+| entries 80+ / below 60 | 1 / 7 | 4 / 5 | 2 / 10 |
+| relations_valid defect | 88% | 60% | 66% |
+| examples_natural | 36% | 34% | **48%** |
+| examples_fit_sense | 39% | 38% | 39% |
+| distinct_from_other_senses | 10% | 10% | **20%** |
+| domain_fits | 29% | 21% | **14%** |
+| gloss_accurate | 13% | 12% | 12% |
+
+**Read.** Tier 3 lands where tier 2 was before its quality passes (66.7 vs 66.0), with
+the luna retag already paying off (domain 14%, the best of any tier). Two criteria are
+worse than tier 2 ever was: `examples_natural` 48% and `distinct_from_other_senses`
+20%. Both fit the tier: rarer words get fewer natural contexts, and v1.3's sense
+inventories for them are thinner and more overlapping (sense-hygiene merged 5,918
+senses but its example_fit step is still running in follow-up 2). Decision point 2 of
+the plan: 3.5 points below tier 2's final score, so recipe B ($45: registers + D-53
+per-sense examples, which is what moved naturalness on tier 2) is justified, after the
+follow-ups and a second judge read. Recorded, not launched.
