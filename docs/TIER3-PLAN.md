@@ -133,3 +133,26 @@ step in the paper plan and should wait until the 42K + tier 3 are judged togethe
   domain-fit best of any tier (14%), example naturalness (48%) and sense distinctness
   (20%) worst. **Decision point 2 → recipe B is justified ($45) but not launched**: the
   v2.0 export/upload runs first so the release does not wait on it.
+
+## 9. Tier 4 — stopwords + everything at Wikipedia frequency ≥ 10 (2026-09-05)
+
+Goal set 2026-09-05 01:50: "add coverage for A) stopwords and B) entries ≥ 10 wiki
+frequency". Selection is frequency-first with two free junk filters, measured on the
+128,475 uncovered v1.3 entries:
+
+| group | entries | note |
+|---|---|---|
+| A. stopwords / function words | 514 | excluded from the core ranking on purpose; a dictionary needs "the" |
+| B. wiki_frequency ≥ 10, not a fragment | 54,838 | 34,919 multiword compounds, 19,919 single words |
+| dropped: phrase fragments | 730 | first token an auxiliary/article/preposition or last token a preposition/article ("be found in", "the legislature", "no evidence of"); phrasal verbs like "spread out" are kept |
+| dropped: non-ASCII | 2 | |
+| **tier 4** | **55,352** | `data/core/tier4.tsv` (rank, word, wiki_frequency, in_degree, total_senses, group) |
+
+Not filtered: single words absent from wamerican (18,298) — a sample was mostly real
+rare words and proper nouns ("reliquary", "estuarine", "cultivars", "kielce"); the free
+`kind` classifier labels the proper nouns. Expected cost at the tier-3 unit rate
+($0.0049/entry, recipe A): **~$271**; chain caps sum **$345** (1.5× tier-2 unit costs
+× 55,352; validity capped at $60). Same chain as tier 3 (luna-only config, one luna
+process ≤ 48 workers), plus the follow-up pattern for capped hygiene passes. After it:
+the lexicon reaches ~110K lexemes, covering ~131K v1.3 headwords with inflections.
+Migration (free) started 01:55; chain launches on its completion marker.

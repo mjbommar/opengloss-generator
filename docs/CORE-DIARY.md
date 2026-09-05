@@ -1476,3 +1476,10 @@ limitations, citation). Verified via the Hub API: 15/15 public with README and p
 `load_dataset` streaming works on senses, queries, and the relations `tombstoned` config.
 Goal 3 complete. Cost of goal 3: tier 3 $62.76 + spans rerun $0.04; export and upload
 free. Total enrichment spend across all goals ≈ $500.
+
+## Goal 4 — tier 4: stopwords + wiki_frequency ≥ 10 (2026-09-05 01:55)
+
+55,352 entries selected (514 stopwords + 54,838 at wf ≥ 10 after dropping 730 phrase
+fragments and 2 non-ASCII); 63% multiword. Sources staged from the v1.3 lexicon and
+migrating (free); recipe-A chain queued behind it with caps summing $345, expected
+≈ $271. Details in `docs/TIER3-PLAN.md` § 9.
