@@ -1432,3 +1432,11 @@ shards with explicit schemas, cards generated from the data (statistics, fields 
 example row, code samples, family index). Sample-300 export: 15 dirs, 10 MB, 6.8 s.
 Real export queued behind the tier-3 follow-ups (`data/hf/`); upload is a reviewed
 manual step.
+
+**`DONE-TIER3` 23:13.** Recipe A complete on 12,838 lemmas. Costs: structural $5.41,
+gloss levels $14.87 (incl. the $3.87 haiku overrun), example levels $7.35, encyclopedia
+$10.35, content-hygiene $1.49, relation-hygiene $8.01 (cap), sense-hygiene $5.00 (cap),
+repair $0.05, catch-up $0.22, readability $1.46, rendition hygiene $0.01, judge $2.78
+→ **$57.00** (plan: ~$66; caps $96). Audit (tier 3): 0 hypernym cycles, synonym
+reciprocity 99.9%, headword-initial 0.01%, 288 senses with zero relations. Judge 66.7
+(QA-DIARY it. 14). Follow-up 1 (validity remainder) started.
