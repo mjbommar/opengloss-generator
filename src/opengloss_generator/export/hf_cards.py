@@ -51,18 +51,22 @@ class V13:
     URL = "https://huggingface.co/datasets/mjbommar/opengloss-v1.3-definitions"
 
 
-#: The Opus judge's mean score on the fixed 40-entry sample at the close of the tier-2
-#: build, out of 100 (``docs/CORE-DIARY.md``, "Goal 2 complete"). It moved 68.6 -> 70.2
-#: over that goal; it is a sample statistic, not a guarantee about any single entry.
+#: The Opus judge's mean scores on fixed 40-entry samples, out of 100 (``docs/QA-DIARY.md``
+#: iterations 12 and 14): the tier-2 sample at the close of goal 2 (68.6 -> 70.2 over that
+#: goal) and the tier-3 sample after its text-only recipe. Sample statistics, not
+#: guarantees about any single entry.
 JUDGE_SCORE = 70.2
+JUDGE_SCORE_TIER3 = 66.7
 JUDGE_SAMPLE_ENTRIES = 40
 
-#: Synonym / antonym reciprocity measured over the whole store in the same closing audit.
-SYNONYM_RECIPROCITY = 0.976
-ANTONYM_RECIPROCITY = 0.987
+#: Synonym / antonym reciprocity over the whole 54,724-entry store, closing audit of
+#: 2026-09-05 after tier 3 (``opengloss audit``).
+SYNONYM_RECIPROCITY = 0.980
+ANTONYM_RECIPROCITY = 0.991
 
-#: Senses left with no relation at all after the closing audit — the largest known gap.
-SENSES_WITHOUT_RELATIONS = 2_143
+#: Senses left with no relation at all in that audit (of 137,314 live) — the largest
+#: known gap.
+SENSES_WITHOUT_RELATIONS = 3_709
 
 PAPER_URL = "https://arxiv.org/abs/2511.18622"
 LICENSE_ID = "cc-by-4.0"
@@ -284,9 +288,10 @@ def _whats_new(stats: Stats) -> str:
    grounded QA pairs, mined word-in-context pairs, MS MARCO-style triples with
    graph-derived hard negatives, and graded TREC qrels — all derivable from, and
    consistent with, the same entries.
-5. **Derivable identifiers.** v1.3 minted a random UUID per node and the export dropped
-   it, so published rows could not be joined back below lexeme level. Every id in v2.0 is
-   positional and recomputable from the row alone.
+5. **Derivable identifiers everywhere.** v1.3 published a positional id for lexemes and
+   senses (`3d_model_noun_0`) and nothing below that. v2.0 gives every rendition, edge,
+   query, QA pair and provenance record an id computable from the row alone, and never
+   renumbers: a retired sense is tombstoned, so the ids after it keep their meaning.
 6. **Per-field provenance.** Which model wrote a field, how many tokens it took, what it
    cost — published as its own dataset.
 
@@ -455,10 +460,10 @@ def _limitations(spec: RepoSpec, stats: Stats) -> str:
   schema, not transcribed from a corpus or checked by a lexicographer. It is
   well-formed and internally consistent; it is not attested usage, and it will contain
   confident errors. Do not use it as ground truth about what a word means.
-- **Judge score {JUDGE_SCORE}/100.** A different model family (Claude Opus) scored a fixed
-  {JUDGE_SAMPLE_ENTRIES}-entry sample at the close of the build. That is a sample
-  statistic on a stratified sample, not a per-entry guarantee, and the judge is itself a
-  model.
+- **Judge scores {JUDGE_SCORE}/100 (core + tier 2) and {JUDGE_SCORE_TIER3}/100 (tier 3).**
+  A different model family (Claude Opus) scored fixed {JUDGE_SAMPLE_ENTRIES}-entry
+  stratified samples at the close of each build. Sample statistics, not per-entry
+  guarantees, and the judge is itself a model.
 - **Relation precision is the weakest axis.** Relations were judged for validity and the
   ones that failed were demoted rather than asserted; symmetric reciprocity finished at
   {_pct(SYNONYM_RECIPROCITY)} for synonyms and {_pct(ANTONYM_RECIPROCITY)} for antonyms,
