@@ -885,3 +885,21 @@ Relations per sense mean 5.5 (tier 2: 5.5 after reconcile).
 
 The proper-noun share is the notable difference from tier 2 and should be stated on
 the v2.0 cards' tier description.
+
+## Iteration 16 — tier-4 mid-chain scan (2026-09-05 17:00, gloss stage 38% done)
+
+5,000 random tier-4 entries, 16,736 live senses (3.35/entry — highest of any tier; the
+compounds are polysemous in v1.3). Kinds: **compound 63%**, simplex 23%, proper noun
+12%, phrasal verb 1.6%, idiom 0.6%, function word 0.6%. Domain roots lean science /
+education / business / technology, as expected for compounds.
+
+| check | rate | note |
+|---|---|---|
+| circular canonical gloss | 11.1% of senses | v1.3 inherited; the `circular_gloss` content-hygiene step in the chain's hygiene block will rewrite them ($0.0001 each) |
+| foreign-language glosses | 20 in 16,736 | the fragment/junk filters worked; the survivors are legitimate ("escribir" as a bilingual-education term, "teixeira" a surname) |
+| very short gloss | 4 | |
+| headword-initial level renditions | 4.5–5.5% | vs 0.0–0.3% on tier 2 — **41 of 41 hits read were proper nouns** ("Drucker is a German surname…", "Cornus is a genus…"), where headword-initial is correct style and the check exempts them at judge time; not a defect |
+| reading-level bands | FK 2.9 / 6.3 / 11.7 / 16.0 | on target; grade-1 renditions of compounds are sometimes two sentences ("A set way to save and share computer things. It can hold…"), acceptable |
+
+Spot-read of `digital_format` (3 senses): the graded renditions track the canonical
+sense distinctions cleanly (storage mode / file type / conceptual state).
