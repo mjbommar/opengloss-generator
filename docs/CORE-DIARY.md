@@ -1424,3 +1424,11 @@ datasets (nested lexicon + senses; flat definitions, examples, encyclopedia, rel
 incl. tombstones, queries, qa-pairs, contrasts, provenance; retrieval-pairs, triples,
 qrels, pretrain), each with a generated card (live statistics, fields table, example
 row, code samples, family index). Upload is a separate reviewed step.
+
+**23:10 — `export-hf` merged (D-72):** 15-repo family (lexicon, senses; definitions,
+examples, encyclopedia+explanation, etymology, relations+tombstoned, queries, qa-pairs,
+contrasts, provenance; retrieval-pairs, retrieval-triples, qrels, pretrain), parquet
+shards with explicit schemas, cards generated from the data (statistics, fields table,
+example row, code samples, family index). Sample-300 export: 15 dirs, 10 MB, 6.8 s.
+Real export queued behind the tier-3 follow-ups (`data/hf/`); upload is a reviewed
+manual step.
