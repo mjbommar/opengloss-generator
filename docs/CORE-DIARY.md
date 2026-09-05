@@ -1440,3 +1440,9 @@ repair $0.05, catch-up $0.22, readability $1.46, rendition hygiene $0.01, judge 
 → **$57.00** (plan: ~$66; caps $96). Audit (tier 3): 0 hypernym cycles, synonym
 reciprocity 99.9%, headword-initial 0.01%, 288 senses with zero relations. Judge 66.7
 (QA-DIARY it. 14). Follow-up 1 (validity remainder) started.
+
+**Tier 3 follow-up 1 (23:13 → 23:37):** validity remainder completed within cap
+(9,452 calls, **$4.94**); reconcile 972 one-sided edges; graph-hygiene 1,030 entries.
+Audit: 0 cycles, synonym reciprocity 99.1%, antonym 99.7%, `senses_zero_relations`
+521 (tier 3's thin graph). Tier-3 total so far **$61.94**. Follow-up 2 (example_fit
+remainder, repair, catch-up) started.
