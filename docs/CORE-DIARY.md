@@ -1487,3 +1487,8 @@ migrating (free); recipe-A chain queued behind it with caps summing $345, expect
 **Tier 4 migration (06:12 → 07:08, free):** 55,352 files, 54,909 migrated, 443
 skipped as already present (slug collisions with enriched entries — case or spacing
 variants of words we have), 0 failures. Store: **109,633 lexemes.** Chain started 07:08.
+
+**Tier 4 structural stages (07:09 →):** classify_kind $0.37 (36% deterministic — the
+multiword entries need the model), hygiene $0.37 (134,578 domains cleared, 8,346
+glosses rewritten), tag_domain (luna) **$5.47** (51,738 calls, 175,481 senses tagged,
+1h47m, cache 0.93). Spans running at 09:15.
