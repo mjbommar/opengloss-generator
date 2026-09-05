@@ -1405,3 +1405,7 @@ share, gotcha #7) + relaunch 11,532 entries **$10.12** luna-only (45,339 calls,
 **Tier 3 examples × 4 levels (17:24 → 18:51, 1h27m):** 41,093 calls, **$7.35**
 (expected $8; cap $12), 12,830 entries, 129,433 renditions, 0 failures, cache 0.90.
 Encyclopedia grade_5 + college started 18:51 (cap $28).
+
+**Tier 3 encyclopedia grade_5 + college (18:51 → 20:57, 2h05m):** 14,905 calls,
+**$10.35** (expected $19; cap $28), all 12,838 entries, 25,676 renditions, 0 failures,
+0 downgrades. Tier-3 text stages total $32.57. Hygiene block started 20:57.
