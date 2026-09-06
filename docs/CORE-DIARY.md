@@ -1568,3 +1568,14 @@ one-sided edges (synonym 60,130, antonym 36,329) across 77,744 entries — the v
 pass was cut at 94% by the stage timeout, so many tier-4 pairs had one side judged and
 the other not; the sweep applies the stricter side. Tombstone/dedup/cap counts in the
 run log. Sweep 2 + graph-hygiene, then the tier-4 judge and audit.
+
+**`DONE-TIER4` 19:26.** Recipe A on 54,909 entries. Chain costs: structural $32.36,
+gloss $59.98 (cap, 94%), examples $40.32, encyclopedia $43.30, content-hygiene $6.92,
+relation-hygiene $43.02 (timeout, 94%), sense-hygiene $13.65 (timeout), repair $0.13,
+catch-up $0.68, readability $6.73, rendition hygiene $0.03, judge $2.89 → **$250.01**
+(plan ~$300; caps $345). Audit (tier 4): gloss levels ≥ 99.9%, example levels 100%,
+encyclopedia 3 levels 100%; 0 cycles; synonym reciprocity 99.1%, antonym 99.9%;
+`gloss_starts_with_headword` 504 (compounds), `senses_zero_relations` 1,887. Judge
+**62.2** — the phantom-POS finding (QA-DIARY it. 18; D-76 in progress). Follow-up 0
+(resolve + rendition remainders) started; follow-up 1 (sense-hygiene remainder, repair,
+regen, validity, reconcile, closing audit) behind it.
