@@ -1,4 +1,4 @@
-"""Workflow 10 — sense hygiene: near-duplicate senses, and examples filed under the wrong one.
+"""Workflow 10 — sense hygiene: phantom parts of speech, duplicate senses, misfiled examples.
 
 ``workflows/content_hygiene.py`` repairs defects a rule can see, and
 ``workflows/relation_hygiene.py`` judges the far end of an edge. Neither can answer the two
@@ -23,11 +23,59 @@ are two different strings and survive it; nothing at all compares an example aga
 definitions it was *not* filed under. Both questions are one model call per entry, on the cheap
 model, because both are structural verdicts about definitions rather than prose for a reader.
 
-Two steps, selectable by name through ``only=``, each idempotent, each its own pooled sweep over
-the id list.
+A third question came out of the tier-4 sample (``docs/QA-DIARY.md``, Iteration 18 — 40 entries,
+mean score 62.2, the weakest tier), and it is about the *part-of-speech inventory* rather than
+the sense inventory. 63% of tier 4 is multiword, inherited from OpenGloss v1.3, whose generator
+wrote a sense under every part of speech it guessed at. So compounds carry **phantom
+part-of-speech entries**: ``blank cell`` has an adjective entry whose glosses define the
+adjective *blank* — "no such adjective exists", the judge wrote — and whose morphology inflects
+*blank* ("blanker", "blankest") rather than the compound. That one defect scores against three
+criteria at once: the gloss is inaccurate for the headword, the phantom sense is not distinct
+from the real one, and its relations (nominal hypernyms under an adjective) are wrong. Neither
+step below can see it — ``distinctness`` refuses to group across parts of speech by design, and
+the phantom gloss *is* distinct text.
+
+Three steps, selectable by name through ``only=``, each idempotent, each its own pooled sweep
+over the id list.
+
+``phantom_pos`` (nano, ``HYGIENE`` policy)
+    Entries with **two or more live part-of-speech entries**, plus any compound, idiom or
+    phrasal verb carrying a part of speech outside its kind's natural set
+    (:data:`NATURAL_POS`), get one call listing every live part-of-speech entry as
+    ``[ref, pos, canonical glosses]`` beside the headword and its ``kind``, and the answer is
+    ``{verdicts: [{pos_ref, verdict}]}`` — one strict-enum verdict per block:
+
+    ``genuine``
+        The definitions really are definitions of this headword used as this part of speech.
+        The ordinary answer.
+    ``phantom_component``
+        They define a different lexeme — one component word of a multi-word headword, or a word
+        derived from it — rather than the headword itself. ``blank cell``'s adjective block.
+    ``phantom_duplicate``
+        They restate another listed block's senses under a part of speech the headword does not
+        have in that use: a noun-shaped definition filed under an adjective, or the reverse.
+
+    A phantom block is retired **whole**: every live sense under it is marked
+    :attr:`~opengloss_generator.schema.Sense.retired` — never deleted, never renumbered — with
+    ``retired sense <sid>: phantom_pos: <reason>`` on the entry's provenance table, and every
+    relation on those senses is *demoted* to ``see_also`` rather than dropped
+    (:data:`PHANTOM_RELATION_NOTE`), following ``relation_hygiene``'s convention that a
+    defective edge becomes a weaker one that still says something true. The lexeme's **last
+    live part of speech is never retired**: when the model calls every listed block phantom,
+    the one whose part of speech is natural for the kind (failing that, the first listed) is
+    kept and counted as ``skipped_last_pos``, because an entry with no live sense is not a
+    smaller dictionary but a broken one.
+
+    A free signal prioritises the sweep and is reported rather than acted on
+    (:func:`_defines_a_component`): a multi-word headword's block whose every gloss names none
+    of the headword's content words, and whose morphology inflects exactly one of them as a
+    standalone word, looks exactly like a definition of that component. It is precise and
+    incomplete, so the verdict is still bought for every listed block, and it is deliberately
+    kept out of the prompt — a hint of the answer is not an independent judgement of it.
 
 ``distinctness`` (nano, ``HYGIENE`` policy)
-    Entries with **two or more non-retired senses under one part of speech** get one call
+    Runs after ``phantom_pos`` so a phantom sense is never merged with a real one. Entries with
+    **two or more non-retired senses under one part of speech** get one call
     listing every live sense as ``[ref, pos, canonical gloss, first example]``, and the answer is
     ``{duplicate_groups: [[ref, ref, ...], ...]}`` — the groups of senses that are the *same*
     meaning, empty when they are all distinct. :data:`DISTINCTNESS_INSTRUCTIONS` sets the bar
@@ -77,10 +125,13 @@ the id list.
 Idempotence
 -----------
 
-Neither step is idempotent by construction, so each carries D-47's sentinel on a zero-cost
+No step is idempotent by construction, so each carries D-47's sentinel on a zero-cost
 provenance record — ``<prefix>:<digest>;attempts=<n>``, bounded at :data:`MAX_ATTEMPTS` attempts
-per entry — over the *sense set* for ``distinctness`` and the *canonical example set* for
-``example_fit``. Following ``relation_hygiene`` rather than ``content_hygiene``, the digest is
+per entry — over the *part-of-speech gloss sets* for ``phantom_pos``, the *sense set* for
+``distinctness`` and the *canonical example set* for ``example_fit``. ``phantom_pos`` keys on
+the glosses rather than on the sense ids because the question is about what the definitions
+say: the same three sense ids can hold three rewritten definitions, and that is a different
+question. Following ``relation_hygiene`` rather than ``content_hygiene``, the digest is
 taken over the set **as the answers leave it**, not as they found it: taken the other way, a
 sweep that merged a duplicate or moved an example would leave a marker describing a set that no
 longer exists, and the very next sweep would buy a second opinion about senses it had already
@@ -89,34 +140,42 @@ unchanged entry is free, and an entry that later *gains* a sense or an example s
 further attempt. A sentinel rather than a bare :class:`~opengloss_generator.schema.StageName`
 because both calls reuse the shared ``HYGIENE`` policy rather than adding a stage of their own.
 
-An entry with one live sense is never listed, never called for, and costs $0 on every sweep.
+An entry with one live sense is never listed by either sense-level step, never called for, and
+costs $0 on every sweep; a simplex with one live part of speech is likewise free in
+``phantom_pos``, whose last-live-part-of-speech guard makes its answer foregone.
 
 Run order
 ---------
 
-Run this pass **before** ``retrofit --only repair`` (which refills the senses ``example_fit``
-empties) and after ``content_hygiene``'s ``garbage_examples`` (there is no point paying a model
-to decide where ``'hypernyms(['`` belongs). Retiring a sense does not renumber anything, so no
+``phantom_pos`` runs first, then ``distinctness``, then ``example_fit`` (see
+:attr:`SenseHygieneStep.ALL`). Run this pass **before** ``retrofit --only repair`` (which
+refills the senses ``example_fit`` empties) and after ``content_hygiene``'s
+``garbage_examples`` (there is no point paying a model to decide where ``'hypernyms(['``
+belongs). Retiring a sense does not renumber anything, so no
 downstream sense id moves and no edge is re-pointed; ``Lexeme.edges`` already skips retired
 senses, so a retired duplicate leaves the projected graph on its own.
 
 Concurrency and locking (D-31)
 ------------------------------
 
-Both steps drive their ids through :func:`~opengloss_generator.runner.run_pool`, and the handler
+Every step drives its ids through :func:`~opengloss_generator.runner.run_pool`, and the handler
 holds the entry's lock across the whole of read → collect → model call → apply → write, so no
-entry is ever read outside the lock it is written under. Neither step reads any *other* entry at
-all: both questions are answered entirely from within one entry. Counters go through
+entry is ever read outside the lock it is written under. No step reads any *other* entry at
+all: all three questions are answered entirely from within one entry. ``phantom_pos``'s free
+prioritisation pass (:func:`_signalled_first`) does read every entry before the pool starts,
+outside any lock, and is the one exception that proves the rule: it decides *visit order* and
+nothing else, so a stale read costs an ordering rather than a verdict. Counters go through
 :class:`_Tally`, mutated only while holding an ``asyncio.Lock``, for the reason
 ``retrofit._Tally`` gives.
 
 :data:`~opengloss_generator.workflows.content_hygiene.PROGRESS_EVERY` is imported from
 ``content_hygiene`` so every sweep in the project reads the same in a run log. This pass keeps
 its own :class:`StepResult` rather than importing that module's, because its counters are its
-own — nothing here is demoted, retyped or rewritten. Its contract and its instructions are
-module-private for D-49's and D-50's reason: ``contracts.py`` and ``prompts.py`` are edited
-concurrently on this branch, and a self-contained module is what lets this work land without
-conflicting with that.
+own — nothing here is retyped or rewritten, and the one demotion it does make
+(``phantom_pos``'s, onto a sense it has just retired) is counted separately. Its contract and
+its instructions are module-private for D-49's and D-50's reason: ``contracts.py`` and
+``prompts.py`` are edited concurrently on this branch, and a self-contained module is what
+lets this work land without conflicting with that.
 """
 
 from __future__ import annotations
@@ -124,16 +183,24 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from opengloss_generator import spans
 from opengloss_generator.errors import BudgetExceededError, GenerationError
+from opengloss_generator.hygiene import content_words
 from opengloss_generator.log import get_logger
 from opengloss_generator.prompts import PROMPT_VERSION
 from opengloss_generator.runner import run_pool
-from opengloss_generator.schema import CANONICAL_KEY, Provenance, StageName
+from opengloss_generator.schema import (
+    CANONICAL_KEY,
+    LexemeKind,
+    PartOfSpeech,
+    Provenance,
+    RelationType,
+    StageName,
+)
 from opengloss_generator.workflows.content_hygiene import PROGRESS_EVERY
 
 if TYPE_CHECKING:
@@ -145,6 +212,7 @@ if TYPE_CHECKING:
         POSEntry,
         ReadingLevel,
         Register,
+        Relation,
         Rendition,
         Renditions,
         Sense,
@@ -158,7 +226,12 @@ __all__ = [
     "MAX_ATTEMPTS",
     "MAX_CANONICAL_EXAMPLES",
     "MOVED_OUT_NOTE",
+    "NATURAL_POS",
+    "PHANTOM_POS_INSTRUCTIONS",
+    "PHANTOM_RELATION_NOTE",
+    "PHANTOM_VERDICTS",
     "REMOVED_EXAMPLE_NOTE",
+    "RETIRED_PHANTOM_NOTE",
     "RETIRED_SENSE_NOTE",
     "SenseHygieneOutcome",
     "SenseHygieneStep",
@@ -178,6 +251,46 @@ DETERMINISTIC_MODEL = "rule:sense_hygiene"
 #: :class:`~opengloss_generator.schema.Sense` has no ``note`` field, so this is where the reason
 #: lives; formatted with the retired and surviving sense ids.
 RETIRED_SENSE_NOTE = "retired sense {retired}: duplicate of {survivor}"
+
+#: The note a ``phantom_pos`` retirement writes, one per retired sense. Shares
+#: :data:`RETIRED_SENSE_NOTE`'s ``retired sense <sid>:`` opening so one grep finds every
+#: retirement this pass makes, and carries the model's own verdict word as the reason.
+RETIRED_PHANTOM_NOTE = "retired sense {retired}: phantom_pos: {reason}"
+
+#: What a relation on a sense ``phantom_pos`` retires is demoted *to* a ``see_also`` with. The
+#: relation is not deleted — a phantom adjective entry's nominal hypernyms are wrong about the
+#: headword but they are evidence of what the generator was thinking, and ``relation_hygiene``
+#: writes its own demotions the same way (``demoted: …``), so one convention covers both.
+PHANTOM_RELATION_NOTE = "demoted: phantom_pos sense"
+
+#: The two ways a part-of-speech entry can be phantom, as the model names them and as the
+#: retirement note records them. ``genuine`` is the third answer and is not here: it is the
+#: absence of a defect rather than one of its kinds.
+PHANTOM_COMPONENT = "phantom_component"
+PHANTOM_DUPLICATE = "phantom_duplicate"
+PHANTOM_GENUINE = "genuine"
+PHANTOM_VERDICTS: tuple[str, ...] = (PHANTOM_GENUINE, PHANTOM_COMPONENT, PHANTOM_DUPLICATE)
+
+#: The parts of speech a multi-word lexeme of each kind *naturally* has. Used only as a gate:
+#: an entry carrying a part of speech outside its kind's set is asked about even when it has
+#: only one, because that is exactly the shape ``docs/QA-DIARY.md`` iteration 18 found (an
+#: adjective entry on a nominal compound). It is not evidence on its own — plenty of compounds
+#: really are adjectives ("well known") or verbs ("carry out"), which is why the answer is
+#: still bought from the model rather than inferred here. A kind absent from this map (a
+#: simplex, a proper noun) has no natural part of speech and is gated on its POS-entry count
+#: alone.
+NATURAL_POS: dict[LexemeKind, frozenset[PartOfSpeech]] = {
+    LexemeKind.COMPOUND: frozenset({PartOfSpeech.NOUN}),
+    LexemeKind.PHRASAL_VERB: frozenset({PartOfSpeech.VERB}),
+    LexemeKind.IDIOM: frozenset(
+        {
+            PartOfSpeech.NOUN,
+            PartOfSpeech.VERB,
+            PartOfSpeech.ADJECTIVE,
+            PartOfSpeech.ADVERB,
+        }
+    ),
+}
 
 #: Note prefixes for the two ways ``example_fit`` takes an example out of a sense. Each is
 #: completed with the removed text, so nothing is lost by the removal.
@@ -199,6 +312,7 @@ _ATTEMPTS_SEPARATOR = ";attempts="
 #: Sentinel prefixes, one per step. Both calls reuse the shared ``HYGIENE`` policy rather than
 #: adding a stage of their own, so the stage alone would collide with ``content_hygiene``,
 #: ``relation_hygiene``, ``retrofit`` and every other pass that does the same.
+_PHANTOM_POS_PREFIX = "sense_hygiene:phantom_pos"
 _DISTINCTNESS_PREFIX = "sense_hygiene:distinctness"
 _EXAMPLE_FIT_PREFIX = "sense_hygiene:example_fit"
 
@@ -208,18 +322,35 @@ _NO_EXAMPLE = "(none)"
 #: The fewest live senses that make either question worth asking.
 _MIN_SENSES = 2
 
+#: The fewest content words a headword needs before ``phantom_pos``'s free signal can ask which
+#: *component* a block defines. A one-word headword has no components to confuse it with.
+_MIN_COMPONENT_WORDS = 2
+
+#: The fewest live part-of-speech entries that make ``phantom_pos`` worth asking about on a
+#: lexeme whose kind has no natural part of speech. One is not enough on its own: the step
+#: never retires a lexeme's last live part of speech, so a single-POS simplex has a foregone
+#: answer.
+_MIN_POS_ENTRIES = 2
+
 
 class SenseHygieneStep:
     """Names of the steps :func:`run_sense_hygiene` can select between."""
 
+    PHANTOM_POS = "phantom_pos"
     DISTINCTNESS = "distinctness"
     EXAMPLE_FIT = "example_fit"
 
-    #: The order the steps run in. ``distinctness`` first, deliberately: it retires senses and
-    #: merges their examples onto a survivor, so running it first means ``example_fit`` is never
-    #: billed to decide where an example belongs among senses that were about to be merged, and
-    #: never files an example under a sense that is retired a moment later.
-    ALL: tuple[str, ...] = (DISTINCTNESS, EXAMPLE_FIT)
+    #: The order the steps run in. ``phantom_pos`` first, deliberately: it retires whole
+    #: part-of-speech entries that were never this headword's to begin with, and a phantom sense
+    #: must not be merged with a real one — ``distinctness`` refuses to group across parts of
+    #: speech, but it would happily merge a phantom adjective sense with a second phantom
+    #: adjective sense and leave the survivor looking like a settled meaning. Running it first
+    #: also means neither later step is billed to judge senses that are about to disappear.
+    #: ``distinctness`` before ``example_fit`` for its own reason: it retires senses and merges
+    #: their examples onto a survivor, so running it first means ``example_fit`` is never billed
+    #: to decide where an example belongs among senses that were about to be merged, and never
+    #: files an example under a sense that is retired a moment later.
+    ALL: tuple[str, ...] = (PHANTOM_POS, DISTINCTNESS, EXAMPLE_FIT)
 
 
 # --------------------------------------------------------------------------------------
@@ -237,7 +368,25 @@ class StepResult:
         entries_changed: Entries it actually wrote.
         groups_merged: Duplicate groups applied (``distinctness`` only) — one per group,
             whatever the number of senses in it.
-        senses_retired: Senses marked retired as duplicates of a survivor.
+        pos_entries_judged: Part-of-speech entries a verdict was bought for (``phantom_pos``
+            only). Several per call: one call covers a whole entry.
+        pos_entries_retired: Part-of-speech entries found phantom and retired whole.
+        retired_component: Of those, the ones whose definitions defined a component word or a
+            different lexeme (``phantom_component``).
+        retired_duplicate: Of those, the ones restating another part-of-speech entry's senses
+            under a part of speech the headword does not have (``phantom_duplicate``).
+        skipped_last_pos: Part-of-speech entries called phantom and left alone anyway, because
+            retiring them would have left the lexeme with no live part of speech at all. A
+            *report*: the entry needs a rewritten sense, which is not this step's job.
+        relations_demoted: Relations on a retired phantom sense turned into ``see_also`` rather
+            than deleted. A consequence of a retirement already counted, so it is deliberately
+            absent from :attr:`changed`.
+        signalled: Part-of-speech entries the free component-definition signal fired on
+            (:func:`_defines_a_component`). Never acted on — it orders the sweep and is
+            reported so the signal's precision against the model can be measured.
+        signalled_phantom: Of those, the ones the model then called phantom.
+        senses_retired: Senses marked retired — as duplicates of a survivor by
+            ``distinctness``, or as part of a phantom part-of-speech entry by ``phantom_pos``.
         examples_moved: Canonical examples refiled under the sense they illustrate, each with
             its level renditions.
         examples_removed: Canonical examples taken out of a sense — either because they
@@ -258,6 +407,14 @@ class StepResult:
     entries_scanned: int = 0
     entries_changed: int = 0
     groups_merged: int = 0
+    pos_entries_judged: int = 0
+    pos_entries_retired: int = 0
+    retired_component: int = 0
+    retired_duplicate: int = 0
+    skipped_last_pos: int = 0
+    relations_demoted: int = 0
+    signalled: int = 0
+    signalled_phantom: int = 0
     senses_retired: int = 0
     examples_moved: int = 0
     examples_removed: int = 0
@@ -273,7 +430,10 @@ class StepResult:
 
         ``groups_merged`` is deliberately absent: it describes the same edits
         ``senses_retired`` counts, and adding both would count one merge twice.
-        ``senses_emptied`` is absent because it is a report about an edit already counted.
+        ``senses_emptied`` is absent because it is a report about an edit already counted, and
+        so are ``pos_entries_retired`` and ``relations_demoted``: every sense a phantom
+        part-of-speech entry loses is already in ``senses_retired``, and every relation demoted
+        sits on one of those senses.
         """
         return self.senses_retired + self.examples_moved + self.examples_removed
 
@@ -283,6 +443,14 @@ class StepResult:
             "entries_scanned": self.entries_scanned,
             "entries_changed": self.entries_changed,
             "groups_merged": self.groups_merged,
+            "pos_entries_judged": self.pos_entries_judged,
+            "pos_entries_retired": self.pos_entries_retired,
+            "retired_component": self.retired_component,
+            "retired_duplicate": self.retired_duplicate,
+            "skipped_last_pos": self.skipped_last_pos,
+            "relations_demoted": self.relations_demoted,
+            "signalled": self.signalled,
+            "signalled_phantom": self.signalled_phantom,
             "senses_retired": self.senses_retired,
             "examples_moved": self.examples_moved,
             "examples_removed": self.examples_removed,
@@ -384,6 +552,14 @@ class _Tally:
         lexeme_id: str,
         *,
         groups_merged: int = 0,
+        pos_entries_judged: int = 0,
+        pos_entries_retired: int = 0,
+        retired_component: int = 0,
+        retired_duplicate: int = 0,
+        skipped_last_pos: int = 0,
+        relations_demoted: int = 0,
+        signalled: int = 0,
+        signalled_phantom: int = 0,
         senses_retired: int = 0,
         examples_moved: int = 0,
         examples_removed: int = 0,
@@ -395,6 +571,14 @@ class _Tally:
         Args:
             lexeme_id: The entry visited.
             groups_merged: Duplicate groups applied on this entry.
+            pos_entries_judged: Part-of-speech entries judged on this entry.
+            pos_entries_retired: Part-of-speech entries retired whole on this entry.
+            retired_component: Of those, the ``phantom_component`` ones.
+            retired_duplicate: Of those, the ``phantom_duplicate`` ones.
+            skipped_last_pos: Phantom verdicts left unapplied to keep one live part of speech.
+            relations_demoted: Relations on this entry's retired phantom senses demoted.
+            signalled: Part-of-speech entries the free signal fired on.
+            signalled_phantom: Of those, the ones the model called phantom.
             senses_retired: Senses retired on this entry.
             examples_moved: Examples refiled on this entry.
             examples_removed: Examples taken out of a sense on this entry.
@@ -406,6 +590,14 @@ class _Tally:
             self._visited += 1
             result.entries_scanned += 1
             result.groups_merged += groups_merged
+            result.pos_entries_judged += pos_entries_judged
+            result.pos_entries_retired += pos_entries_retired
+            result.retired_component += retired_component
+            result.retired_duplicate += retired_duplicate
+            result.skipped_last_pos += skipped_last_pos
+            result.relations_demoted += relations_demoted
+            result.signalled += signalled
+            result.signalled_phantom += signalled_phantom
             result.senses_retired += senses_retired
             result.examples_moved += examples_moved
             result.examples_removed += examples_removed
@@ -733,7 +925,649 @@ def _marker_note(prefix: str, refs: Iterable[str], attempt: int) -> str:
 
 
 # --------------------------------------------------------------------------------------
-# Step 1 — distinctness
+# Step 1 — phantom_pos
+# --------------------------------------------------------------------------------------
+#
+# The instructions and the output contract live here, not in prompts.py / contracts.py, for the
+# reason the two later steps give: a self-contained call site cannot conflict with the
+# concurrent edits those files are under. Nothing outside this module depends on the names
+# below.
+
+
+#: Instructions for this step's one nano call per entry. Byte-stable, for the reason
+#: :data:`DISTINCTNESS_INSTRUCTIONS` is. Stated around what a *genuine* part of speech looks
+#: like rather than around the defect, because a model asked only "which of these is fake?"
+#: will find fakes, and a wrong answer here retires a real meaning.
+PHANTOM_POS_INSTRUCTIONS = """\
+You are auditing which PARTS OF SPEECH a dictionary has given one headword. You are shown the \
+headword, what kind of lexical item it is, and every part-of-speech entry the dictionary \
+currently holds for it, numbered, each with the definitions filed under it. For each numbered \
+part-of-speech entry, say whether it genuinely belongs to this headword.
+
+WHY THIS IS ASKED. The dictionary these entries come from wrote a definition under every part \
+of speech its generator guessed at. For a single word that is usually harmless. For a \
+MULTI-WORD headword it is not. Asked for the adjective of "blank cell", the generator defined \
+the adjective "blank" -- one component of the headword, a different word entirely -- and filed \
+it under "blank cell" as though the whole compound were an adjective. There is no adjective \
+"blank cell". The same thing happens with a verb entry that defines only the verb component of \
+a compound, and with a part-of-speech entry that restates the headword's real definition under \
+a part of speech the headword is never actually used in.
+
+THE THREE ANSWERS.
+
+- genuine. The definitions under this part of speech really are definitions of THIS headword, \
+used as THIS part of speech. Someone could use the whole headword, unchanged, in a sentence in \
+that role, meaning what these definitions say. This is the ordinary answer and most \
+part-of-speech entries deserve it.
+- phantom_component. The definitions define a DIFFERENT lexeme: one component word of a \
+multi-word headword, or a word derived from it, rather than the headword itself. The clearest \
+sign is that the definition would be exactly right printed under that component word on its \
+own, and says nothing at all about what the whole headword means. A second sign is inflected \
+forms belonging to the component rather than to the headword.
+- phantom_duplicate. The definitions say what another listed part-of-speech entry already \
+says, restated under a part of speech the headword does not have in that use. The commonest \
+shapes are a noun-shaped definition ("a place where...", "the act of...", "a person who...") \
+filed under an adjective, and an adjective-shaped one ("having...", "relating to...", \
+"describing...") filed under a noun.
+
+HOW TO DECIDE. Read the definitions filed under the numbered part of speech and ask one \
+question: could a speaker use the WHOLE headword, unchanged and without adding words to it, in \
+a sentence in that role, meaning this? "The cell was blank" uses the adjective "blank", not the \
+compound "blank cell", so an adjective entry defining "not filled in" does not survive the \
+question. "It was a blank cell" uses the noun, so the noun entry does.
+
+WHAT IS NOT EVIDENCE. That the headword is several words is not evidence: plenty of multi-word \
+headwords genuinely are adjectives ("well known", "state of the art"), adverbs ("part time") \
+or verbs ("carry out"), and a phrasal verb genuinely has a noun form as often as not. That a \
+definition is short, badly worded, or narrower than the others is not evidence either -- this \
+question is about whether the part of speech exists at all, not about how well it is written. \
+That two parts of speech are RELATED in the ordinary way a noun and its verb are related is \
+not evidence: "an act of running" under the noun and "to move quickly on foot" under the verb \
+are two genuine entries, not a duplicate.
+
+BE CONSERVATIVE. A phantom verdict retires every definition filed under that part of speech \
+from the dictionary. A wrong one hides a meaning a reader was looking for, and there is nothing \
+downstream to catch it. When the definitions are a plausible reading of the whole headword in \
+that role, or when you are simply not sure, answer genuine.
+
+ANSWER FORMAT. Give exactly one verdict for every numbered part-of-speech entry you were \
+shown, referring to each by the number it was listed under, and nothing for numbers you were \
+not shown.
+
+WORKED EXAMPLES.
+
+Headword: "blank cell" (compound)
+
+  1. [noun] An empty cell in a table, spreadsheet, form, or grid that currently contains no \
+data.
+  2. [adjective] Not filled in or completed; having no marks, data, or content yet present. | \
+Lacking expression or emotion; not showing understanding or reaction.
+
+Verdicts: 1 genuine, 2 phantom_component. Both adjective definitions define the ordinary \
+adjective "blank" -- the second one ("a blank look") is not even about cells. Nobody says "the \
+table was blank cell".
+
+Headword: "field trip" (compound)
+
+  1. [noun] A visit made by students to a place away from their usual classroom, for study.
+  2. [adjective] Relating to or involving a visit made by students away from the classroom.
+
+Verdicts: 1 genuine, 2 phantom_duplicate. The adjective entry says exactly what the noun entry \
+says, turned into an adjective definition; "field trip" is a noun that can sit in front of \
+another noun ("field trip permission"), which every noun can do, and that is not an adjective \
+sense.
+
+Headword: "part time" (compound)
+
+  1. [adjective] Working or done for less than the usual number of hours.
+  2. [adverb] For less than the full number of usual working hours.
+
+Verdicts: 1 genuine, 2 genuine. The whole headword really is used both ways -- "a part time \
+job" and "she works part time" -- and neither definition is a definition of "part" or of \
+"time". Two closely related definitions under two parts of speech that the headword genuinely \
+has are two genuine entries."""
+
+
+class _DraftPOSVerdict(BaseModel):
+    """One part-of-speech entry's verdict."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    pos_ref: Annotated[int, Field(ge=1)]
+    verdict: Literal["genuine", "phantom_component", "phantom_duplicate"]
+
+
+class _DraftPOSVerdicts(BaseModel):
+    """Every part-of-speech verdict for one entry, produced together.
+
+    One call per entry rather than per part-of-speech entry: ``phantom_duplicate`` is a claim
+    about *two* of them at once, so a per-entry question could not be asked at all.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    verdicts: list[_DraftPOSVerdict]
+
+
+@dataclass(slots=True)
+class _POSRef:
+    """One live part-of-speech entry, as the model is shown it and as the answer refers back.
+
+    Attributes:
+        pos_entry: The part-of-speech entry itself, mutated in place when it is retired.
+        senses: Its live senses, paired with their derived positional ids (D-1).
+        glosses: Their canonical definitions, shown to the model and hashed into the marker.
+        signalled: Whether the free component-definition signal fired on it.
+    """
+
+    pos_entry: POSEntry
+    senses: list[tuple[Sense, str]]
+    glosses: list[str]
+    signalled: bool
+
+
+@dataclass(slots=True)
+class _PhantomCounts:
+    """What one entry's ``phantom_pos`` call did.
+
+    Attributes:
+        answered: Whether a call actually completed. A failed call leaves no marker, so the
+            entry is tried again on the next sweep.
+        judged: Part-of-speech entries a verdict was returned for.
+        retired: Part-of-speech entries retired whole.
+        component: Of those, the ``phantom_component`` ones.
+        duplicate: Of those, the ``phantom_duplicate`` ones.
+        skipped_last: Phantom verdicts deliberately not applied, to leave one live part of
+            speech on the lexeme.
+        senses_retired: Senses retired across every retired part-of-speech entry.
+        relations_demoted: Relations on those senses demoted to ``see_also``.
+        signalled: Part-of-speech entries the free signal fired on.
+        signalled_phantom: Of those, the ones the model called phantom.
+        rejected: Verdicts refused — a ref that was not listed, or a second verdict for a ref
+            already answered.
+    """
+
+    answered: bool = False
+    judged: int = 0
+    retired: int = 0
+    component: int = 0
+    duplicate: int = 0
+    skipped_last: int = 0
+    senses_retired: int = 0
+    relations_demoted: int = 0
+    signalled: int = 0
+    signalled_phantom: int = 0
+    rejected: int = 0
+
+
+def _live_pos_entries(entry: Lexeme) -> list[POSEntry]:
+    """Return every part-of-speech entry that still carries at least one live sense.
+
+    A part-of-speech entry whose senses were all retired by some earlier pass is already gone
+    from the dictionary a reader sees, so it is neither listed for the model nor counted
+    towards the last-live-part-of-speech guard.
+
+    Args:
+        entry: The entry to inspect. Never mutated.
+
+    Returns:
+        The live part-of-speech entries, in document order.
+    """
+    return [
+        pos_entry
+        for pos_entry in entry.pos_entries
+        if any(not sense.retired for sense in pos_entry.senses)
+    ]
+
+
+def _has_unnatural_pos(entry: Lexeme, live: Sequence[POSEntry]) -> bool:
+    """Return whether a multi-word kind carries a part of speech outside its natural set.
+
+    The second half of this step's gate (:data:`NATURAL_POS`). It is a *question* gate, not
+    evidence: a compound really can be an adjective, and the verdict is still bought from the
+    model. A kind with no entry in :data:`NATURAL_POS` — every simplex, every proper noun —
+    never qualifies this way.
+
+    Args:
+        entry: The entry to inspect. Never mutated.
+        live: Its live part-of-speech entries.
+
+    Returns:
+        Whether any of them sits outside the kind's natural set.
+    """
+    natural = NATURAL_POS.get(entry.kind)
+    if natural is None:
+        return False
+    return any(pos_entry.pos not in natural for pos_entry in live)
+
+
+def _defines_a_component(entry: Lexeme, pos_entry: POSEntry) -> bool:
+    """Return whether a part-of-speech entry looks like a definition of one component word.
+
+    The free signal, computed from the entry alone and costing nothing. It fires when all three
+    of these hold of a **multi-word** headword's part-of-speech entry:
+
+    1. every live canonical gloss under it names **none** of the headword's content words — a
+       compound's own definition almost always repeats its head noun ("an empty *cell* in a
+       table"), and one that repeats nothing is not talking about the compound;
+    2. the part-of-speech entry's morphology names **exactly one** of those content words as
+       the standalone word it inflects ("blanker", "blankest", "blankly" for *blank cell*);
+    3. and none of its forms is a form of the whole headword ("blank cells"), which would say
+       the block is about the compound after all.
+
+    Measured on the D-76 pilot sample (400 tier-4 entries, 408 blocks judged): it fires on 41
+    blocks, 22 of which the model then called phantom — 54% precision against a 23% base rate,
+    but only 23% recall of the 95 blocks actually retired. Better than chance and nowhere near
+    a substitute, which is why it *prioritises* the sweep (:func:`_signalled_first`) and is
+    reported for its precision, and why the verdict is still bought for every listed
+    part-of-speech entry. It is deliberately **not** shown to the model: a hint of the answer
+    inside the prompt is not an independent judgement of it.
+
+    Args:
+        entry: The entry the part-of-speech block belongs to. Never mutated.
+        pos_entry: The block to test. Never mutated.
+
+    Returns:
+        Whether the block looks like a definition of one of the headword's component words.
+    """
+    parts = content_words(entry.headword)
+    if len(parts) < _MIN_COMPONENT_WORDS:
+        return False
+    glosses = [sense.canonical_gloss() for sense in pos_entry.senses if not sense.retired]
+    if not glosses:
+        return False
+    if any(parts & content_words(gloss) for gloss in glosses):
+        return False
+    inflected: set[str] = set()
+    for form in (*pos_entry.morphology.inflected_forms(), *pos_entry.morphology.derivations):
+        tokens = content_words(form)
+        named = {part for part in parts if any(token.startswith(part) for token in tokens)}
+        if len(named) > 1:
+            return False
+        inflected |= named
+    return len(inflected) == 1
+
+
+def _phantom_refs(entry: Lexeme) -> list[_POSRef]:
+    """Return the part-of-speech entries this step lists, or ``[]`` when it lists none.
+
+    Every live part-of-speech entry is listed once the gate is passed, not only the suspicious
+    one: ``phantom_duplicate`` is a claim that one block restates another, which cannot be
+    judged without both of them in front of the model.
+
+    The gate is two clauses. An entry with two or more live parts of speech qualifies, because
+    one of them can be retired. A compound, idiom or phrasal verb carrying a part of speech
+    outside its kind's natural set qualifies even with one, because that is the measured shape
+    of the defect — the verdict there can only ever be a *report* (the last live part of speech
+    is never retired), and it is bought anyway because a one-block compound whose only block is
+    a component definition is an entry with no correct definition at all, which is worth
+    knowing and is not worth guessing at.
+
+    Args:
+        entry: The entry to inspect. Never mutated.
+
+    Returns:
+        One ref per live part-of-speech entry in document order, or an empty list.
+    """
+    live = _live_pos_entries(entry)
+    if len(live) < _MIN_POS_ENTRIES and not _has_unnatural_pos(entry, live):
+        return []
+    grouped: dict[int, list[tuple[Sense, str]]] = {id(pos_entry): [] for pos_entry in live}
+    for pos_entry, sense, sense_id in _live_senses(entry):
+        bucket = grouped.get(id(pos_entry))
+        if bucket is not None:
+            bucket.append((sense, sense_id))
+    return [
+        _POSRef(
+            pos_entry=pos_entry,
+            senses=grouped[id(pos_entry)],
+            glosses=[sense.canonical_gloss() for sense, _ in grouped[id(pos_entry)]],
+            signalled=_defines_a_component(entry, pos_entry),
+        )
+        for pos_entry in live
+    ]
+
+
+def _pos_ref_id(ref: _POSRef) -> str:
+    """Return the marker ref for one part-of-speech entry: its part of speech and gloss set.
+
+    Keyed on the glosses rather than on the sense ids so that a block whose definitions were
+    *rewritten* since the last sweep earns a fresh verdict, which is the case the whole
+    question turns on — the same three sense ids can hold three different definitions.
+
+    Args:
+        ref: The listed part-of-speech entry.
+
+    Returns:
+        ``<pos>:<digest of its canonical glosses>``.
+    """
+    return f"{ref.pos_entry.pos.value}:{_ref_digest(ref.glosses)}"
+
+
+def _build_phantom_pos_prompt(entry: Lexeme, refs: Sequence[_POSRef]) -> str:
+    """Return the volatile half of this step's prompt.
+
+    Args:
+        entry: The entry being judged, for its headword and kind.
+        refs: The part-of-speech entries, in the order the model should answer about them — a
+            ``pos_ref`` in the reply is a 1-based position into this sequence.
+
+    Returns:
+        The per-call prompt body.
+    """
+    lines = [
+        f"  {position}. [{ref.pos_entry.pos.value}] "
+        + " | ".join(_one_line(gloss) for gloss in ref.glosses)
+        for position, ref in enumerate(refs, start=1)
+    ]
+    listed = "\n".join(lines)
+    return (
+        f"Headword: {entry.headword}\n"
+        f"Kind: {entry.kind.value}\n"
+        f"Parts of speech ({len(refs)}):\n{listed}"
+    )
+
+
+def _demote(relation: Relation, note: str, provenance_id: str) -> None:
+    """Demote one relation to ``see_also`` in place, keeping any note it already carried.
+
+    Mirrors ``relation_hygiene._retype``, which is module-private there. Nothing is deleted:
+    a phantom adjective entry's nominal hypernyms are wrong about the headword, but a
+    ``see_also`` still says the two terms have something to do with each other, and the reason
+    is written where a later reader will find it.
+
+    Args:
+        relation: The relation to demote, mutated in place.
+        note: Why, prepended to whatever note the relation already had.
+        provenance_id: The entry's record for this edit.
+    """
+    relation.type = RelationType.SEE_ALSO
+    relation.note = note if relation.note is None else f"{note} | {relation.note}"
+    relation.provenance_id = provenance_id
+
+
+def _kept_position(entry: Lexeme, refs: Sequence[_POSRef], phantoms: dict[int, str]) -> int | None:
+    """Return which phantom verdict must go unapplied, or ``None`` when none must.
+
+    A lexeme never loses its last live part of speech: an entry with no live sense at all is not
+    a smaller dictionary, it is a broken one, and every consumer of this store — the exports,
+    the graph projection, the QA judge — reads the live senses. When the model calls *every*
+    listed block phantom, one is kept: the one whose part of speech is natural for the lexeme's
+    kind, and failing that the first listed, which is document order and therefore stable.
+
+    Args:
+        entry: The entry being judged.
+        refs: The part-of-speech entries as they were listed.
+        phantoms: Position to verdict word, for the blocks called phantom.
+
+    Returns:
+        The position to leave alone, or ``None`` when at least one block survives anyway.
+    """
+    if len(phantoms) < len(refs):
+        return None
+    natural = NATURAL_POS.get(entry.kind)
+    if natural is not None:
+        for position, ref in enumerate(refs):
+            if ref.pos_entry.pos in natural:
+                return position
+    return 0
+
+
+def _retire_pos_entry(entry: Lexeme, ref: _POSRef, reason: str) -> tuple[int, int]:
+    """Retire every live sense of one phantom part-of-speech entry, demoting its relations.
+
+    Nothing is deleted and nothing is renumbered (D-1): each sense is marked
+    :attr:`~opengloss_generator.schema.Sense.retired` and keeps everything it had, and each of
+    its relations becomes a ``see_also`` carrying :data:`PHANTOM_RELATION_NOTE` — a relation
+    asserted by a sense that should never have existed must not keep claiming to be a hypernym,
+    and ``Lexeme.edges`` skips retired senses anyway, so the demotion is what a reader of the
+    stored list sees rather than a change to the projected graph.
+
+    Args:
+        entry: The entry the block belongs to, mutated in place.
+        ref: The block to retire.
+        reason: The model's verdict word, written into the note.
+
+    Returns:
+        ``(senses retired, relations demoted)``.
+    """
+    retired = 0
+    demoted = 0
+    for sense, sense_id in ref.senses:
+        provenance_id = entry.add_provenance(
+            _rule_provenance(RETIRED_PHANTOM_NOTE.format(retired=sense_id, reason=reason))
+        )
+        for relation in sense.relations:
+            if relation.type is RelationType.SEE_ALSO:
+                continue
+            _demote(relation, f"{PHANTOM_RELATION_NOTE} {sense_id}", provenance_id)
+            demoted += 1
+        sense.retired = True
+        retired += 1
+    _LOG.debug(
+        "sense_hygiene_phantom_pos_retired",
+        headword=entry.headword,
+        pos=ref.pos_entry.pos.value,
+        reason=reason,
+        senses=retired,
+        relations_demoted=demoted,
+    )
+    return retired, demoted
+
+
+def _collect_phantoms(
+    entry: Lexeme, refs: Sequence[_POSRef], verdicts: Sequence[_DraftPOSVerdict]
+) -> tuple[dict[int, str], int, int]:
+    """Return the positions the model called phantom, and how many verdicts were refused.
+
+    A verdict is refused when it names a position that was not listed or repeats one already
+    answered; the rest of the answer stands, because each verdict is its own claim about its own
+    block rather than one claim about a set (which is what makes ``distinctness`` refuse a group
+    whole).
+
+    Args:
+        entry: The entry being judged, for the log line.
+        refs: The blocks as they were listed.
+        verdicts: The answer.
+
+    Returns:
+        ``({position: verdict word}, blocks answered for, refused count)``.
+    """
+    phantoms: dict[int, str] = {}
+    answered: set[int] = set()
+    rejected = 0
+    for verdict in verdicts:
+        position = verdict.pos_ref - 1
+        if not 0 <= position < len(refs) or position in answered:
+            rejected += 1
+            _LOG.info(
+                "sense_hygiene_phantom_verdict_refused",
+                headword=entry.headword,
+                pos_ref=verdict.pos_ref,
+                listed=len(refs),
+            )
+            continue
+        answered.add(position)
+        if verdict.verdict != PHANTOM_GENUINE:
+            phantoms[position] = verdict.verdict
+    return phantoms, len(answered), rejected
+
+
+def _apply_phantom_verdicts(
+    entry: Lexeme, refs: Sequence[_POSRef], verdicts: Sequence[_DraftPOSVerdict]
+) -> _PhantomCounts:
+    """Retire every part-of-speech entry the model called phantom, bar the last live one.
+
+    Args:
+        entry: The entry being judged, mutated in place.
+        refs: The blocks as they were listed.
+        verdicts: The answer.
+
+    Returns:
+        The counts for this entry, with :attr:`_PhantomCounts.answered` left to the caller.
+    """
+    counts = _PhantomCounts()
+    counts.signalled = sum(1 for ref in refs if ref.signalled)
+    phantoms, counts.judged, counts.rejected = _collect_phantoms(entry, refs, verdicts)
+    counts.signalled_phantom = sum(1 for position in phantoms if refs[position].signalled)
+    kept = _kept_position(entry, refs, phantoms)
+    for position, reason in sorted(phantoms.items()):
+        if position == kept:
+            counts.skipped_last += 1
+            _LOG.info(
+                "sense_hygiene_phantom_pos_kept_last",
+                headword=entry.headword,
+                pos=refs[position].pos_entry.pos.value,
+                reason=reason,
+            )
+            continue
+        retired, demoted = _retire_pos_entry(entry, refs[position], reason)
+        counts.retired += 1
+        counts.senses_retired += retired
+        counts.relations_demoted += demoted
+        if reason == PHANTOM_COMPONENT:
+            counts.component += 1
+        else:
+            counts.duplicate += 1
+    return counts
+
+
+async def _decide_phantom_pos(
+    entry: Lexeme, refs: Sequence[_POSRef], runner: StageRunner, tally: _Tally
+) -> _PhantomCounts:
+    """Ask nano which of an entry's parts of speech are not this headword's, and retire them.
+
+    Args:
+        entry: The entry being judged, mutated in place.
+        refs: The blocks, in the order the model is shown them.
+        runner: The stage runner.
+        tally: The step tally, for the call and its cost.
+
+    Returns:
+        The counts for this entry.
+
+    Raises:
+        BudgetExceededError: A budget stop is a run-level condition and propagates.
+    """
+    try:
+        stage_result = await runner.run(
+            # Reuses hygiene's model policy (nano), like the other two steps: a strict-enum
+            # verdict about a definition's subject is a structural question, not prose.
+            stage=StageName.HYGIENE,
+            output_type=_DraftPOSVerdicts,
+            instructions=PHANTOM_POS_INSTRUCTIONS,
+            prompt=_build_phantom_pos_prompt(entry, refs),
+            prompt_version=PROMPT_VERSION,
+        )
+    except BudgetExceededError:
+        raise
+    except GenerationError as exc:
+        _LOG.warning("sense_hygiene_phantom_pos_failed", headword=entry.headword, error=str(exc))
+        return _PhantomCounts(signalled=sum(1 for ref in refs if ref.signalled))
+
+    await tally.call(stage_result.cost_usd)
+    entry.add_provenance(stage_result.provenance)
+    counts = _apply_phantom_verdicts(entry, refs, stage_result.output.verdicts)
+    counts.answered = True
+    return counts
+
+
+def _signalled_first(store: LexemeStore, ids: Sequence[str]) -> list[str]:
+    """Return ``ids`` reordered so the entries the free signal fires on are visited first.
+
+    One free read per id before the pool starts, and the result affects **ordering only** — no
+    verdict, no edit and no marker depends on it, so nothing here is read under a lock that it
+    is later written under (D-31). What it buys is that a sweep stopped by its budget has spent
+    that budget on the entries most likely to carry the defect rather than on an alphabetical
+    prefix of the store.
+
+    Args:
+        store: The store being swept.
+        ids: The entry ids to visit, in the caller's order.
+
+    Returns:
+        The same ids: the signalled ones first, each group otherwise in the caller's order.
+    """
+    signalled: list[str] = []
+    rest: list[str] = []
+    for lexeme_id in ids:
+        entry = store.read(lexeme_id)
+        hit = entry is not None and any(
+            _defines_a_component(entry, pos_entry) for pos_entry in _live_pos_entries(entry)
+        )
+        (signalled if hit else rest).append(lexeme_id)
+    _LOG.info("sense_hygiene_phantom_pos_prioritised", signalled=len(signalled), other=len(rest))
+    return signalled + rest
+
+
+async def _phantom_pos_step(
+    store: LexemeStore,
+    runner: StageRunner,
+    ids: Sequence[str],
+    *,
+    workers: int,
+    stop_event: asyncio.Event | None,
+    changed_ids: set[str],
+) -> StepResult:
+    """Retire every part-of-speech entry that is not this headword's, one nano call per entry.
+
+    Args:
+        store: The store to clean. Each entry is read, judged — including its one call when an
+            attempt is due — and written inside one hold of its own lock.
+        runner: The stage runner.
+        ids: The entry ids to visit.
+        workers: Pool size.
+        stop_event: Shared stop event.
+        changed_ids: Run-level set of entries written by any step.
+
+    Returns:
+        The step's :class:`StepResult`.
+    """
+    tally = _Tally(SenseHygieneStep.PHANTOM_POS, changed_ids)
+
+    async def judge(lexeme_id: str) -> None:
+        counts = _PhantomCounts()
+        async with store.locked(lexeme_id):
+            entry = store.read(lexeme_id)
+            if entry is None:
+                return
+            refs = _phantom_refs(entry)
+            attempt = _attempt_number(entry, _PHANTOM_POS_PREFIX, [_pos_ref_id(r) for r in refs])
+            if attempt is not None:
+                counts = await _decide_phantom_pos(entry, refs, runner, tally)
+                if counts.answered:
+                    # The digest is over the part-of-speech set as the retirements leave it, and
+                    # it is recomputed exactly the way the next sweep will compute it — so an
+                    # entry nothing changed on is free next time, and one whose definitions are
+                    # later rewritten still earns its second attempt.
+                    surviving = [_pos_ref_id(ref) for ref in _phantom_refs(entry)]
+                    entry.add_provenance(
+                        _rule_provenance(_marker_note(_PHANTOM_POS_PREFIX, surviving, attempt))
+                    )
+                    # Written even when nothing was retired: the marker is the only thing that
+                    # call bought, and losing it re-bills the same answer.
+                    store.write(entry)
+        await tally.entry(
+            lexeme_id,
+            pos_entries_judged=counts.judged,
+            pos_entries_retired=counts.retired,
+            retired_component=counts.component,
+            retired_duplicate=counts.duplicate,
+            skipped_last_pos=counts.skipped_last,
+            relations_demoted=counts.relations_demoted,
+            signalled=counts.signalled,
+            signalled_phantom=counts.signalled_phantom,
+            senses_retired=counts.senses_retired,
+            rejected=counts.rejected,
+        )
+
+    ordered = _signalled_first(store, ids)
+    await _drive(ordered, judge, tally, workers=workers, stop_event=stop_event)
+    return tally.result
+
+
+# --------------------------------------------------------------------------------------
+# Step 2 — distinctness
 # --------------------------------------------------------------------------------------
 #
 # The instructions and the output contract live here, not in prompts.py / contracts.py: those
@@ -1159,7 +1993,7 @@ async def _distinctness_step(
 
 
 # --------------------------------------------------------------------------------------
-# Step 2 — example_fit
+# Step 3 — example_fit
 # --------------------------------------------------------------------------------------
 
 
@@ -1652,6 +2486,7 @@ async def _example_fit_step(
 type _StepFn = Callable[..., Awaitable[StepResult]]
 
 _STEP_FUNCTIONS: dict[str, _StepFn] = {
+    SenseHygieneStep.PHANTOM_POS: _phantom_pos_step,
     SenseHygieneStep.DISTINCTNESS: _distinctness_step,
     SenseHygieneStep.EXAMPLE_FIT: _example_fit_step,
 }
@@ -1666,9 +2501,13 @@ async def run_sense_hygiene(
     only: set[str] | None = None,
     lexeme_ids: Sequence[str] | None = None,
 ) -> SenseHygieneOutcome:
-    """Merge near-duplicate senses and refile examples under the sense they illustrate.
+    """Retire phantom parts of speech, merge near-duplicate senses, refile misplaced examples.
 
-    Two steps, described in full in the module docstring. ``distinctness`` retires a sense that
+    Three steps, described in full in the module docstring. ``phantom_pos`` retires whole
+    part-of-speech entries whose definitions are not this headword's — a compound carrying an
+    adjective entry that defines one of its component words — demoting their relations rather
+    than dropping them, and never taking a lexeme's last live part of speech. ``distinctness``
+    retires a sense that
     says what a lower-indexed sense already says, after merging onto that survivor everything it
     lacked; ``example_fit`` moves a canonical example — with its level renditions — to the sense
     it actually illustrates, or takes it out with its text preserved in a note when it
@@ -1682,7 +2521,7 @@ async def run_sense_hygiene(
 
     Args:
         store: The store to repair.
-        runner: The stage runner. Both steps make one nano call per qualifying entry on the
+        runner: The stage runner. Every step makes one nano call per qualifying entry on the
             ``HYGIENE`` policy; an entry with a single live sense never costs anything.
         workers: Pool size for every step.
         stop_event: Shared stop event. A budget stop sets it; a caller may also set it from

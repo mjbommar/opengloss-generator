@@ -1,0 +1,45 @@
+{
+  "cache_hit_rate": 0.0,
+  "cached_input_tokens": 0,
+  "calls": 199,
+  "cost_by_model": {
+    "gpt-5.4-nano": 0.049922
+  },
+  "cost_by_stage": {
+    "hygiene": 0.049922
+  },
+  "cost_usd": 0.049922,
+  "duration_seconds": 54.612,
+  "entries_changed": 83,
+  "flex_downgraded": false,
+  "input_tokens": 291678,
+  "items_failed": 0,
+  "items_succeeded": 0,
+  "output_tokens": 33207,
+  "run_id": "20260906T234331Z-871fb83c",
+  "steps": {
+    "phantom_pos": {
+      "calls": 199,
+      "cost_usd": 0.049922,
+      "entries_changed": 83,
+      "entries_scanned": 400,
+      "examples_moved": 0,
+      "examples_removed": 0,
+      "groups_merged": 0,
+      "pos_entries_judged": 408,
+      "pos_entries_retired": 95,
+      "rejected": 0,
+      "relations_demoted": 937,
+      "retired_component": 61,
+      "retired_duplicate": 34,
+      "senses_emptied": 0,
+      "senses_retired": 169,
+      "signalled": 41,
+      "signalled_phantom": 22,
+      "skipped_last_pos": 0,
+      "stopped_reason": null
+    }
+  },
+  "stop_reason": "completed",
+  "stopped_reason": null
+}

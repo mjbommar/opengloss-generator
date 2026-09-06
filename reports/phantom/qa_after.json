@@ -1,0 +1,81 @@
+{
+  "calls": 20,
+  "cost_usd": 1.240695,
+  "cost_usd_per_entry": 0.062035,
+  "encyclopedia_defects": 1,
+  "encyclopedia_judged": 20,
+  "entries_failed": 0,
+  "entries_judged": 20,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "awkward_style": 7,
+    "factual_error": 2,
+    "grammar_error": 2,
+    "hallucination": 2,
+    "missing_content": 4,
+    "off_topic": 1,
+    "other": 2,
+    "scope_mismatch": 4,
+    "terminology_error": 16,
+    "unsupported_addition": 3
+  },
+  "mean_score": 68.95,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.05,
+    "example grade_1/plain": 0.0,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.0811
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 20,
+    "example grade_1/plain": 42,
+    "gloss college/plain": 37,
+    "gloss grade_1/plain": 37
+  },
+  "score_buckets": {
+    "60-79": 17,
+    "80-89": 1,
+    "90+": 0,
+    "<60": 2
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 6,
+    "domain_fits": 6,
+    "examples_fit_sense": 15,
+    "examples_natural": 8,
+    "gloss_accurate": 7,
+    "relations_valid": 26
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.1429,
+    "domain_fits": 0.1429,
+    "examples_fit_sense": 0.3571,
+    "examples_natural": 0.1905,
+    "gloss_accurate": 0.1667,
+    "relations_valid": 0.619
+  },
+  "senses_judged": 42,
+  "stopped_reason": null,
+  "top_issues": [
+    "adjective 0 relations: ideology, rhetoric",
+    "notes: The adjective is given noun hypernyms (ideology, rhetoric), which are things the word can describe, not categories it belongs to.",
+    "noun 0 gloss: Anno is not a preposition; it is the ablative singular of annus used adverbially",
+    "noun 0 relations: ante, post, dating formula, year marker, chronological label, undated",
+    "notes: Several examples are near-identical restatements of the same anno 1521 dating line.",
+    "adjective 0 gloss: Restricts the meaning to teaching and learning; the adjective applies generally (medicine, policy, practice).",
+    "adjective 0 relations: evidentiary basis, ground-based, grounded, anecdotic",
+    "notes: The single sense narrows a general-purpose adjective to education; the broader use (evidence-based medicine, policy) is absent. Several listed synonyms are not adjectival equivalents.",
+    "noun 0 relations: Islamic scripture unit, seven verse surah",
+    "noun 1 relations: secular commemoration, nonreligious rite, funeral recitation, memorial recitation",
+    "notes: Sense 2's hyponyms merely restate its own gloss and its antonyms are invented category labels rather than opposed terms; both senses also carry several near-duplicate examples that add nothing.",
+    "verb 0 gloss: Restricted to living organisms, yet the sense as exemplified also covers non-biological material removal.",
+    "verb 0 relations: evaporate, accumulate",
+    "verb 2 relations: study design concept, exclude",
+    "notes: Sense 1's examples mix medical and materials-science uses (plasma/laser ablation of surfaces) that its living-organism gloss excludes, and the general erosion/vaporization sense described in the encyclopedia has no sense of its own. One example is a definitional gloss rather than natural usage.",
+    "adjective 0 relations: mechanical, bolt driven, bolt based",
+    "notes: Several examples under both noun senses use the word attributively (\"the bolt-action rifle\"), illustrating the adjective sense rather than the noun sense they are attached to.",
+    "noun 0 relations: secular text, nonreligious text, Passover book",
+    "noun 1 relations: nonlegal rabbinic text, rabbinic narrative",
+    "notes: Four of sense 2's six examples (museum/archive sentences) describe a physical Passover Haggadah volume, i.e. sense 1, not the nonlegal rabbinic literature the gloss defines."
+  ]
+}

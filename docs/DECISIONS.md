@@ -5101,3 +5101,215 @@ dry-run plan, the runner refusal, and a default selection without a runner stayi
 one scripted contract in `tests/conftest.py`; 1,188 pass, 2 pre-existing skips.
 `uv run ruff check`/`format --check`, `uv run ty check src`, `uv run pytest` clean on
 `hygiene/retype`. `data/core-store` untouched — the sample is a read-only copy.
+
+## D-76 (2026-09-06) — `sense-hygiene --only phantom_pos`: retiring the parts of speech v1.3 invented
+
+**Context.** The tier-4 Opus judge sample (`docs/QA-DIARY.md` iteration 18: 40 entries, 92
+senses, mean **62.2**, the weakest of the three tiers) named a defect none of the existing
+passes can see. 63% of tier 4 is multiword and inherited from OpenGloss v1.3, whose generator
+wrote a sense under *every part of speech it guessed at*. So compounds carry **phantom
+part-of-speech entries**. `blank cell` has an adjective block whose glosses define the adjective
+*blank* — "defines the adjective 'blank', not the compound headword; no such adjective exists",
+the judge wrote — and whose morphology inflects *blank* (`blanker`, `blankest`) rather than the
+compound. `communal` carries nominal hypernyms under an adjective. One defect, three criteria
+scored against at once: the gloss is inaccurate for the headword, the phantom sense is not
+distinct from the real one, and the relations hanging off it are wrong.
+
+`sense_hygiene`'s `distinctness` step cannot catch it, twice over: it refuses by design to group
+across parts of speech, and the phantom gloss *is* distinct text. `content_hygiene` sees a
+well-formed definition. `relation_hygiene` judges the far end of the edge, not the sense that
+asserted it.
+
+**Decision.** A third step in `workflows/sense_hygiene.py`, `phantom_pos`, **first in
+`SenseHygieneStep.ALL`** — before `distinctness`, because a phantom sense must not be merged
+with a real one, and because neither later step should be billed to judge senses that are about
+to disappear.
+
+*The gate.* Entries with two or more **live** part-of-speech blocks, plus any compound, idiom or
+phrasal verb carrying a part of speech outside its kind's natural set (`NATURAL_POS`: noun for a
+compound, verb for a phrasal verb, any content POS for an idiom). The second clause asks a
+question whose answer can only ever be a *report* — the last live part of speech is never
+retired — and it is bought anyway, because a one-block compound whose only block is a component
+definition is an entry with no correct definition at all, which is worth knowing and is not
+worth guessing at. It cost 9 of 199 calls on the pilot (4.5%).
+
+*The call.* One nano call per entry on the shared `HYGIENE` policy, listing the headword, its
+`kind`, and every live block as `[ref, pos, canonical glosses]`. Strict-enum output, one verdict
+per block: `genuine` | `phantom_component` (the glosses define a component word or a different
+lexeme, not this headword in this part of speech) | `phantom_duplicate` (a restatement of
+another block's senses under a part of speech the headword does not have in that use). One call
+per *entry* rather than per block is forced by the contract, not chosen for price:
+`phantom_duplicate` is a claim about two blocks at once.
+
+*The action.* A phantom block is retired **whole**: every live sense under it is marked
+`retired` — never deleted, never renumbered (D-1) — with `retired sense <sid>: phantom_pos:
+<reason>` on the entry's provenance table, one record per sense. Every relation on those senses
+is **demoted** to `see_also` rather than dropped (`PHANTOM_RELATION_NOTE`), following
+`relation_hygiene`'s convention that a defective edge becomes a weaker one that still says
+something true; `Lexeme.edges` already skips retired senses, so the demotion is what a reader of
+the *stored* list sees rather than a change to the projected graph. The lexeme's **last live
+part of speech is never retired**: when every listed block comes back phantom, the one whose
+part of speech is natural for the kind (failing that, the first listed) is kept and counted as
+`skipped_last_pos`.
+
+*Idempotence.* D-47's sentinel, two attempts, keyed on `<pos>:<digest of that block's canonical
+glosses>` rather than on sense ids — the question is about what the definitions *say*, and the
+same three sense ids can hold three rewritten definitions. The digest is taken over the set as
+the retirements leave it, following the module's own convention, so a settled entry is free on
+the next sweep and a rewritten one earns its second attempt.
+
+*The free signal.* A multi-word headword's block whose every gloss names **none** of the
+headword's content words, whose morphology names **exactly one** of them as the standalone word
+it inflects, and none of whose forms is a form of the whole headword, looks exactly like a
+definition of that component (`_defines_a_component`). It is computed, counted and used to order
+the sweep (`_signalled_first`, one free read per id before the pool starts, affecting visit
+order and nothing else) so that a budget-capped sweep spends its money on the likely offenders
+rather than on an alphabetical prefix. It is **not** shown to the model — a hint of the answer
+is not an independent judgement of it — and it never skips a call. Measured below, it is not
+close to being a substitute for one.
+
+**Pilot.** 400 tier-4 entries copied read-only out of `data/core-store` into
+`data/sample-phantom` (`scripts/build_sample_phantom.py`, seed 18, 300 multiword / 100
+single-word against the population's 63% multiword; the production store was untouched — a chain
+was running on it). `sense-hygiene --only phantom_pos --budget 1.00`:
+
+| | |
+|---|---|
+| entries scanned | 400 |
+| entries the gate selected / calls | 199 |
+| POS entries judged | 408 |
+| verdicts refused | 0 |
+| **POS entries retired** | **95** (23% of those judged) |
+| — `phantom_component` | 61 |
+| — `phantom_duplicate` | 34 |
+| senses retired | 169 |
+| relations demoted | 937 |
+| entries changed | 83 |
+| `skipped_last_pos` | 0 |
+| signalled / of those, phantom | 41 / 22 |
+| cost | **$0.0499** — $0.000125 per entry scanned, $0.000251 per call |
+| wall clock | 55 s at the default concurrency |
+
+At that rate the whole 55K tier-4 list is roughly **$6.90** and the retirement lands almost
+entirely where the diary said it would: 75 of the 95 retired blocks are on compounds, 6 on
+idioms, 4 each on proper nouns, function words and phrasal verbs, and **2 on simplexes** out of
+72 simplex entries in the sample. By part of speech: adjective 56, verb 14, noun 13, preposition
+7, adverb 3, pronoun 1, conjunction 1. The commonest single shape is exactly iteration 18's:
+`compound + adjective + phantom_component`, 31 of 95.
+
+The free signal fired on 41 of the 408 blocks, 22 of which the model then called phantom: **54%
+precision against a 23% base rate, 23% recall.** Better than chance, nowhere near a substitute,
+which is the whole argument for prioritising with it and still paying for every verdict.
+
+**Twenty verdicts read** (`reports/phantom/verdicts.txt`; 10 retirements and 10 keeps drawn at
+random, plus every one of the 13 noun-block retirements read separately as the highest-risk
+class).
+
+*Retire, right (9 of the 10 read).* `natural phenomena` [adjective] — "Existing in nature; not
+produced or created by humans", four glosses, every one of them the adjective *natural*.
+`address number` [verb] — "To deal with or discuss a number", the verb *address*. `frictional
+forces` [adjective] — "Relating to friction", the adjective *frictional*. Also right and of the
+second kind: `wild ride` [adjective] whose single gloss is a **noun** definition ("An experience
+or event that is exciting, unpredictable, and intense") duplicating the noun block, and
+`qualitative property` [adjective] with four noun-shaped glosses under an adjective — the
+`communal` shape the diary named. `fade from view` [preposition] restating the verb block.
+
+*Retire, borderline (1 of the 10).* `middle kingdom` [proper_noun, adjective] — "Relating to the
+historical Middle Kingdom period… used to describe artifacts, texts, or studies from that era."
+That is attributive use of a proper noun rather than an adjective sense, so the retirement is
+defensible, but `italian cuisine`'s near-identical adjective block was **kept** in the same
+sweep. The model is not consistent about attributive-noun blocks.
+
+*Keep, right (6 of the 10).* `gray-haired` and `practice-oriented` [adjective] — genuinely
+adjectival compounds, and the proof the kind gate does not just retire everything unnatural.
+`feudatory` [adjective] beside its noun block, `planate` [verb] beside its adjective block,
+`italian cuisine` [noun], `school timetable` [noun].
+
+*Keep, missed (4 of the 10).* `water filtration`, `dairy farm` and `nation-state` all keep an
+adjective block that is attributive noun use ("Of or relating to a milk-producing agricultural
+enterprise"), and `random motion` keeps an adjective block whose gloss is a **noun** definition
+("Motion that proceeds without a predictable pattern") — a `phantom_duplicate` by the
+instructions' own definition. The step under-retires.
+
+**False-retire risk, explicitly.** A wrong retirement hides a real sense and nothing downstream
+looks for it again, so this is the number that matters. Across 23 retirements read closely — the
+10 random ones and all 13 noun-block retirements — **one is a clear false retire**:
+
+> `full settlement` [compound]. Noun block retired as `phantom_component` ("A complete payment
+> that ends a financial obligation or claim." || "The act or state of establishing a community
+> in a location…"); adjective block kept ("Describing an arrangement that is complete and
+> final"). The retirement is exactly inverted: the first noun gloss is the headword's real
+> definition and the kept adjective block is the phantom.
+
+That is ~4% of retirements read (1/23), and it exposes the step's real structural limitation:
+**a block is retired whole.** `full settlement`'s noun block mixed one genuine gloss with one
+component gloss (*settlement* = colony), and the block-level question has no way to say "the
+first of these, not the second". Every other noun-block retirement read correct — `spanish
+-language` [noun] "A Romance language spoken in Spain" (the component *Spanish*), `driving
+action` [noun] "The act of operating a motor vehicle" (the component *driving*), `pattern after`
+[noun] "A person or thing used as a model" (the component *pattern*), `go viral`, `point out`,
+`process information`, `thou art`, `romanian civil`, `become moist`, `remove stains`,
+`in election statistics`, `powered by gravity`.
+
+Set against that: 4 clear misses in 10 keeps read. The step errs **conservative by roughly four
+to one**, which is the direction the instructions ask for and the direction a retirement pass
+has to err in. The mitigation for the residual risk is already in the design and not in a
+promise: nothing is deleted, `retired` is a tombstone, every retirement carries `phantom_pos:
+<reason>` and its sense id in provenance, and every demoted relation carries `demoted:
+phantom_pos sense <sid>` — so the whole class is findable, countable and reversible, which is
+what D-73 asked of its own 10% inversion rate.
+
+**Judge, before and after.** Two paired Opus runs, both on the pilot's own 400-entry copy.
+
+*The measurement (20 entries drawn from the 83 the step changed, seed 7, paired by id):*
+
+| | before | after |
+|---|---|---|
+| senses judged | 82 | **36** |
+| mean score | 45.4 | **60.4** (+15.0) |
+| entries below 60 | 19 / 20 | 8 / 20 |
+| **`gloss_accurate` defect** | **56.1%** | **27.8%** |
+| **`distinct_from_other_senses` defect** | **63.4%** | **25.0%** |
+| `examples_fit_sense` defect | 58.5% | 41.7% |
+| `domain_fits` defect | 24.4% | 16.7% |
+| `relations_valid` defect | 87.8% | 86.1% |
+| `examples_natural` defect | 48.8% | 58.3% |
+
+The two criteria iteration 18 named as the defect's signature are the two that move, and they
+halve. `relations_valid` barely moves, which is the honest reading of a demotion: a `see_also`
+on a retired sense is not a *good* edge, it is a disclosed one, and the surviving senses' own
+edges were never what this step was about. `examples_natural` goes the wrong way by 10 points on
+a denominator that shrank from 82 senses to 36 — the phantom blocks were carrying examples the
+judge liked, and what is left is the pre-existing example problem `example_fit` and
+`relation-regen` are for, now measured undiluted.
+
+*The control (20 entries, seed 7, drawn from the whole 400 and, as it turned out, containing
+**none** the step changed):* mean 69.4 → 68.95, `gloss_accurate` 16.7% → 16.7%,
+`distinct_from_other_senses` 21.4% → 14.3%, 42 senses both times. Nothing changed on disk
+between the two runs, so this is the judge's own run-to-run variance: ±0.5 on the mean and up to
+7 points on a rate over 42 senses. The +15.0 and the two ~30-point drops above are well outside
+it. Total judge spend: $5.65 over four runs, plus $0.05 for the step itself.
+
+**Not done here.** The forced re-judge of iteration 18's own 40-entry tier-4 sample is not in
+this record: `data/core-store` was under a running chain and this branch treats it as read-only.
+
+**Consequence.** Modified: `src/opengloss_generator/workflows/sense_hygiene.py`
+(`SenseHygieneStep.PHANTOM_POS` first in `ALL`; `PHANTOM_POS_INSTRUCTIONS`, `_DraftPOSVerdict`,
+`_DraftPOSVerdicts`, `_POSRef`, `_PhantomCounts`, `_live_pos_entries`, `_has_unnatural_pos`,
+`_defines_a_component`, `_phantom_refs`, `_pos_ref_id`, `_build_phantom_pos_prompt`, `_demote`,
+`_kept_position`, `_retire_pos_entry`, `_collect_phantoms`, `_apply_phantom_verdicts`,
+`_decide_phantom_pos`, `_signalled_first`, `_phantom_pos_step`; `RETIRED_PHANTOM_NOTE`,
+`PHANTOM_RELATION_NOTE`, `PHANTOM_COMPONENT`/`PHANTOM_DUPLICATE`/`PHANTOM_GENUINE`,
+`PHANTOM_VERDICTS`, `NATURAL_POS`, `_PHANTOM_POS_PREFIX`, `_MIN_POS_ENTRIES`; eight counters on
+`StepResult` and their `_Tally` plumbing); `cli.py` (the `--only` help and the `sense-hygiene`
+docstring); `README.md` (the `sense-hygiene` row). New: `scripts/build_sample_phantom.py`,
+`reports/phantom/`. Tests: **+15** (`tests/test_sense_hygiene.py`: retirement under each of the
+two reasons, the per-sense note, relations demoted rather than deleted with an existing
+`see_also` left alone, the last-live-part-of-speech guard, a genuine two-block inventory left
+alone, a one-block simplex never billed, a one-block compound judged but never retired,
+idempotence across two sweeps, a marker that re-bills only when a gloss is rewritten, the free
+signal firing and not firing, `phantom_pos` running before `distinctness`, and two CLI tests —
+`--only phantom_pos` and its dry run), plus one scripted contract in `tests/conftest.py`; 1,226 pass,
+2 pre-existing skips, 1 deselected. `uv run ruff check`/`format --check`, `uv run ty check src`,
+`uv run pytest` clean on `hygiene/phantom-pos`. `data/core-store` untouched — the sample is a
+read-only copy.

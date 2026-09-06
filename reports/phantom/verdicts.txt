@@ -1,0 +1,140 @@
+# entries judged with only one live block: 9
+# retire rows 95, keep rows 313
+
+==========================================================================================
+RETIRE
+==========================================================================================
+
+-- powered by gravity [idiom] :: verb  (phantom_component)
+     * To provide energy for motion or operation using gravity as the energy source.
+   other [noun]:
+     - A device or system whose operation is driven by gravitational potential energy, using gravity to convert potential energy into motion or electricity.
+     - A concept or term describing energy storage or transfer that relies on gravity to provide a push or lift without external electrical or chemical input.
+   other [adjective]:
+     - adjective describing a device or system that is powered by gravitational energy rather than electricity or fuel
+   other [preposition]:
+     - A prepositional phrase used to describe a device or process that is driven by the force of gravity.
+
+-- natural phenomena [compound] :: adjective  (phantom_component)
+     * Existing in nature; not produced or created by humans.
+     * Not artificial or synthetic; in a form that has not been processed or altered.
+     * Describes events or patterns that occur in the normal, expected way in nature.
+     * Inherited or innate ability or talent; present from birth rather than learned.
+   other [noun]:
+     - Observable events and processes that occur in the natural world without human intervention.
+
+-- fade from view [phrasal_verb] :: preposition  (phantom_duplicate)
+     * to disappear gradually from sight or from the field of vision
+   other [verb]:
+     - To gradually become less visible until no longer seen.
+     - To lose public prominence or attention gradually.
+   other [noun]:
+     - The act of gradually becoming less visible or detectable to the eye.
+     - A gradual decrease in prominence or attention for someone or something.
+
+-- remote areas [compound] :: adjective  (phantom_component)
+     * Distant in space or position; located far from populated areas or centers.
+   other [noun]:
+     - A geographic region distant from populated places, often with limited access to services.
+
+-- refined tone [compound] :: adjective  (phantom_component)
+     * Describes language or demeanor that is polished and culturally cultivated, appropriate for formal writing or speaking.
+   other [noun]:
+     - A manner of speaking or writing that is polite, polished, and sophisticated in academic or formal settings.
+
+-- qualitative property [compound] :: adjective  (phantom_duplicate)
+     * A property describing the nature or character of an object or phenomenon without using numerical measurement.
+     * An attribute whose values come from a finite set of categories rather than from a continuous numerical scale.
+     * An attribute used to describe nonnumerical aspects for evaluation instead of assigning numerical scores.
+     * A property that cannot be directly observed as a numerical value and is inferred from evaluative judgments.
+   other [noun]:
+     - A property described by qualitative attributes rather than a numeric value, used to classify or describe an object by quality.
+     - A value drawn from categorical classes rather than representing a measured quantity.
+
+-- address number [compound] :: verb  (phantom_component)
+     * To deal with or discuss a number or numerical issue in a classroom or problem solving context.
+     * To assign a numerical address or label to a location or item.
+   other [noun]:
+     - The numeric component of a street address that identifies a dwelling or building along a street and helps mail carriers and visitors locate the site.
+     - A numeric label that identifies a specific unit within a building such as an apartment or office as part of the address.
+     - A numeric label used in postal systems and data records to identify locations for sorting routing and inventory.
+
+-- wild ride [compound] :: adjective  (phantom_duplicate)
+     * An experience or event that is exciting, unpredictable, and intense.
+   other [noun]:
+     - An exciting or dangerous journey or experience, especially in a vehicle or during travel.
+     - A period or situation marked by rapid, chaotic events.
+
+-- frictional forces [compound] :: adjective  (phantom_component)
+     * Relating to friction; describing forces that oppose motion when surfaces rub together.
+   other [noun]:
+     - Forces arising at contact that oppose motion between touching surfaces and act parallel to their interface.
+     - A contact force prevents motion when surfaces are at rest relative to each other, whereas another acts when they move and slide past one another.
+     - Such contact forces can convert some mechanical energy into heat, especially when surfaces rub against each other during motion.
+
+-- middle kingdom [proper_noun] :: adjective  (phantom_component)
+     * Relating to the historical Middle Kingdom period, particularly the ancient era in Egyptian history, used to describe artifacts, texts, or studies from that era.
+     * An adjective describing something that relates to a central or intermediate realm within a hierarchy, used in educational contexts to illustrate ordering or balance.
+   other [noun]:
+     - The Middle Kingdom is the period of ancient Egyptian history roughly from 2055 to 1650 BCE characterized by political stabilization, temple and tomb building, and cultural renewal.
+     - The Middle Kingdom is the traditional Chinese name for China, derived from Zhongguo meaning center or middle realm, used in historical writings to denote the Chinese nation and its culture.
+
+==========================================================================================
+KEEP
+==========================================================================================
+
+-- water filtration [compound] :: adjective  (genuine)
+     * Pertaining to devices or processes that remove impurities from water.
+     * Describing content or discussion about the process of filtering water in science education.
+   other [noun]:
+     - The process of removing impurities from water to make it safe for drinking and everyday use.
+     - A device or system designed to remove impurities from water.
+     - The science topic or field that studies how water is cleaned and treated.
+
+-- gray-haired [compound] :: adjective  (genuine)
+     * Having hair that is partly or wholly gray, typically as a result of aging.
+     * Figuratively, characterized by age, long experience, or seniority, especially within an institution or profession.
+
+-- practice-oriented [compound] :: adjective  (genuine)
+     * Primarily concerned with the application of knowledge, methods, or skills in real-world situations, rather than with purely theoretical or abstract considerations.
+
+-- school timetable [compound] :: noun  (genuine)
+     * The planned sequence of time slots for lessons and activities during a school day.
+     * A framework that supports routine and time management, teaching students to plan and manage their day.
+   other [adjective]:
+     - Of or relating to the timetable used by a school to schedule classes.
+
+-- italian cuisine [proper_noun] :: noun  (genuine)
+     * The national cuisine of Italy, comprising diverse regional dishes and cooking practices shaped by geography, history, and culture.
+     * A field within culinary studies that investigates the history, geography, and cultural influences that shape Italian cuisine.
+   other [adjective]:
+     - Relating to the cooking traditions of Italy; used to describe dishes, menus, or restaurants that are characteristic of Italian cooking.
+     - Used as a descriptive modifier indicating that something is inspired by or associated with Italian cooking; commonly attached to dishes or menus.
+
+-- feudatory [simplex] :: adjective  (genuine)
+     * Relating to or constituting the position of a vassal or dependent client under a suzerain.
+     * Figurative or historical usage describing subordinate or dependent affiliation within a larger hierarchical structure; not necessarily feudal in law.
+   other [noun]:
+     - A person who holds land granted by a feudal lord in return for military or other services; a vassal.
+     - The position of being a vassal within a feudal hierarchy.
+
+-- dairy farm [compound] :: adjective  (genuine)
+     * Of or relating to a milk-producing agricultural enterprise or its activities, facilities, or outputs, especially the production of milk and management of livestock.
+   other [noun]:
+     - A farm dedicated to producing milk and dairy products, typically with milking cows or other dairy animals and facilities for milking, storage, and on-site processing.
+
+-- random motion [compound] :: adjective  (genuine)
+     * Motion that proceeds without a predictable pattern or direction, often produced by many small unrelated influences.
+   other [noun]:
+     - Movement that happens in many directions without a predictable pattern or plan.
+
+-- planate [simplex] :: verb  (genuine)
+     * To shave, smooth, or flatten a material surface by using a plane or similar tool, producing a planar surface.
+   other [adjective]:
+     - Having a surface that is flat or plane-like; planar in character; related to a plane in geometry or materials science.
+
+-- nation-state [compound] :: adjective  (genuine)
+     * Of or relating to a sovereign political unit whose citizens share a common national identity.
+     * Favoring the sovereignty of a single sovereign political unit in international affairs.
+   other [noun]:
+     - A sovereign political unit whose borders align with a single nation and whose government represents that nation.

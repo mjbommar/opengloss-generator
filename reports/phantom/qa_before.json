@@ -1,0 +1,81 @@
+{
+  "calls": 20,
+  "cost_usd": 1.395832,
+  "cost_usd_per_entry": 0.069792,
+  "encyclopedia_defects": 1,
+  "encyclopedia_judged": 20,
+  "entries_failed": 0,
+  "entries_judged": 20,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "awkward_style": 5,
+    "factual_error": 2,
+    "grammar_error": 2,
+    "hallucination": 2,
+    "missing_content": 6,
+    "off_topic": 1,
+    "other": 3,
+    "scope_mismatch": 1,
+    "terminology_error": 17,
+    "unsupported_addition": 2
+  },
+  "mean_score": 69.4,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.05,
+    "example grade_1/plain": 0.0,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.0811
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 20,
+    "example grade_1/plain": 42,
+    "gloss college/plain": 37,
+    "gloss grade_1/plain": 37
+  },
+  "score_buckets": {
+    "60-79": 13,
+    "80-89": 4,
+    "90+": 0,
+    "<60": 3
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 9,
+    "domain_fits": 5,
+    "examples_fit_sense": 15,
+    "examples_natural": 6,
+    "gloss_accurate": 7,
+    "relations_valid": 28
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.2143,
+    "domain_fits": 0.119,
+    "examples_fit_sense": 0.3571,
+    "examples_natural": 0.1429,
+    "gloss_accurate": 0.1667,
+    "relations_valid": 0.6667
+  },
+  "senses_judged": 42,
+  "stopped_reason": null,
+  "top_issues": [
+    "adjective 0 relations: ideology, rhetoric, repressive",
+    "notes: Hypernyms 'ideology' and 'rhetoric' are nouns naming things the adjective describes, not broader categories of it; 'repressive' is a related term rather than a synonym.",
+    "adjective 0 gloss: restricted to teaching and learning; the adjective applies generally to medicine, policy, and practice",
+    "adjective 0 relations: evidentiary basis, ground-based, grounded",
+    "notes: Several examples (district policy, funding evaluation) fall outside the gloss's teaching-and-learning scope, confirming the gloss is too narrow; 'evidentiary basis' is a noun phrase and 'ground-based' means situated on the ground.",
+    "noun 0 gloss: anno is the ablative singular of annus used adverbially, not a preposition, as the entry's own encyclopedia states",
+    "noun 0 relations: ante, post, undated, dating formula, year marker, chronological label",
+    "notes: Five of the eight examples are near-identical restatements of the same \"anno 1521\" manuscript sentence; ante/post are temporal prepositions, not antonyms, and \"year marker\"/\"chronological label\" are meta-labels rather than synonyms.",
+    "noun 0 relations: seven verse surah, Islamic scripture unit",
+    "noun 1 relations: secular commemoration, nonreligious rite",
+    "notes: Sense 1's example set is largely four paraphrases of one sentence, and its opening example (\"functions as the opening\") reads as textbook prose rather than natural usage.",
+    "noun 0 relations: Passover text, Seder liturgy, Passover book, secular text, nonreligious text",
+    "noun 1 relations: nonlegal rabbinic text, legalistic literature",
+    "notes: Four of sense 2's examples describe a physical illustrated Passover book, which belongs to sense 1, not the nonlegal rabbinic corpus.",
+    "verb 0 relations: evaporate, accumulate",
+    "verb 2 relations: study design concept",
+    "notes: The general non-biological sense (removal of surface material by erosion, vaporization, or heat, as in glaciers and heat shields) is described at length in the encyclopedia but has no sense; two of sense 1's examples (laser surface layers, plasma ablation in vacuum) belong to that missing sense.",
+    "adjective 0 relations: mechanical, manually operated, bolt driven, bolt based",
+    "notes: Several examples under both noun senses use \"bolt-action\" attributively (\"the bolt-action rifle\"), illustrating the adjective sense rather than the noun being defined.",
+    "adjective 0 relations: scientific attribute, lab experiments, biology laboratory, chemistry laboratory, classroom observations, clinical diagnoses, clinical guidelines, clinical lab, lab activities, lab class, educational method, applied science, chemistry experiments, biology experiments"
+  ]
+}

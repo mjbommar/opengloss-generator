@@ -1,11 +1,11 @@
-"""Sense hygiene: near-duplicate senses, and examples filed under the wrong sense.
+"""Sense hygiene: phantom parts of speech, near-duplicate senses, misfiled examples.
 
 Companion to ``test_content_hygiene.py`` and ``test_relation_hygiene.py``. Those cover defects a
-rule can see and edges that point at the wrong thing; everything here is about the sense
-inventory itself — two senses that are one meaning written twice, and an example that
-illustrates a sense other than the one it sits under. Both are questions only a model can
-answer, so every test drives the scripted model through the markers ``tests/conftest.py``
-registers for this pass.
+rule can see and edges that point at the wrong thing; everything here is about the entry's own
+inventory — a part of speech the headword never had, two senses that are one meaning written
+twice, and an example that illustrates a sense other than the one it sits under. All three are
+questions only a model can answer, so every test drives the scripted model through the markers
+``tests/conftest.py`` registers for this pass.
 """
 
 from __future__ import annotations
@@ -41,12 +41,19 @@ from opengloss_generator.workflows import sense_hygiene as module
 from opengloss_generator.workflows.sense_hygiene import (
     MAX_CANONICAL_EXAMPLES,
     MOVED_OUT_NOTE,
+    PHANTOM_RELATION_NOTE,
     REMOVED_EXAMPLE_NOTE,
+    RETIRED_PHANTOM_NOTE,
     RETIRED_SENSE_NOTE,
     SenseHygieneStep,
     run_sense_hygiene,
 )
-from tests.conftest import SENSE_DUPLICATE_MARKER, SENSE_FIT_NONE_MARKER
+from tests.conftest import (
+    PHANTOM_COMPONENT_MARKER,
+    PHANTOM_DUPLICATE_MARKER,
+    SENSE_DUPLICATE_MARKER,
+    SENSE_FIT_NONE_MARKER,
+)
 
 DISTINCT_GLOSS = "A distinct definition number {index} written for the pass under test."
 DUPLICATE_GLOSS = f"A {SENSE_DUPLICATE_MARKER} definition number {{index}} of one meaning."
@@ -85,12 +92,13 @@ def _entry(
     *,
     pos: PartOfSpeech = PartOfSpeech.NOUN,
     extra: list[tuple[PartOfSpeech, list[Sense]]] | None = None,
+    kind: LexemeKind = LexemeKind.SIMPLEX,
 ) -> Lexeme:
     """Build an entry holding one part-of-speech block, plus any extra blocks named."""
     entries = [POSEntry(pos=pos, senses=senses, morphology=Morphology())]
     for other_pos, other_senses in extra or []:
         entries.append(POSEntry(pos=other_pos, senses=other_senses, morphology=Morphology()))
-    return Lexeme.empty(headword, kind=LexemeKind.SIMPLEX, pos_entries=entries)
+    return Lexeme.empty(headword, kind=kind, pos_entries=entries)
 
 
 def _relation(relation_type: RelationType, term: str) -> Relation:
@@ -140,7 +148,281 @@ def _duplicate_pair_entry(headword: str = "vow") -> Lexeme:
 
 
 # --------------------------------------------------------------------------------------
-# Step 1 — distinctness
+# Step 1 — phantom_pos
+# --------------------------------------------------------------------------------------
+
+GENUINE_GLOSS = "An empty cell in a spreadsheet or table that currently holds no data."
+COMPONENT_GLOSS = f"Not filled in or completed; a definition that {PHANTOM_COMPONENT_MARKER} word."
+DUPLICATE_POS_GLOSS = (
+    f"Relating to an empty cell in a table; a definition that {PHANTOM_DUPLICATE_MARKER}."
+)
+
+
+def _block(
+    pos: PartOfSpeech, senses: list[Sense], *, morphology: Morphology | None = None
+) -> POSEntry:
+    """Build one part-of-speech block, with morphology where a test needs the free signal."""
+    return POSEntry(pos=pos, senses=senses, morphology=morphology or Morphology())
+
+
+def _multi_pos_entry(
+    headword: str, blocks: list[POSEntry], *, kind: LexemeKind = LexemeKind.COMPOUND
+) -> Lexeme:
+    """Build an entry holding several part-of-speech blocks, compound unless told otherwise."""
+    return Lexeme.empty(headword, kind=kind, pos_entries=blocks)
+
+
+def _phantom_entry(headword: str = "blank cell") -> Lexeme:
+    """Build the measured shape: a nominal compound carrying an adjective component block."""
+    return _multi_pos_entry(
+        headword,
+        [
+            _block(PartOfSpeech.NOUN, [_sense(0, GENUINE_GLOSS)]),
+            _block(
+                PartOfSpeech.ADJECTIVE,
+                [
+                    _sense(
+                        0,
+                        COMPONENT_GLOSS,
+                        relations=[
+                            _relation(RelationType.HYPERNYM, "state of emptiness"),
+                            _relation(RelationType.SEE_ALSO, "already weak"),
+                        ],
+                    ),
+                    _sense(
+                        1, f"Lacking expression; another gloss that {PHANTOM_COMPONENT_MARKER}."
+                    ),
+                ],
+                morphology=Morphology(comparative="blanker", superlative="blankest"),
+            ),
+        ],
+    )
+
+
+async def test_a_phantom_component_part_of_speech_is_retired_whole(session):
+    session.store.write(_phantom_entry())
+
+    outcome = await run_sense_hygiene(
+        session.store, session.stages, workers=4, only={SenseHygieneStep.PHANTOM_POS}
+    )
+
+    result = outcome.steps[SenseHygieneStep.PHANTOM_POS]
+    assert result.calls == 1
+    assert result.pos_entries_judged == 2
+    assert result.pos_entries_retired == 1
+    assert result.retired_component == 1
+    assert result.retired_duplicate == 0
+    assert result.senses_retired == 2
+    assert result.skipped_last_pos == 0
+    assert result.entries_changed == 1
+
+    stored = session.store.read("blank_cell")
+    assert [sense.retired for sense in _senses_of(stored)] == [False]
+    assert [sense.retired for sense in _senses_of(stored, 1)] == [True, True]
+    # Nothing is deleted: the retired block keeps every definition it had.
+    assert _senses_of(stored, 1)[0].canonical_gloss() == COMPONENT_GLOSS
+
+
+async def test_a_phantom_component_retirement_notes_its_reason_per_sense(session):
+    session.store.write(_phantom_entry())
+
+    await run_sense_hygiene(
+        session.store, session.stages, workers=4, only={SenseHygieneStep.PHANTOM_POS}
+    )
+
+    notes = _notes(session.store.read("blank_cell"))
+    for index in (0, 1):
+        expected = RETIRED_PHANTOM_NOTE.format(
+            retired=f"blank_cell:adjective:{index}", reason="phantom_component"
+        )
+        assert expected in notes
+
+
+async def test_a_phantom_duplicate_part_of_speech_is_retired_under_its_own_reason(session):
+    session.store.write(
+        _multi_pos_entry(
+            "field trip",
+            [
+                _block(PartOfSpeech.NOUN, [_sense(0, GENUINE_GLOSS)]),
+                _block(PartOfSpeech.ADJECTIVE, [_sense(0, DUPLICATE_POS_GLOSS)]),
+            ],
+        )
+    )
+
+    outcome = await run_sense_hygiene(
+        session.store, session.stages, workers=4, only={SenseHygieneStep.PHANTOM_POS}
+    )
+
+    result = outcome.steps[SenseHygieneStep.PHANTOM_POS]
+    assert result.retired_duplicate == 1
+    assert result.retired_component == 0
+    assert result.senses_retired == 1
+    stored = session.store.read("field_trip")
+    assert [sense.retired for sense in _senses_of(stored, 1)] == [True]
+    assert RETIRED_PHANTOM_NOTE.format(
+        retired="field_trip:adjective:0", reason="phantom_duplicate"
+    ) in _notes(stored)
+
+
+async def test_relations_on_a_retired_phantom_sense_are_demoted_not_deleted(session):
+    session.store.write(_phantom_entry())
+
+    outcome = await run_sense_hygiene(
+        session.store, session.stages, workers=4, only={SenseHygieneStep.PHANTOM_POS}
+    )
+
+    # One demotion, not two: a relation that was already a ``see_also`` has nowhere weaker to go.
+    assert outcome.steps[SenseHygieneStep.PHANTOM_POS].relations_demoted == 1
+    retired = _senses_of(session.store.read("blank_cell"), 1)[0]
+    assert [relation.type for relation in retired.relations] == [
+        RelationType.SEE_ALSO,
+        RelationType.SEE_ALSO,
+    ]
+    demoted, untouched = retired.relations
+    assert demoted.target.term == "state of emptiness"
+    assert demoted.note is not None
+    assert demoted.note.startswith(PHANTOM_RELATION_NOTE)
+    assert untouched.note is None
+
+
+async def test_the_last_live_part_of_speech_is_never_retired(session):
+    session.store.write(
+        _multi_pos_entry(
+            "blank cell",
+            [
+                _block(PartOfSpeech.NOUN, [_sense(0, f"A gloss that {PHANTOM_COMPONENT_MARKER}.")]),
+                _block(PartOfSpeech.ADJECTIVE, [_sense(0, COMPONENT_GLOSS)]),
+            ],
+        )
+    )
+
+    outcome = await run_sense_hygiene(
+        session.store, session.stages, workers=4, only={SenseHygieneStep.PHANTOM_POS}
+    )
+
+    result = outcome.steps[SenseHygieneStep.PHANTOM_POS]
+    assert result.pos_entries_retired == 1
+    assert result.skipped_last_pos == 1
+    stored = session.store.read("blank_cell")
+    # The kept block is the one whose part of speech is natural for a compound.
+    assert [sense.retired for sense in _senses_of(stored)] == [False]
+    assert [sense.retired for sense in _senses_of(stored, 1)] == [True]
+
+
+async def test_a_genuine_inventory_is_left_alone(session):
+    session.store.write(
+        _multi_pos_entry(
+            "part time",
+            [
+                _block(PartOfSpeech.ADJECTIVE, [_sense(0, "Done for fewer than the usual hours.")]),
+                _block(PartOfSpeech.ADVERB, [_sense(0, "For fewer than the usual hours.")]),
+            ],
+        )
+    )
+
+    outcome = await run_sense_hygiene(
+        session.store, session.stages, workers=4, only={SenseHygieneStep.PHANTOM_POS}
+    )
+
+    result = outcome.steps[SenseHygieneStep.PHANTOM_POS]
+    assert result.calls == 1
+    assert result.pos_entries_judged == 2
+    assert result.pos_entries_retired == 0
+    assert result.entries_changed == 0
+    stored = session.store.read("part_time")
+    assert [sense.retired for sense in _senses_of(stored)] == [False]
+    assert [sense.retired for sense in _senses_of(stored, 1)] == [False]
+
+
+async def test_a_simplex_with_one_part_of_speech_is_never_called_for(session):
+    session.store.write(_entry("abseil", [_sense(0, COMPONENT_GLOSS)], kind=LexemeKind.SIMPLEX))
+
+    outcome = await run_sense_hygiene(
+        session.store, session.stages, workers=4, only={SenseHygieneStep.PHANTOM_POS}
+    )
+
+    assert outcome.steps[SenseHygieneStep.PHANTOM_POS].calls == 0
+    assert outcome.cost_usd == 0.0
+
+
+async def test_a_compound_with_only_an_unnatural_part_of_speech_is_judged_but_kept(session):
+    session.store.write(
+        _multi_pos_entry(
+            "blank cell", [_block(PartOfSpeech.ADJECTIVE, [_sense(0, COMPONENT_GLOSS)])]
+        )
+    )
+
+    outcome = await run_sense_hygiene(
+        session.store, session.stages, workers=4, only={SenseHygieneStep.PHANTOM_POS}
+    )
+
+    # The kind gate asks the question even with one block, and the guard refuses the answer.
+    result = outcome.steps[SenseHygieneStep.PHANTOM_POS]
+    assert result.calls == 1
+    assert result.skipped_last_pos == 1
+    assert result.pos_entries_retired == 0
+    assert [sense.retired for sense in _senses_of(session.store.read("blank_cell"))] == [False]
+
+
+async def test_phantom_pos_is_idempotent(session):
+    session.store.write(_phantom_entry())
+    only = {SenseHygieneStep.PHANTOM_POS}
+
+    first = await run_sense_hygiene(session.store, session.stages, workers=4, only=only)
+    assert first.calls == 1
+    assert first.steps[SenseHygieneStep.PHANTOM_POS].pos_entries_retired == 1
+
+    # One live block is left, and it is natural for a compound, so the entry no longer qualifies.
+    second = await run_sense_hygiene(session.store, session.stages, workers=4, only=only)
+    assert second.calls == 0
+    assert second.cost_usd == 0.0
+    assert second.steps[SenseHygieneStep.PHANTOM_POS].pos_entries_retired == 0
+
+
+async def test_a_judged_genuine_entry_is_not_re_billed_until_a_gloss_changes(session):
+    session.store.write(
+        _multi_pos_entry(
+            "part time",
+            [
+                _block(PartOfSpeech.ADJECTIVE, [_sense(0, "Done for fewer than the usual hours.")]),
+                _block(PartOfSpeech.ADVERB, [_sense(0, "For fewer than the usual hours.")]),
+            ],
+        )
+    )
+    only = {SenseHygieneStep.PHANTOM_POS}
+
+    assert (await run_sense_hygiene(session.store, session.stages, workers=4, only=only)).calls == 1
+    assert (await run_sense_hygiene(session.store, session.stages, workers=4, only=only)).calls == 0
+
+    # The marker is keyed on the glosses, not on the sense ids: a rewritten definition is a
+    # different question about the same block and earns the second of D-47's two attempts.
+    entry = session.store.read("part_time")
+    entry.pos_entries[1].senses[0].gloss = Renditions[str](
+        root=[canonical_rendition("A rewritten definition of the same block.")]
+    )
+    session.store.write(entry)
+
+    assert (await run_sense_hygiene(session.store, session.stages, workers=4, only=only)).calls == 1
+    assert (await run_sense_hygiene(session.store, session.stages, workers=4, only=only)).calls == 0
+
+
+def test_the_free_signal_fires_on_a_component_definition():
+    entry = _phantom_entry()
+    noun, adjective = entry.pos_entries
+
+    # The adjective block names neither "blank" nor "cell" and inflects "blank" alone.
+    assert module._defines_a_component(entry, adjective) is True
+    # The noun block's own definition names "cell", so it is talking about the compound.
+    assert module._defines_a_component(entry, noun) is False
+
+
+def test_the_free_signal_never_fires_on_a_single_word_headword():
+    entry = _entry("communal", [_sense(0, COMPONENT_GLOSS)], pos=PartOfSpeech.ADJECTIVE)
+    assert module._defines_a_component(entry, entry.pos_entries[0]) is False
+
+
+# --------------------------------------------------------------------------------------
+# Step 2 — distinctness
 # --------------------------------------------------------------------------------------
 
 
@@ -329,7 +611,7 @@ async def test_a_judged_distinct_entry_is_not_re_billed(session):
 
 
 # --------------------------------------------------------------------------------------
-# Step 2 — example_fit
+# Step 3 — example_fit
 # --------------------------------------------------------------------------------------
 
 
@@ -546,15 +828,48 @@ async def test_only_runs_just_the_named_step(session):
     assert [sense.retired for sense in _senses_of(session.store.read("vow"))] == [False, False]
 
 
-async def test_both_steps_run_by_default_in_order(session):
+async def test_every_step_runs_by_default_in_order(session):
     session.store.write(_duplicate_pair_entry())
 
     outcome = await run_sense_hygiene(session.store, session.stages, workers=4)
 
     assert list(outcome.steps) == list(SenseHygieneStep.ALL)
-    # distinctness ran first and left one live sense, so example_fit had nothing to ask about.
+    # A one-block simplex has a foregone phantom_pos answer, so that step never bills for it.
+    assert outcome.steps[SenseHygieneStep.PHANTOM_POS].calls == 0
+    # distinctness then left one live sense, so example_fit had nothing to ask about.
     assert outcome.steps[SenseHygieneStep.DISTINCTNESS].calls == 1
     assert outcome.steps[SenseHygieneStep.EXAMPLE_FIT].calls == 0
+
+
+def _phantom_duplicate_gloss(opening: str) -> str:
+    """Return a gloss both scripted judges react to: a duplicate sense inside a phantom block."""
+    return f"{opening} {SENSE_DUPLICATE_MARKER} gloss that {PHANTOM_COMPONENT_MARKER}."
+
+
+async def test_phantom_pos_runs_before_distinctness(session):
+    """A phantom block's senses are retired before distinctness is asked to group them."""
+    session.store.write(
+        _multi_pos_entry(
+            "blank cell",
+            [
+                _block(PartOfSpeech.NOUN, [_sense(0, GENUINE_GLOSS)]),
+                _block(
+                    PartOfSpeech.ADJECTIVE,
+                    [
+                        _sense(0, _phantom_duplicate_gloss("A")),
+                        _sense(1, _phantom_duplicate_gloss("Another")),
+                    ],
+                ),
+            ],
+        )
+    )
+
+    outcome = await run_sense_hygiene(session.store, session.stages, workers=4)
+
+    # Both adjective senses are gone as phantoms, so distinctness never saw a pair to merge.
+    assert outcome.steps[SenseHygieneStep.PHANTOM_POS].senses_retired == 2
+    assert outcome.steps[SenseHygieneStep.DISTINCTNESS].calls == 0
+    assert outcome.steps[SenseHygieneStep.DISTINCTNESS].groups_merged == 0
 
 
 async def test_an_unknown_step_name_is_rejected(session):
@@ -694,6 +1009,32 @@ def test_the_cli_dry_run_spends_nothing(tmp_path: Path):
 
     assert summary["stop_reason"] == "dry_run"
     assert summary["cost_usd"] == 0.0
+
+
+@pytest.mark.usefixtures("_cli_offline")
+def test_the_cli_dry_run_over_phantom_pos_writes_nothing(tmp_path: Path):
+    store = tmp_path / "store"
+    LexemeStore(StoreConfig(root=store, fsync_on_write=False)).write(_phantom_entry())
+
+    summary = _cli("sense-hygiene", "--only", "phantom_pos", "--store", str(store), "--dry-run")
+
+    assert summary["stop_reason"] == "dry_run"
+    assert summary["cost_usd"] == 0.0
+    stored = LexemeStore(StoreConfig(root=store, fsync_on_write=False)).read("blank_cell")
+    assert [sense.retired for sense in stored.pos_entries[1].senses] == [False, False]
+
+
+@pytest.mark.usefixtures("_cli_offline")
+def test_the_cli_runs_phantom_pos(tmp_path: Path):
+    store = tmp_path / "store"
+    LexemeStore(StoreConfig(root=store, fsync_on_write=False)).write(_phantom_entry())
+
+    summary = _cli("sense-hygiene", "--only", "phantom_pos", "--store", str(store))
+
+    assert set(summary["steps"]) == {"phantom_pos"}
+    assert summary["steps"]["phantom_pos"]["pos_entries_retired"] == 1
+    assert summary["steps"]["phantom_pos"]["retired_component"] == 1
+    assert summary["cost_usd"] > 0
 
 
 @pytest.mark.usefixtures("_cli_offline")

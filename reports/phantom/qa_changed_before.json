@@ -1,0 +1,84 @@
+{
+  "calls": 20,
+  "cost_usd": 1.854365,
+  "cost_usd_per_entry": 0.092718,
+  "encyclopedia_defects": 5,
+  "encyclopedia_judged": 20,
+  "entries_failed": 0,
+  "entries_judged": 20,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "audience_inappropriate": 1,
+    "awkward_style": 16,
+    "factual_error": 3,
+    "grammar_error": 4,
+    "hallucination": 10,
+    "missing_content": 13,
+    "off_topic": 4,
+    "other": 3,
+    "punctuation_error": 3,
+    "register_mismatch": 1,
+    "scope_mismatch": 10,
+    "terminology_error": 20,
+    "unsupported_addition": 1
+  },
+  "mean_score": 45.4,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0,
+    "example grade_1/plain": 0.0976,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.1379
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 20,
+    "example grade_1/plain": 82,
+    "gloss college/plain": 58,
+    "gloss grade_1/plain": 58
+  },
+  "score_buckets": {
+    "60-79": 1,
+    "80-89": 0,
+    "90+": 0,
+    "<60": 19
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 52,
+    "domain_fits": 20,
+    "examples_fit_sense": 48,
+    "examples_natural": 40,
+    "gloss_accurate": 46,
+    "relations_valid": 72
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.6341,
+    "domain_fits": 0.2439,
+    "examples_fit_sense": 0.5854,
+    "examples_natural": 0.4878,
+    "gloss_accurate": 0.561,
+    "relations_valid": 0.878
+  },
+  "senses_judged": 82,
+  "stopped_reason": null,
+  "top_issues": [
+    "adjective 0 gloss: labelled adjective, but the phrase is a noun phrase and every example uses it as a noun or attributive noun",
+    "adjective 0 relations: settled, financial transaction, net settlement",
+    "noun 0 relations: exact payment, legal settlement",
+    "noun 1 relations: eviction",
+    "noun 1 gloss grade_1/plain: run-on final clause is a non sequitur and blurs the 'full occupancy' point",
+    "notes: Sense 1 is the financial sense relabelled as an adjective; it duplicates sense 2. Several examples in senses 2 and 3 never contain the headword.",
+    "noun 0 gloss: Defines the noun 'virality', not the phrasal verb; 'go viral' is not used as a noun",
+    "noun 0 relations: waning popularity, propagation process, limited reach",
+    "verb 0 relations: dissemination, popularity, visibility",
+    "verb 2 gloss: Meta-description of a 'figurative use' rather than a definition, and it restates sense 2",
+    "verb 2 relations: popularity, visibility",
+    "notes: Sense 1 treats the phrasal verb as a noun and two of its examples ('achieves go viral status', 'influence go viral outcomes') are ungrammatical; one example omits the headword entirely. Senses 2 and 3 are indistinguishable.",
+    "noun 0 gloss: Defines the noun 'election statistics', not the headword phrase 'in election statistics'",
+    "noun 0 relations: anecdotes, impressions, uncollected data, anecdotal notes, official statistics, election reports, county reports, state tallies, district reports",
+    "noun 2 gloss: Invented sense: classroom use of the same data is a context, not a separate meaning",
+    "noun 2 relations: untaught data, nonteaching data, education data, teaching dataset, classroom dataset, activity datasets",
+    "noun 2 domain: suggested elections and politics",
+    "preposition 0 gloss: Glosses the bare preposition 'in', not the multiword headword",
+    "preposition 0 relations: preposition, inside, within, out",
+    "preposition 1 gloss: Temporal gloss contradicts every example, none of which expresses time"
+  ]
+}

@@ -1579,7 +1579,9 @@ def relation_regen(
 def sense_hygiene(
     only: Annotated[
         str | None,
-        typer.Option("--only", help="Comma list of steps (distinctness, example_fit)."),
+        typer.Option(
+            "--only", help="Comma list of steps (phantom_pos, distinctness, example_fit)."
+        ),
     ] = None,
     config_path: _ConfigOpt = None,
     store: _StoreOpt = None,
@@ -1587,13 +1589,16 @@ def sense_hygiene(
     concurrency: _ConcurrencyOpt = None,
     dry_run: _DryRunOpt = False,
 ) -> None:
-    """Merge near-duplicate senses and refile misplaced examples (D-52).
+    """Retire phantom parts of speech, merge duplicate senses, refile examples (D-52, D-76).
 
-    One nano call per multi-sense entry per step: the first retires a sense that repeats a
-    lower-indexed one, merging its examples, relations and renditions onto the survivor; the
-    second moves a canonical example to the sense it actually illustrates. Nothing is deleted
-    and no sense is renumbered; every step is idempotent, and a single-sense entry costs $0.
-    Run ``retrofit --only repair`` afterwards to refill any sense left without an example.
+    One nano call per qualifying entry per step: the first retires a whole part-of-speech entry
+    whose definitions define a component word rather than the headword (a v1.3 inheritance on
+    compounds), demoting its relations and never taking a lexeme's last part of speech; the
+    second retires a sense that repeats a lower-indexed one, merging its examples, relations and
+    renditions onto the survivor; the third moves a canonical example to the sense it actually
+    illustrates. Nothing is deleted and no sense is renumbered; every step is idempotent, and a
+    single-sense, single-part-of-speech entry costs $0. Run ``retrofit --only repair``
+    afterwards to refill any sense left without an example.
     """
     cfg = _build_config(config_path, store, budget, concurrency, dry_run)
     steps = {s.strip() for s in only.split(",") if s.strip()} if only else None

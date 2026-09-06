@@ -1688,3 +1688,38 @@ def _contrast_retype_payload(prompt: str) -> dict[str, Any]:
 
 
 _PAYLOADS.update({"_draftcontrastretype": _contrast_retype_payload})
+
+
+# --------------------------------------------------------------------------------------
+# workflows/sense_hygiene.py: phantom_pos (D-76)
+# --------------------------------------------------------------------------------------
+#
+# Appended and registered with ``_PAYLOADS.update`` for the reason every block above gives.
+#
+# The verdict is a function of the *listed part-of-speech item* rather than of the headword,
+# so one entry can script a different answer for each of its blocks — which is what a step
+# asking one question about every block of one entry at a time needs. A block whose glosses
+# carry :data:`PHANTOM_COMPONENT_MARKER` comes back ``phantom_component``, one carrying
+# :data:`PHANTOM_DUPLICATE_MARKER` comes back ``phantom_duplicate``, and every other block
+# comes back ``genuine``.
+
+PHANTOM_COMPONENT_MARKER = "defines a component"
+PHANTOM_DUPLICATE_MARKER = "restates another block"
+
+
+def _phantom_pos_payload(prompt: str) -> dict[str, Any]:
+    """Judge every listed part-of-speech block by the markers its glosses carry."""
+    verdicts = []
+    for number, item in _numbered(prompt):
+        lowered = item.lower()
+        if PHANTOM_COMPONENT_MARKER in lowered:
+            verdict = "phantom_component"
+        elif PHANTOM_DUPLICATE_MARKER in lowered:
+            verdict = "phantom_duplicate"
+        else:
+            verdict = "genuine"
+        verdicts.append({"pos_ref": number, "verdict": verdict})
+    return {"verdicts": verdicts}
+
+
+_PAYLOADS.update({"_draftposverdicts": _phantom_pos_payload})

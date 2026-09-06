@@ -1,0 +1,82 @@
+{
+  "calls": 20,
+  "cost_usd": 1.1639,
+  "cost_usd_per_entry": 0.058195,
+  "encyclopedia_defects": 4,
+  "encyclopedia_judged": 20,
+  "entries_failed": 0,
+  "entries_judged": 20,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "awkward_style": 16,
+    "factual_error": 4,
+    "grammar_error": 3,
+    "hallucination": 4,
+    "inconsistent_style": 1,
+    "missing_content": 4,
+    "off_topic": 2,
+    "other": 2,
+    "punctuation_error": 2,
+    "scope_mismatch": 6,
+    "terminology_error": 19
+  },
+  "mean_score": 60.4,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0,
+    "example grade_1/plain": 0.0278,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.08
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 20,
+    "example grade_1/plain": 36,
+    "gloss college/plain": 25,
+    "gloss grade_1/plain": 25
+  },
+  "score_buckets": {
+    "60-79": 11,
+    "80-89": 1,
+    "90+": 0,
+    "<60": 8
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 9,
+    "domain_fits": 6,
+    "examples_fit_sense": 15,
+    "examples_natural": 21,
+    "gloss_accurate": 10,
+    "relations_valid": 31
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.25,
+    "domain_fits": 0.1667,
+    "examples_fit_sense": 0.4167,
+    "examples_natural": 0.5833,
+    "gloss_accurate": 0.2778,
+    "relations_valid": 0.8611
+  },
+  "senses_judged": 36,
+  "stopped_reason": null,
+  "top_issues": [
+    "verb 0 relations: dampness, wetness",
+    "encyclopedia: Calls 'become moist' a phrasal verb; it is a copular verb plus adjective complement.",
+    "notes: Eleven examples largely restate one scenario (soil/rain, towel, clay-groundwater repeated in past and future forms), reading as assembled filler. Two relation targets are nouns offered as hyponyms of a verb. Structural kind 'function_word' is wrong for this verb phrase.",
+    "adverb 0 gloss: Circular meta-definition; the phrase is a transparent preposition+noun, not a lexicalised adverb",
+    "adverb 0 relations: specifically, locally, regionally, globally, generally, categorically, universally, across domains, locative adverb, in data subset, in urban districts, in precinct results, in regional data, in state results, in sample subset",
+    "adverb 0 example grade_1/plain: 'election statistics' is well beyond grade_1 vocabulary and the sentence is semantically incoherent",
+    "encyclopedia: Treats the prepositional phrase as the name of a field; describes election statistics, not the headword",
+    "notes: Example 'turnout is highest among young voters' is false; young voters generally have the lowest turnout. The headword is a domain-tag artifact rather than a lexical unit, and the relation set is largely invented.",
+    "verb 0 relations: dissemination, popularity, visibility",
+    "verb 2 gloss: defines by describing the phrase ('a figurative use where...') instead of stating the meaning",
+    "verb 2 relations: popularity, visibility",
+    "verb 2 domain: suggested everyday general language",
+    "notes: The two senses are not separable: sense 2 is glossed as a figurative/everyday use but its examples are almost all online sharing, restating sense 1. Verb senses take noun hypernyms throughout.",
+    "adjective 0 gloss: defines an adjective ('propulsive'), but the headword is a noun compound and most examples use it as a noun",
+    "adjective 0 relations: propulsive, propelling, engaging, motivational, inspiring, initiating, triggering",
+    "notes: The term is a noun compound but is glossed and tagged as an adjective; relations mix adjectives as synonyms and repeat the same targets as both synonym and hyponym. Several examples ('A driving-action prompt motivates students', 'Constructive praise can be a driving-action cue') are assembled rather",
+    "adjective 0 gloss: defines the adjective 'multimodal', not the noun phrase headword, which has no adjective use",
+    "adjective 0 relations: multimedia, bimodal resources, trimodal activities, polymodal lessons, instructional design element",
+    "noun 0 relations: approaches, forms, single channel",
+    "noun 1 gloss: defines multimodal instruction, a teaching method, not what the phrase itself denotes"
+  ]
+}
