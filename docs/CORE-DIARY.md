@@ -1579,3 +1579,15 @@ encyclopedia 3 levels 100%; 0 cycles; synonym reciprocity 99.1%, antonym 99.9%;
 **62.2** — the phantom-POS finding (QA-DIARY it. 18; D-76 in progress). Follow-up 0
 (resolve + rendition remainders) started; follow-up 1 (sense-hygiene remainder, repair,
 regen, validity, reconcile, closing audit) behind it.
+
+**~20:00 — `phantom_pos` merged (D-76):** first step in sense-hygiene; one nano call
+per multi-POS or kind-mismatched entry, retires POS blocks whose glosses define a
+component word or duplicate another block. Pilot on 400 tier-4 entries: 95 blocks
+retired (61 component, 34 duplicate), 169 senses, 937 relations demoted, $0.000125/
+entry (~$7 store-wide). Paired judge on the 20 entries it changed: mean 45.4 → 60.4,
+gloss_accurate defect 56% → 28%, distinctness 63% → 25%. One false retire in 23 read
+(`full settlement` — the block-level verdict cannot split a block that mixes a real and
+a phantom gloss); four misses in ten keeps, so it errs conservative ~4:1, and every
+retirement is a reversible tombstone. Closing script queued behind follow-up 1:
+phantom_pos ($12 cap) → reconcile ×2 → graph-hygiene → forced tier-4 re-judge →
+store-wide audit → `export-hf --release v2.1` → push (16 repos, incl. inflections).
