@@ -1509,3 +1509,11 @@ started 22:53 (cap $45; at this rate expect ~$40).
 **Tier 4 examples × 4 levels (22:53 → 07:30, 8h36m):** 248,097 calls, **$40.32** (cap
 $45), all 54,904 entries, 740,646 renditions, 0 failures, cache 0.90. Completed.
 Encyclopedia grade_5 + college started 07:30 (cap $60).
+
+**2026-09-06 ~09:00 — v2.1 release prep merged (D-75):** new `opengloss-v2.1-inflections`
+repo (one row per surface form → lemma, incl. a `lemma` row; ~230K rows expected),
+tier-4 wired into the tier index, card prose derived from the tiers present, and a
+`--release` option (`v2.0` reproduces the published family). Two more agents are
+building the `retype` step (D-73, contrast paragraphs → hypernym/hyponym instead of
+`see_also`) and the `relation-regen` pass (D-74, for senses left with no relations).
+QA-DIARY it. 16–17 cover tier 4's gloss and example renditions mid-chain.
