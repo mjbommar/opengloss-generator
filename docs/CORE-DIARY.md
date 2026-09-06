@@ -1548,3 +1548,13 @@ started 12:05.
 glosses (3,935 refused) — tier 4's compounds inherited v1.3's circular definitions at a
 high rate, as QA-DIARY it. 16 predicted (11% of senses); `degenerate_renditions` 143;
 plus stilted/filler example rewrites. Relation-hygiene (validity, cap $60) started 14:00.
+
+**Tier 4 relation-hygiene (14:00 → 16:00): killed by the chain's 2-hour stage timeout**,
+not by its cap — 55,267 validity calls, **$43.02** of the $60 cap, 328 transient
+failures retried, no summary line. Sample census afterwards: 94% of tier-4 entries
+carry a validity marker, 6% (~3,300) do not. 96 stale lock files left by the kill; the
+store breaks dead-owner locks on read, so the next pass (sense-hygiene, started 16:00)
+proceeds. Chain gotcha #8: stage timeouts must scale with the tier (tier 4 ≈ 4.3×
+tier 3). The remainder is covered by follow-up 1's store-wide validity pass (markers
+skip judged entries); its cap raised $6 → $14 to cover ~3,300 tier-4 entries plus the
+regenerated edges. Tier-4 spend ≈ $233.
