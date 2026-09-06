@@ -1505,3 +1505,7 @@ tier 4's multiword entries carry more edges per sense). Graph-hygiene, then glos
 0 429s, cache 0.89. $0.00116/entry — 1.3× tier 3's rate; the compounds average 3.35
 senses. The remaining ~3,100 entries are in follow-up 0 (cap $12). Examples × 4 levels
 started 22:53 (cap $45; at this rate expect ~$40).
+
+**Tier 4 examples × 4 levels (22:53 → 07:30, 8h36m):** 248,097 calls, **$40.32** (cap
+$45), all 54,904 entries, 740,646 renditions, 0 failures, cache 0.90. Completed.
+Encyclopedia grade_5 + college started 07:30 (cap $60).
