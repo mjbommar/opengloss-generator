@@ -1542,3 +1542,9 @@ free-ish pass (open item).
 Completed. Tier-4 text stages total $143.61 (gloss $59.98 capped + examples $40.32 +
 encyclopedia $43.30); with structural $32.36 the tier stands at **$176**. Hygiene block
 started 12:05.
+
+**Tier 4 content-hygiene (12:05 → 14:00, 1h55m):** 50,843 calls, **$6.92** (cap $12),
+37,349 entries changed, completed. `circular_gloss` rewrote **35,822** canonical
+glosses (3,935 refused) — tier 4's compounds inherited v1.3's circular definitions at a
+high rate, as QA-DIARY it. 16 predicted (11% of senses); `degenerate_renditions` 143;
+plus stilted/filler example rewrites. Relation-hygiene (validity, cap $60) started 14:00.
