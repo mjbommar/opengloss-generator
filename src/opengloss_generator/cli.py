@@ -88,13 +88,12 @@ from opengloss_generator.workflows.qa_pairs import QACallRecord, plan_qa_pairs, 
 from opengloss_generator.workflows.queries import DEFAULT_PER_SENSE as QUERIES_DEFAULT_PER_SENSE
 from opengloss_generator.workflows.queries import SenseReport, plan_queries, run_queries
 from opengloss_generator.workflows.relation_hygiene import run_relation_hygiene
-from opengloss_generator.workflows.relation_reconcile import run_relation_reconcile
-from opengloss_generator.workflows.relation_regen import plan_relation_regen, run_relation_regen
 from opengloss_generator.workflows.relation_reconcile import (
     RelationReconcileOutcome,
     RelationReconcileStep,
     run_relation_reconcile,
 )
+from opengloss_generator.workflows.relation_regen import plan_relation_regen, run_relation_regen
 from opengloss_generator.workflows.resolve import resolve_entry, resolve_store
 from opengloss_generator.workflows.retrofit import RetrofitPass, run_retrofit
 from opengloss_generator.workflows.sense_hygiene import run_sense_hygiene
