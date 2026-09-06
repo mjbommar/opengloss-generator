@@ -913,3 +913,33 @@ band's centre (tier 2: 2.6 / 5.9 / 10.8 / 14.6). Compound headwords ("liberal ar
 make short sentences read as easier on Flesch–Kincaid, so the readability-hygiene pass
 will not fire on them; not a defect, but the college-level examples are simpler than
 tier 2's. Spot-read `liberal_arts` (2 senses): sense-discriminating and spans correct.
+
+## Iteration 18 — tier 4 judge sample (2026-09-06 19:25)
+
+40 tier-4 entries / 92 senses, seed 7, Opus, $2.89. Recipe A after the chain's hygiene
+block (validity and sense-hygiene both cut by the stage timeout; remainders queued).
+
+| | tier 2 final | tier 3 | **tier 4** |
+|---|---|---|---|
+| mean score | 70.2 | 66.7 | **62.2** |
+| entries 80+ / below 60 | 4 / 5 | 2 / 10 | 4 / **14** |
+| relations_valid defect | 60% | 66% | 82% |
+| examples_fit_sense | 38% | 39% | 48% |
+| examples_natural | 34% | 48% | 41% |
+| **gloss_accurate** | 12% | 12% | **35%** |
+| **distinct_from_other_senses** | 10% | 20% | **35%** |
+| domain_fits | 21% | 14% | **12%** (best) |
+
+**Read.** Tier 4 is the weakest tier, and the judge's notes name a *v1.3 inheritance*
+defect specific to compounds: **phantom POS entries** — `blank cell` carries an
+adjective entry whose gloss "defines the adjective 'blank', not the compound headword;
+no such adjective exists"; `communal` (adj) carries nominal hypernyms/hyponyms
+("monastic community", "cooperative housing") because v1.3 wrote a noun-shaped sense
+under an adjective POS. That single defect drives three criteria at once: the gloss is
+inaccurate for the headword, the phantom sense is not distinct from the real one, and
+its relations are wrong. Sense-hygiene's distinctness step (which did complete) does
+not catch it because the phantom gloss *is* distinct text. Also visible: plural forms
+in relation lists ("rabbis") and hyponyms filed as synonyms — the validity remainder
+and reconcile target those. Action: a `phantom_pos` hygiene step (agent launched,
+D-76) to retire POS entries whose glosses define a component word rather than the
+compound; re-judge after it and the remainders.
