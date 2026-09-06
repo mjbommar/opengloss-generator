@@ -1558,3 +1558,7 @@ proceeds. Chain gotcha #8: stage timeouts must scale with the tier (tier 4 ≈ 4
 tier 3). The remainder is covered by follow-up 1's store-wide validity pass (markers
 skip judged entries); its cap raised $6 → $14 to cover ~3,300 tier-4 entries plus the
 regenerated edges. Tier-4 spend ≈ $233.
+
+**Tier 4 sense-hygiene (16:00 → 18:00): cut by the 2-hour stage timeout** at
+58,044 calls, $13.65 of its $20 cap; remainder routed to follow-up 1 (cap $12). Repair started
+18:00; then catch-up, readability, rendition hygiene, reconcile, judge, audit.
