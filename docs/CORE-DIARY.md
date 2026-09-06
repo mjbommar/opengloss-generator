@@ -1536,3 +1536,9 @@ rewritten). Now first in the reconcile order. Note for the store: every
 step existed — the step pays off on *future* contrast runs (tier 3/4 have none yet),
 not on the existing tombstones. Reversing the existing tombstones is a separate,
 free-ish pass (open item).
+
+**Tier 4 encyclopedia grade_5 + college (07:30 → 12:05, 4h35m):** 70,403 calls,
+**$43.30** (cap $60), all 54,909 entries, 109,818 renditions, 0 failures, cache 0.70.
+Completed. Tier-4 text stages total $143.61 (gloss $59.98 capped + examples $40.32 +
+encyclopedia $43.30); with structural $32.36 the tier stands at **$176**. Hygiene block
+started 12:05.
