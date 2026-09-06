@@ -1562,3 +1562,9 @@ regenerated edges. Tier-4 spend ≈ $233.
 **Tier 4 sense-hygiene (16:00 → 18:00): cut by the 2-hour stage timeout** at
 58,044 calls, $13.65 of its $20 cap; remainder routed to follow-up 1 (cap $12). Repair started
 18:00; then catch-up, readability, rendition hygiene, reconcile, judge, audit.
+
+**Tier 4 reconcile sweep 1 (18:59 → 19:18, free):** `asymmetric` demoted **96,461**
+one-sided edges (synonym 60,130, antonym 36,329) across 77,744 entries — the validity
+pass was cut at 94% by the stage timeout, so many tier-4 pairs had one side judged and
+the other not; the sweep applies the stricter side. Tombstone/dedup/cap counts in the
+run log. Sweep 2 + graph-hygiene, then the tier-4 judge and audit.
