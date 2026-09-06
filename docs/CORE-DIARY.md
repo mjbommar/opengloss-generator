@@ -1517,3 +1517,10 @@ tier-4 wired into the tier index, card prose derived from the tiers present, and
 building the `retype` step (D-73, contrast paragraphs → hypernym/hyponym instead of
 `see_also`) and the `relation-regen` pass (D-74, for senses left with no relations).
 QA-DIARY it. 16–17 cover tier 4's gloss and example renditions mid-chain.
+
+**~09:15 — `relation-regen` merged (D-74):** one luna call per zero-relation sense,
+with tombstoned targets passed as "do not propose"; pilot on 366 empty senses filled
+92% with 678 relations at $0.00041/sense, one tombstoned target correctly refused; 13
+of 15 read were right, the two borderline ones are what the validity judge exists for.
+Queued as follow-up 1 after the tier-4 remainders: regen (cap $6) → resolve → validity
+→ reconcile ×2 → graph-hygiene → store-wide closing audit.
