@@ -1499,3 +1499,9 @@ edges 1,710,475, resolved 813,417 (47.6%); 87,600 unresolved edges whose target 
 the store remain for a remainder pass (queued after `DONE-TIER4`, cap $15). The rest
 point outside the store and cannot resolve. Structural total so far $32.36 (plan $25 —
 tier 4's multiword entries carry more edges per sense). Graph-hygiene, then gloss levels.
+
+**Tier 4 gloss × 4 levels (13:07 → 22:53, 9h46m): stopped on its $60 cap** after
+51,776 of 54,909 entries (94%), 280,135 calls, **694,582 renditions**, 0 failures,
+0 429s, cache 0.89. $0.00116/entry — 1.3× tier 3's rate; the compounds average 3.35
+senses. The remaining ~3,100 entries are in follow-up 0 (cap $12). Examples × 4 levels
+started 22:53 (cap $45; at this rate expect ~$40).
