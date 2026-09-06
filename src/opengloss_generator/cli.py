@@ -89,6 +89,7 @@ from opengloss_generator.workflows.queries import DEFAULT_PER_SENSE as QUERIES_D
 from opengloss_generator.workflows.queries import SenseReport, plan_queries, run_queries
 from opengloss_generator.workflows.relation_hygiene import run_relation_hygiene
 from opengloss_generator.workflows.relation_reconcile import run_relation_reconcile
+from opengloss_generator.workflows.relation_regen import plan_relation_regen, run_relation_regen
 from opengloss_generator.workflows.resolve import resolve_entry, resolve_store
 from opengloss_generator.workflows.retrofit import RetrofitPass, run_retrofit
 from opengloss_generator.workflows.sense_hygiene import run_sense_hygiene
@@ -262,6 +263,16 @@ _DRY_RUN_QA_OUTPUT_TOKEN_ESTIMATE = 3300
 _DRY_RUN_CONTRASTS_INPUT_TOKEN_ESTIMATE = 1800
 _DRY_RUN_CONTRASTS_CACHED_INPUT_TOKEN_ESTIMATE = 1600
 _DRY_RUN_CONTRASTS_OUTPUT_TOKEN_ESTIMATE = 200
+
+#: Per-call token estimate for ``relation-regen --dry-run``, priced against
+#: ``StageName.SENSES`` (the policy the pass reuses, D-74). Measured, not modelled, on
+#: D-74's sample pilot (2026-09-06, `data/sample-relgen`, 300 entries / 366 empty senses):
+#: 411,303 input and 183,576 output tokens over 366 calls, mean 1,124 / 502. Cache hit
+#: rate measured **0.0%** — this pass brings its own instructions rather than the sense
+#: stage's, and at ~600 tokens they sit under the provider's 1,024-token cache floor, so
+#: every call is priced uncached here, unlike every other stage's dry-run estimate above.
+_DRY_RUN_RELATION_REGEN_INPUT_TOKEN_ESTIMATE = 1124
+_DRY_RUN_RELATION_REGEN_OUTPUT_TOKEN_ESTIMATE = 502
 
 #: How many failure messages a batch sweep keeps for the run summary.
 _MAX_REPORTED_FAILURES = 5
@@ -1401,6 +1412,105 @@ def relation_reconcile(
                 session.stop_reason = outcome.stopped_reason
             elif cfg.dry_run:
                 session.stop_reason = "dry_run"
+            return session.summary(**outcome.as_dict()).as_dict()
+
+    _echo_summary(_run(_main()))
+
+
+def _relation_regen_dry_run_estimate(
+    store: LexemeStore, words: Sequence[str], cfg: AppConfig
+) -> dict[str, object]:
+    """Plan a ``relation-regen`` sweep without calling a model, and price the plan.
+
+    The plan itself is free and exact — ``workflows.relation_regen.plan_relation_regen``
+    reads each entry's live senses, their relation counts and the D-47 marker — so
+    ``senses_due`` is a count, not a guess. Only the money is estimated, from the
+    per-call token estimate above.
+
+    Args:
+        store: The store to read entries from.
+        words: The ids the sweep would visit.
+        cfg: The run configuration, for the reused ``SENSES`` policy.
+
+    Returns:
+        Extra summary fields describing the plan and its estimated cost.
+    """
+    scanned = 0
+    due = 0
+    for word in words:
+        entry = store.read(word)
+        if entry is None:
+            continue
+        scanned += 1
+        plan = plan_relation_regen(entry)
+        due += plan.senses_due
+
+    policy = cfg.policy(StageName.SENSES)
+    per_call = estimate_cost(
+        policy.model,
+        input_tokens=_DRY_RUN_RELATION_REGEN_INPUT_TOKEN_ESTIMATE,
+        output_tokens=_DRY_RUN_RELATION_REGEN_OUTPUT_TOKEN_ESTIMATE,
+        tier=policy.service_tier,
+    )
+    return {
+        "entries_scanned": scanned,
+        "senses_due": due,
+        "estimated_calls": due,
+        "estimated_cost_usd": round(per_call.total_usd * due, 6),
+        "note": "estimate only; --dry-run makes no model calls",
+    }
+
+
+@app.command("relation-regen")
+def relation_regen(
+    from_list: Annotated[
+        Path | None,
+        typer.Option(
+            "--from-list",
+            help="Restrict the sweep to the headwords in this list (default: whole store).",
+        ),
+    ] = None,
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+    budget: _BudgetOpt = None,
+    concurrency: _ConcurrencyOpt = None,
+    dry_run: _DryRunOpt = False,
+) -> None:
+    """Regenerate relations for every live sense the store currently holds none for (D-74).
+
+    One ``StageName.SENSES``-priced call per empty sense: the headword, its part of
+    speech and gloss, one example, the entry's other senses' glosses (to discriminate),
+    its domain, and every target a hygiene pass already rejected for this exact sense
+    (parsed from `relation-reconcile`'s tombstone records) — with an instruction not to
+    propose them again. Up to six typed relations come back, each with a one-line
+    justification; a target equal to the headword, already rejected, a duplicate, or over
+    its type's `relation-reconcile` cap is dropped for free before anything is written.
+    Relations are written unresolved, with note `regen: <justification>`; run `resolve`
+    and `relation-hygiene` afterwards to resolve and judge them — this pass does neither
+    itself. Idempotent (D-47): a sense that gained a relation is never revisited, and one
+    that did not is retried at most twice, only when its gloss has since changed.
+    """
+    cfg = _build_config(config_path, store, budget, concurrency, dry_run)
+    lexeme_ids = (
+        [slugify(word) for word in _read_word_list(from_list)] if from_list is not None else None
+    )
+
+    async def _main() -> dict[str, object]:
+        async with RunSession(cfg, install_signal_handler=True) as session:
+            words = lexeme_ids if lexeme_ids is not None else sorted(session.store.iter_ids())
+            if cfg.dry_run:
+                session.stop_reason = "dry_run"
+                extra = _relation_regen_dry_run_estimate(session.store, words, cfg)
+                return session.summary(**extra).as_dict()
+            outcome = await run_relation_regen(
+                session.store,
+                session.stages,
+                lexeme_ids=lexeme_ids,
+                workers=cfg.concurrency.workers,
+                stop_event=session.stop_event,
+            )
+            if outcome.stopped_reason is not None:
+                session.stop_reason = outcome.stopped_reason
             return session.summary(**outcome.as_dict()).as_dict()
 
     _echo_summary(_run(_main()))

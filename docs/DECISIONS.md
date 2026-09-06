@@ -4767,3 +4767,128 @@ threaded through `_title`/`_family_table`/`_limitations`/`_loading_section`),
 (+7: inflection rows including the lemma row and lower-casing, a missing-TSV warning, a
 spaced multi-word tier-4 entry, card rendering with four tiers and with two, and
 `--release v2.0` reproducing the old naming everywhere it appears).
+
+## D-74 (2026-09-06) — `relation-regen`: filling the senses hygiene emptied out
+
+**Context.** `relation-hygiene` (D-50) demotes an untrue edge to `see_also`;
+`relation-reconcile` (D-65/D-68) tombstones it — takes it out of `Sense.relations`
+entirely and writes what it removed to provenance. Both are correct, and both are silent
+about what they leave behind: a sense every one of whose edges turned out to be wrong
+ends the sweep with an empty relation list, and neither pass puts anything back. The
+2026-09-05 store-wide audit counted 3,709 of 137,314 live senses in exactly that state
+(`docs/CORE-DIARY.md`, "Goal 2 complete", open item 1), up from 1,760 the first time the
+number was measured — every hygiene sweep since has grown it, and tier 4's thinner
+multiword entries will grow it further. Nothing in the pipeline was aimed at it.
+
+**Decision.** A new workflow, `workflows/relation_regen.py`, and CLI command
+`relation-regen`. One luna call *per empty sense* (not per entry — pooling would buy
+nothing when most affected entries have exactly one such sense), reusing
+`StageName.SENSES`'s policy rather than adding a stage of its own — the same choice
+`relation_hygiene`'s `validity` step made for `HYGIENE`, and for the same reason: this is
+a generation task in the sense stage's own register, and a new stage would need its own
+config policy, pricing coverage and cost-accounting plumbing that a pass this narrow does
+not justify. Its contract and instructions are therefore module-private, following
+`relation_hygiene` and `examples.py`'s sense-fit call, because `contracts.py` and
+`prompts.py` are edited by other passes concurrently and a call that reuses an existing
+stage has nothing to add to either file.
+
+Each call is given the headword, the sense's part of speech and canonical gloss, one of
+its own examples, the entry's *other* live senses' glosses (so the model does not hand
+back a term that actually fits a sibling sense — the same discrimination context
+`examples.py`'s sense-fit call gives), the domain, and — the property that matters most —
+every target a hygiene pass already rejected *for this exact sense*, parsed from
+`relation-reconcile`'s own tombstone provenance records
+(`TOMBSTONE_RECORD_PREFIX`/`TOMBSTONE_LINE_PREFIX`, imported rather than restated), with
+an instruction not to propose them again. Up to six typed relations come back — a strict
+six-member subset of `RelationType` as its own model-facing enum, not the whole thing, so
+`derivation`/`collocation`/`see_also`/etc. cannot appear in a response at all — each with
+a one-line justification. Four free post-checks before anything is written: drop a target
+equal to the headword, drop a target in the rejected set, drop an in-call duplicate, and
+cap each type at `relation_reconcile.RelationCaps`' own allowance (synonym 8, antonym 4,
+hypernym 3, hyponym 8) — the identical ceiling `relation-reconcile --only cap` enforces on
+every other sense in the store. Relations are written **unresolved**
+(`RelationTarget.sense_id` stays `None`) with note `regen: <justification>`; `resolve` and
+`relation-hygiene` resolve and judge them on their next run. This pass does neither
+itself — reimplementing either would be asking a generation call to grade its own answer,
+the shape `docs/QA-DIARY.md` warns against elsewhere in this project.
+
+Idempotence is D-47's shape with one adaptation: because the unit of work is one *sense*,
+not one *entry* or one *ref set*, the marker is keyed on the sense id and digests the
+sense's own canonical gloss text — `relation_regen:<sense id>:<gloss digest>;attempts=<n>`
+— riding the call's own provenance record (`examples.py`'s convention: one call, one
+marker, no separate zero-cost record). A sense a call actually filled is never revisited
+at all, by construction — the selection rule is `not sense.relations`, read fresh every
+sweep. A sense a call *failed* to fill (every proposal was the headword, already
+rejected, a duplicate, or over its cap) keeps its marker until the gloss changes, and is
+bounded at two attempts total even across gloss changes, so a stubborn sense cannot be
+billed for a third opinion about input nothing has changed.
+
+**Pilot** (`data/sample-relgen`, 300 entries copied read-only from the live
+`data/core-store` — a tier-4 chain is running against it, so the copier
+(`scripts/build_sample_relgen.py`, mirroring `build_sample_verdicts.py`'s pattern) only
+ever reads, safe because `LexemeStore.write` swaps a complete file into place atomically —
+selected by `audit.py`'s own `senses_zero_relations` rule: at least one live sense with an
+empty relation list, stopping at 300 qualifying entries rather than scanning the whole
+109K-entry store). Run at `--budget 1.00 --concurrency 8`; it did not need the cap:
+
+| | |
+|---|---|
+| entries / senses scanned | 300 / 366 |
+| calls | 366 (one per sense, as designed) |
+| senses filled | 336 (91.8%); 30 still empty, marker written, one more attempt available |
+| relations proposed → accepted | 680 → 678 |
+| dropped: self / rejected / duplicate / capped / unusable | 0 / **1** / 0 / 1 / 0 |
+| accepted by type | synonym 274, hypernym 249, antonym 62, hyponym 53, holonym 28, meronym 12 |
+| cost | **$0.151276** total — **$0.00041/sense scanned**, $0.00045/sense filled |
+| cache hit rate | 0.0% |
+
+Extrapolated to the whole store's 3,709 known-empty senses: **≈ $1.53** — the pass is
+cheap enough that the $10 default run budget covers several whole-store sweeps.
+
+**The rejected-set exclusion fired, once, on exactly the shape it exists for.**
+`ami:noun:1` ("the acronym for artificial moral intelligence...") carries a
+`relation-reconcile` tombstone record naming `ethical AI`, `moral AI`, `responsible AI`,
+`artificial intelligence` and `computational ethics` as already-demoted `see_also`
+targets. The pilot's own call for that sense proposed two relations; one of them matched
+an entry on that list and was dropped before it reached the sense (`dropped_rejected`),
+the other (`hyponym -> machine ethics`) was kept. Out of 680 proposals across the whole
+pilot, exactly one repeated a tombstoned target — the model does not reach for rejected
+terms often, but the guard is what caught the one time it did, on the single most obvious
+candidate a term like "AMI" invites. The per-type cap fired once too: `puma:noun:1` (the
+footwear company sense) proposed four hypernyms (`corporation`, `enterprise`,
+`multinational corporation`, and a fourth); the fourth was dropped and the sense kept
+exactly three, `relation_reconcile.RelationCaps`' own hypernym ceiling.
+
+**The read.** Fifteen filled senses sampled at random (`random.seed(7)` over the full
+336) and read by hand. Thirteen were correctly typed with a justification that actually
+supports the claim — surname → `name`/`anthroponym`/`forename` hypernyms, `annealing` →
+`metaheuristic`/`stochastic algorithm`/`optimization`, `basically` → `more or
+less`/`kind of`/`sort of`, `beleaguered` → `lay siege` (synonym) / `surround` (hypernym).
+Two were borderline rather than wrong, and both are exactly the shape the *next* sweep
+exists to catch, which is the point of not judging this pass's own output here:
+`repellant` → `repellent` (`synonym`) is arguably a spelling variant of the same word
+rather than a second lexical unit — the same defect class `relation_hygiene`'s inflection
+step targets, just not a *headword* inflection so it slipped this pass's own headword-only
+self-check; and `beleaguered` → `siege` (`holonym`, "the act of laying siege forms part of
+... a siege") is a near-tautological justification a validity verdict should reasonably
+question. Both are single, resolvable, unresolved edges sitting exactly where `resolve`
+and `relation-hygiene` will look next — not a reason to add a fifth post-check here.
+
+**Consequence.** New: `workflows/relation_regen.py` (workflow + module-private contract
+and instructions), `cli.py`'s `relation-regen` command and
+`_relation_regen_dry_run_estimate` (dry-run pricing now measured, not modelled, from this
+pilot), `scripts/build_sample_relgen.py`, `tests/test_relation_regen.py` (+16: rejected-
+set parsing and exclusion, self/duplicate/cap post-checks, marker idempotence and the
+two-attempt bound across gloss changes, the strict six-member enum, CLI dry-run pricing
+and `--from-list`), one payload builder appended to `tests/conftest.py`
+(`_relation_regen_payload`). `uv run ruff check`/`format`, `uv run ty check`,
+`uv run pytest` (1,188 passed, 2 pre-existing skips) are clean on
+`hygiene/relation-regen`.
+
+**Left undone.** The whole-store run itself: this decision pilots and ships the pass, but
+does not run it against `data/core-store`, which a tier-4 chain is currently writing to
+and which is outside this worktree's permissions. The pilot's extrapolation bounds it
+comfortably under $2; a follow-up should run it for real, then `resolve` and
+`relation-hygiene` again to close the loop this pass deliberately leaves open, and record
+how many of the 3,709 (now more, tier 4 included) end up genuinely unfillable after two
+attempts each.
