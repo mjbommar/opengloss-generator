@@ -903,3 +903,13 @@ education / business / technology, as expected for compounds.
 
 Spot-read of `digital_format` (3 senses): the graded renditions track the canonical
 sense distinctions cleanly (storage mode / file type / conceptual state).
+
+## Iteration 17 — tier-4 example renditions (2026-09-06 08:00)
+
+500 tier-4 entries, 6,816 level renditions: span missing 0.6% (tier 3 had 7.9% before
+its rerun — the generation-time span finder handles compounds fine), stilted 3.4%,
+sub-4-word 0.01%. FK medians 1.0 / 3.8 / 7.6 / 11.3 — every level lands *below* its
+band's centre (tier 2: 2.6 / 5.9 / 10.8 / 14.6). Compound headwords ("liberal arts")
+make short sentences read as easier on Flesch–Kincaid, so the readability-hygiene pass
+will not fire on them; not a defect, but the college-level examples are simpler than
+tier 2's. Spot-read `liberal_arts` (2 senses): sense-discriminating and spans correct.
