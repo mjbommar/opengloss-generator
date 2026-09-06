@@ -1524,3 +1524,15 @@ with tombstoned targets passed as "do not propose"; pilot on 366 empty senses fi
 of 15 read were right, the two borderline ones are what the validity judge exists for.
 Queued as follow-up 1 after the tier-4 remainders: regen (cap $6) → resolve → validity
 → reconcile ×2 → graph-hygiene → store-wide closing audit.
+
+**~10:00 — `retype` step merged (D-73):** contrast paragraphs now retype
+`related_differently` synonym/antonym edges to hypernym/hyponym via one nano enum call
+(far side inverted), instead of demoting them. Pilot on 962 rewound edges: 500
+retyped, 29 kept, 380 far-side inverses, **55% rescued** from what D-68 alone would
+have tombstoned; $0.00019/call; 16 of 20 read right, 2 wrong type, 2 inverted
+(direction is the hard part; a first prompt had a systematic direction failure and was
+rewritten). Now first in the reconcile order. Note for the store: every
+`related_differently` edge in the current store was already demoted by D-68 before this
+step existed — the step pays off on *future* contrast runs (tier 3/4 have none yet),
+not on the existing tombstones. Reversing the existing tombstones is a separate,
+free-ish pass (open item).
