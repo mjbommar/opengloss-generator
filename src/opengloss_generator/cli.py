@@ -83,7 +83,11 @@ from opengloss_generator.workflows.qa_pairs import QACallRecord, plan_qa_pairs, 
 from opengloss_generator.workflows.queries import DEFAULT_PER_SENSE as QUERIES_DEFAULT_PER_SENSE
 from opengloss_generator.workflows.queries import SenseReport, plan_queries, run_queries
 from opengloss_generator.workflows.relation_hygiene import run_relation_hygiene
-from opengloss_generator.workflows.relation_reconcile import run_relation_reconcile
+from opengloss_generator.workflows.relation_reconcile import (
+    RelationReconcileOutcome,
+    RelationReconcileStep,
+    run_relation_reconcile,
+)
 from opengloss_generator.workflows.resolve import resolve_entry, resolve_store
 from opengloss_generator.workflows.retrofit import RetrofitPass, run_retrofit
 from opengloss_generator.workflows.sense_hygiene import run_sense_hygiene
@@ -257,6 +261,17 @@ _DRY_RUN_QA_OUTPUT_TOKEN_ESTIMATE = 3300
 _DRY_RUN_CONTRASTS_INPUT_TOKEN_ESTIMATE = 1800
 _DRY_RUN_CONTRASTS_CACHED_INPUT_TOKEN_ESTIMATE = 1600
 _DRY_RUN_CONTRASTS_OUTPUT_TOKEN_ESTIMATE = 200
+
+#: Token estimates for one ``relation-reconcile --only retype`` call, measured off D-73's
+#: pilot rather than guessed: 962 calls billed 1,337,317 input and 74,336 output tokens,
+#: which is 1,390 in and 77 out per call — the instructions plus one edge's two headwords,
+#: two glosses, filed type and contrast paragraph, against a one-word answer that
+#: ``reasoning_effort="low"`` pads with its own hidden tokens. The cached estimate is zero
+#: because the pilot's own cache hit rate was zero over all 962 calls, so pricing the
+#: instructions as cached would understate a real sweep's bill.
+_DRY_RUN_RETYPE_INPUT_TOKEN_ESTIMATE = 1390
+_DRY_RUN_RETYPE_CACHED_INPUT_TOKEN_ESTIMATE = 0
+_DRY_RUN_RETYPE_OUTPUT_TOKEN_ESTIMATE = 77
 
 #: How many failure messages a batch sweep keeps for the run summary.
 _MAX_REPORTED_FAILURES = 5
@@ -1341,13 +1356,48 @@ def relation_hygiene(
     _echo_summary(_run(_main()))
 
 
+def _retype_plan(outcome: RelationReconcileOutcome, cfg: AppConfig) -> dict[str, object]:
+    """Return the priced plan a ``--dry-run`` of the ``retype`` step reports.
+
+    The other five steps' dry run is a real dry run — every edit computed, nothing written
+    — and this one cannot be: computing the edit *is* the model call. So the step counts
+    the calls it would have made and this prices them, the way every other priced
+    ``--dry-run`` in this file does.
+
+    Args:
+        outcome: The dry run's outcome, whose ``retype`` result carries ``calls_planned``.
+        cfg: The run configuration, for the ``HYGIENE`` stage's model policy.
+
+    Returns:
+        The plan's summary fields, or an empty mapping when ``retype`` did not run.
+    """
+    result = outcome.steps.get(RelationReconcileStep.RETYPE)
+    if result is None:
+        return {}
+    per_call = estimate_cost(
+        cfg.policy(StageName.HYGIENE).model,
+        input_tokens=_DRY_RUN_RETYPE_INPUT_TOKEN_ESTIMATE,
+        cached_input_tokens=_DRY_RUN_RETYPE_CACHED_INPUT_TOKEN_ESTIMATE,
+        output_tokens=_DRY_RUN_RETYPE_OUTPUT_TOKEN_ESTIMATE,
+        tier=cfg.policy(StageName.HYGIENE).service_tier,
+    )
+    return {
+        "estimated_calls": result.calls_planned,
+        "estimated_cost_usd": round(per_call.total_usd * result.calls_planned, 6),
+        "note": (
+            "estimate only; --dry-run makes no model calls, so the other steps' counts are "
+            "for a sweep in which retype changed nothing"
+        ),
+    }
+
+
 @app.command("relation-reconcile")
 def relation_reconcile(
     only: Annotated[
         str | None,
         typer.Option(
             "--only",
-            help="Comma list of steps (verdicts, asymmetric, tombstone, dedup, cap).",
+            help="Comma list of steps (retype, verdicts, asymmetric, tombstone, dedup, cap).",
         ),
     ] = None,
     from_list: Annotated[
@@ -1359,21 +1409,27 @@ def relation_reconcile(
     ] = None,
     config_path: _ConfigOpt = None,
     store: _StoreOpt = None,
+    budget: _BudgetOpt = None,
     concurrency: _ConcurrencyOpt = None,
     dry_run: _DryRunOpt = False,
 ) -> None:
     """Reconcile the relation lists relation-hygiene's demotions left behind (D-65).
 
-    Free, no model calls. ``verdicts`` demotes every edge a stored contrast says is not
-    what it claims, near side and far side (D-68); ``asymmetric`` applies the stricter of
-    two disagreeing directional verdicts on a symmetric pair; ``tombstone`` takes every
-    demoted ``see_also`` out of the sense's relation list and writes it to provenance
-    instead, which is what shortens the list the QA judge is shown; ``dedup`` drops exact
-    duplicate edges; ``cap`` trims each sense's per-type runs. Idempotent; ``--dry-run``
-    computes every edit and writes nothing. Run after ``relation-hygiene`` and
+    Five free steps and one nano call per judged edge. ``retype`` asks what each edge a
+    contrast called ``related_differently`` really is — hypernym, hyponym, co-hyponym,
+    antonym, synonym or nothing — and files it under that type, reverse edge included
+    (D-73); it is the only step here that spends, so this command takes ``--budget``.
+    ``verdicts`` demotes every edge a stored contrast says is not what it claims and
+    ``retype`` could not type, near side and far side (D-68); ``asymmetric`` applies the
+    stricter of two disagreeing directional verdicts on a symmetric pair; ``tombstone``
+    takes every demoted ``see_also`` out of the sense's relation list and writes it to
+    provenance instead, which is what shortens the list the QA judge is shown; ``dedup``
+    drops exact duplicate edges; ``cap`` trims each sense's per-type runs. Idempotent;
+    ``--dry-run`` computes every free edit and writes nothing, and prices the calls
+    ``retype`` would have made rather than making them. Run after ``relation-hygiene`` and
     ``contrasts``, and re-run ``graph-hygiene`` afterwards to confirm reciprocity.
     """
-    cfg = _build_config(config_path, store, None, concurrency, dry_run)
+    cfg = _build_config(config_path, store, budget, concurrency, dry_run)
     steps = {s.strip() for s in only.split(",") if s.strip()} if only else None
     # The marker keys on the near side only, so an entry whose far side moved after a
     # sweep is skipped by digest; naming the remainder is cheaper than a whole-store
@@ -1386,6 +1442,7 @@ def relation_reconcile(
         async with RunSession(cfg, install_signal_handler=True) as session:
             outcome = await run_relation_reconcile(
                 session.store,
+                session.stages,
                 workers=cfg.concurrency.workers,
                 stop_event=session.stop_event,
                 only=steps,
@@ -1396,7 +1453,10 @@ def relation_reconcile(
                 session.stop_reason = outcome.stopped_reason
             elif cfg.dry_run:
                 session.stop_reason = "dry_run"
-            return session.summary(**outcome.as_dict()).as_dict()
+            extra = outcome.as_dict()
+            if cfg.dry_run:
+                extra |= _retype_plan(outcome, cfg)
+            return session.summary(**extra).as_dict()
 
     _echo_summary(_run(_main()))
 

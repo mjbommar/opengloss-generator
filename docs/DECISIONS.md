@@ -4685,3 +4685,212 @@ orchestration, sharding and push), `cli.py`'s `export-hf`, `tests/test_export_hf
 extra, and a `per-file-ignores` entry for the three card modules: their string literals
 are *published prose*, so RUF001-003 would flag correct typography, and the SQL in a code
 sample is shown to a reader rather than executed, so S608 does not apply.
+
+## D-73 (2026-09-06) — `relation-reconcile --only retype`: buying back the direction D-68 threw away
+
+**Context.** D-68 made `verdicts` demote every `related_differently` contrast edge to
+`see_also`, argued at length that this was the honest disposal, and then wrote down what it
+cost. Of fifteen such verdicts read against the paragraphs they came from, **eleven were a
+synonym that is really a hypernym or a hyponym** — `falcon→peregrine`, `dictator→pharaoh`,
+`accusation→indictment`, `psychic→clairvoyant`, `operative→shinobi` — and *in every one the
+paragraph names which member is the broader term, in prose*. That decision's own words: "the
+information to retype these correctly exists, in the contrast text, and reading it back out
+would need a model call this pass does not make… the obvious next feature, and it is not
+this one." This is that feature.
+
+**Decision.** A sixth step in `relation_reconcile.py`, `retype`, **first in the step order**,
+and the only one in the module that spends — which is why `relation-reconcile` now takes
+`--budget`.
+
+1. **One strict-enum question per edge.** For each `related_differently` contrast still keyed
+   on a live `synonym` or `antonym` edge, one nano call (`StageName.HYGIENE`'s existing
+   policy — a structural verdict about two definitions, exactly what `relation_hygiene`'s
+   `validity` step uses it for; no new stage member, no new price row) is shown the two
+   headwords, both glosses, the type on file and the paragraph, and answers one of
+   `hypernym | hyponym | co_hyponym | antonym | synonym | none`. `confusable_with` is the
+   third symmetric type and is deliberately excluded: its claim is about spelling and misuse,
+   its schema requires a note that *is* the content, and "which of these two is broader" is
+   not a question its contrasts were written to answer.
+
+2. **Direction is the whole problem, so the prompt is built around it.** This project's
+   convention is that a relation type names what the **target** is to the source
+   (`relation_hygiene.RELATION_VALIDITY_INSTRUCTIONS`: "this sense IS A KIND OF the target"),
+   which is the opposite of the convention a reader is likelier to have met, where "X is a
+   hyponym of Y" describes X. The instructions therefore define each type by the sentence
+   that has to read as true with SOURCE and TARGET named in it, work the *same* pair in both
+   directions, and — after the pilot below found the failure mode — name the failure mode
+   outright: "the one way this question is commonly got wrong is answering with the word that
+   describes the SOURCE."
+
+3. **Four dispositions.** A type other than the one on file **retypes** the edge, note
+   `retyped: contrast <old>→<new>`. The type already on file **keeps** it, note
+   `kept: contrast <type> confirmed` — a fresh, focused judgement about this one pair is
+   better evidence than the by-product verdict it disagrees with, and a contrast may
+   therefore disagree with its own verdict. `co_hyponym` and `none` change nothing and leave
+   the edge for `verdicts` to demote exactly as D-68 does. `co_hyponym` earns its place in
+   the enum without a `RelationType` behind it: a co-ordinate pair under one parent is a real
+   and common answer, and offering it is what stops the model rounding a sibling pair up to
+   `synonym` or down to `none`.
+
+4. **The hand-off to `verdicts`.** `retype` runs first and `_apply_verdicts` skips any edge
+   carrying one of `RETYPE_NOTE_PREFIXES`. The note is load-bearing for exactly one of the
+   four outcomes: a *retyped* edge no longer matches its contrast's edge id and would be
+   skipped anyway, but a *kept* one still matches, and demoting it would undo, a few lines
+   later and in the same sweep, the only judgement anybody ever bought about that pair.
+   Neither note is a demotion prefix, so `tombstone` leaves both alone and
+   `graph_hygiene._asserted_pairs` does not read them as "a pass judged this pair away".
+
+5. **Far side: the inverse, not a second call.** A contrast is written once per *undirected*
+   pair (D-57 §1), so the reverse edge has no contrast and nothing else will ever reach it —
+   and leaving it is strictly worse than doing nothing, since `A --hypernym--> B` beside
+   `B --synonym--> A` contradicts itself where before it was merely wrong the same way at
+   both ends. A retype queues a `_FarSideRetype`; the second phase gives the reverse
+   `hypernym↔hyponym` swapped, `synonym`/`antonym` unchanged. The far-side identity test is
+   **sense-level** (D-68 §3's argument, copied) and accepts two shapes: the reverse still
+   carrying the near side's old type, and a `see_also` a previous sweep demoted — which is
+   the D-68 leftover this step exists to rescue. No second model call: the inverse of a
+   decided direction is arithmetic, not judgement. Run after the main sweep has fully
+   drained so no two entry locks are ever held at once (D-31), and **with no stop event**,
+   for the reason and by the mechanism D-50's second amendment gives.
+
+6. **D-47 marker on the contrast set, two attempts.** `relation_reconcile:retype:<digest>;attempts=<n>`,
+   digest over one `<edge id>=<verdict>` ref per candidate **as collected**, not as the
+   answers leave it — the opposite of `relation_hygiene`'s `validity` marker and the right way
+   round here, because `co_hyponym` and `none` leave their edge untouched and still matching
+   its contrast, so a digest over survivors would be a digest over exactly the questions
+   already paid for. Written whenever a call was answered, even when nothing moved: the
+   marker is what the calls bought.
+
+7. **A default selection is every step the caller is equipped for.** `only=None` with a
+   runner is all six; without one it is the five free steps, so every library caller that has
+   always run this pass for $0 still does. Naming `retype` with no runner raises — a caller
+   who asked for the step by name and silently got a free sweep that changed nothing is owed
+   an error.
+
+8. **`--dry-run` stays free and becomes a plan.** The five free steps compute every edit and
+   write nothing, as before; `retype` counts the calls it would have made into
+   `calls_planned` and makes none, and the CLI prices them off the `HYGIENE` policy's row.
+   The summary says so, because in a dry run the *other* steps' counts are the counts for a
+   sweep in which `retype` changed nothing.
+
+**The population, and why the pilot had to rewind.** The step acts on a `related_differently`
+contrast whose edge is still live and still symmetric. On `data/core-store` today that
+population is **empty**: a full scan of all 109,633 entries found 24,611 `related_differently`
+contrasts and **zero** still matching a live edge, because D-68's `verdicts` demoted them and
+`tombstone` removed them weeks before this step existed. The step is therefore forward-looking
+— it earns its keep on entries whose contrasts are newer than their last reconcile, which is
+every entry the `contrasts` stage reaches from here on — and it does nothing at all to an
+entry already past that point. `scripts/build_sample_retype.py` rebuilds the pre-`verdicts`
+state from evidence rather than guesswork: a contrast's key *is* the edge it was written
+about (`falcon:noun:0-synonym->peregrine` names the asserting sense, the type and the target
+lexeme), so where that edge is gone the script re-adds a relation of that type toward that
+target, taking the target's sense from `Contrast.target_sense_id` and its surface form from
+the target entry's own headword, so no slug is ever un-slugged. The reverse is restored the
+same way where the far entry no longer holds one. `data/core-store` is read-only throughout;
+the sample is a copy.
+
+**Measured (`data/sample-retype`, 400 contrast-bearing seeds from `core_10k.tsv` and
+`tier2_50k.tsv` plus 18,749 far sides, `--from-list` the seeds, `--concurrency 8`,
+`--budget 1.00`).**
+
+| | |
+| --- | --- |
+| Edges judged | **962** on 400 entries (962 restored contrast edges, 743 restored reverses) |
+| Calls · cost · duration | 962 · **$0.180192** · 178 s — **$0.000187 per call** |
+| Tokens per call | 1,390 input, 0 cached, 77 output (cache hit rate 0.0 across all 962) |
+| Answers | `hyponym` 396 · `none` 350 · `hypernym` 102 · `co_hyponym` 84 · `antonym` 26 · `synonym` 4 |
+| Near-side retypes | **500** — `synonym→hyponym` 395, `synonym→hypernym` 102, `antonym→hyponym` 2, `synonym→antonym` 1 |
+| Near-side kept | **29** — `antonym` confirmed 25, `synonym` confirmed 4 |
+| Far-side inverse retypes | **380**, of 500 queued (the other 120 far entries hold no reverse of that type resolved to that sense) |
+| Left for `verdicts` | **433** = the 350 `none` + 84 `co_hyponym`, minus one edge a duplicate had already taken; `verdicts` then demoted 433 near and 341 far |
+| Rescued from demotion | **529 of 962 (55.0%)** — edges D-68 alone would have demoted to `see_also` and tombstoned |
+| Second sweep | 381 of 400 skipped by digest, 12 calls ($0.0022), 1 retype; **third sweep 0 calls** |
+
+The 5:1 skew toward `hyponym` is a property of the sample, not of the model: seeds are drawn
+in rank order from the core word lists, the frequent word of a pair is usually the general one
+(*falcon* before *peregrine*), so the source is systematically the broader member. The model
+still answered `hypernym` 102 times, which is what says it is reading rather than defaulting.
+
+The 12 calls on the second sweep are the honest cost of the far-side phase writing no marker
+(D-68's rule, kept): a seed that is also the far side of another seed has one candidate
+retyped out from under its retype marker, so its candidate set changes and D-47 grants
+attempt 2. It is bounded at two attempts and converges on the third sweep, at 1.2% of the
+first sweep's bill.
+
+**The 20-edge read, and the prompt fix it forced.** The pilot was run twice, and the first run
+is why. In run A (962 calls, $0.154) a seeded-random 20 near-side retypes plus a spot check of
+5 of the 82 `hypernym` answers found **three inverted directions, all the same failure**: the
+model was answering with the word that describes the **source**. `die --synonym--> drown` came
+back `hypernym` (*die* is indeed the hypernym — but the answer names the target, and *drown* is
+narrower); `agent --synonym--> depute` the same; `agency --synonym--> firm` came back `hyponym`
+where the paragraph says in so many words "agency is a kind of firm". The instructions were
+rewritten to name that failure mode outright, to lead each definition with what the TARGET is,
+and to carry `die`/`drown`, `agency`/`firm` and a part-of-speech `none` case as worked
+examples. Run B is the measurement above. All four of run A's misjudged edges are now right:
+`agency→firm` `hypernym`, `die→drown` `hyponym`, `agent→depute` `hyponym`, `moving→travel` no
+retype at all.
+
+Twenty run-B retypes read against their paragraphs — fourteen seeded-random plus six drawn
+from the `hypernym` answers, deliberately over-weighting the minority class where the errors
+live. **Sixteen are right, two are the wrong type without being the wrong direction, and two
+are inverted.**
+
+*Right (16).* `state:noun:1→texas` and `country:noun:0→montenegro` (hyponym — proper names of
+one political unit; `instance_of` would be better still and is not in the enum, which is worth
+a later look), `machine:verb:0→operate` (hypernym: "operate is the ordinary and more flexible
+choice"), `strong:adjective:2→unbreakable` (hyponym: "unbreakable makes a much more absolute
+claim"), `date:noun:0→timestamp`, `address:noun:1→plenary` ("an address can be plenary"),
+`body:noun:1→bulk` ("bulk is therefore a narrower physical-size term"),
+`count:verb:0→quantify` and `agent:noun:0→doer` and `defense:noun:1→vindication` and
+`sound:verb:1→travel` and `crime:noun:0→misdeeds` and `sound:noun:0→vibration` and
+`local:adjective:0→regional` (hypernym, each one following the paragraph's own "X is the
+broader word"), `quality:noun:1→savor` ("savor names a particular kind of quality"),
+`business:noun:0→trades` ("business is the broader").
+
+*Wrong type, right direction (2).* `near:adverb:0→close` was retyped `hypernym` where the
+paragraph argues the two adverbs are interchangeable — `synonym`, i.e. a *keep*, was the
+answer. `light:noun:2→photon` was retyped `hyponym` where the paragraph says outright "the
+relation is whole-to-unit, not synonymy" — a `meronym`, which the enum does not offer, so
+`none` was the honest answer.
+
+*Inverted (2).* `degree:noun:3→unit` came back `hyponym` where the paragraph says "a degree is
+one particular kind of unit" — the target is the broader word and the answer should have been
+`hypernym`. `film:noun:0→skim` came back `hypernym` where the paragraph says "film is the
+wider term" — the answer should have been `hyponym`. The two err in *opposite* directions, so
+what is left after the prompt fix is noise rather than the systematic source/target confusion
+run A had.
+
+**The judgement.** Ship it, with the error rate written down. Two inversions in twenty — on a
+sample deliberately enriched with the hard class, so ~10% is an upper bound rather than the
+sweep's rate — against the alternative of deleting all 962 edges, which is what D-68 does and
+which loses 100% of the information rather than 10%. An inverted retype is worse than a
+deletion in one specific way and better in every other: the far-side inverse makes the pair
+*consistent*, so `graph_hygiene`'s mutual-hypernymy and cycle detectors will not catch it, but
+every one of these edges carries `retyped: contrast <old>→<new>` on its note and is therefore
+findable, countable and reversible as a class, which a tombstoned edge is not. If 10% is later
+judged too high, the lever is a stage policy of its own at a higher `reasoning_effort` — the
+`HYGIENE` policy is `"low"` and is shared with `relation_hygiene`, so raising it here means a
+new `StageName` member and price row, which is a bigger change than this step needed.
+
+**Consequence.** Modified: `src/opengloss_generator/workflows/relation_reconcile.py`
+(`RelationReconcileStep.RETYPE` first in `ALL`; `CONTRAST_RETYPE_INSTRUCTIONS`,
+`_DraftContrastRetype`, `_RetypeCandidate`, `_collect_retype_candidates`, `_apply_retypes`,
+`_apply_retype`, `_build_retype_prompt`, `_target_gloss`, the retype marker helpers,
+`_FarSideRetype`/`_far_side_retype`/`_is_far_side_retype_of`/`_retype_far_side`/
+`_retype_far_side_all`; `RETYPE_NOTE_PREFIX`, `RETYPE_KEPT_NOTE_PREFIX`,
+`RETYPE_FAR_SIDE_NOTE_PREFIX`, `RETYPE_NOTE_PREFIXES`, `RETYPE_MARKER_PREFIX`,
+`RETYPE_MAX_ATTEMPTS`; `by_answer`/`by_retype`/`calls_planned`/`far_side_retyped` on
+`RelationReconcileStepResult` and `retyped`/`calls`/`cost_usd` on the outcome; `_select_steps`
+split out of the entry point; the `runner` parameter and the ``retype``-without-a-runner
+refusal); `cli.py` (`--budget` on `relation-reconcile`, `session.stages` passed through,
+`_retype_plan` and its three measured token constants, the `--only` help and the command
+docstring); `README.md` (the `relation-reconcile` row). New:
+`scripts/build_sample_retype.py`. Tests: **+18** (`tests/test_relation_reconcile.py`: each of
+the six answers' disposition, the far-side inverse and its `see_also` rescue, the two
+directions of one pair coming back inverse, a kept edge surviving `verdicts` in the same
+sweep, a retyped edge surviving `verdicts` and `tombstone`, idempotence over three sweeps, the
+non-`related_differently` verdicts never asked about, asymmetric edges never asked about, the
+dry-run plan, the runner refusal, and a default selection without a runner staying free), plus
+one scripted contract in `tests/conftest.py`; 1,188 pass, 2 pre-existing skips.
+`uv run ruff check`/`format --check`, `uv run ty check src`, `uv run pytest` clean on
+`hygiene/retype`. `data/core-store` untouched — the sample is a read-only copy.
