@@ -202,7 +202,7 @@ def _read(result: hf.HfExportResult, slug: str, config: str = "default") -> list
 
 
 def test_every_repo_has_a_unique_name_and_at_least_one_config():
-    names = [spec.name for spec in REPOS]
+    names = [spec.name() for spec in REPOS]
     assert len(names) == len(set(names))
     for spec in REPOS:
         assert spec.configs
@@ -215,14 +215,15 @@ def test_every_field_is_documented_and_uniquely_named():
     for spec in REPOS:
         for config in spec.configs:
             names = [field.name for field in config.fields]
-            assert len(names) == len(set(names)), f"{spec.name}/{config.name}"
+            assert len(names) == len(set(names)), f"{spec.name()}/{config.name}"
             for field in config.fields:
-                assert field.description.strip(), f"{spec.name}.{field.name}"
+                assert field.description.strip(), f"{spec.name()}.{field.name}"
 
 
 def test_resolve_repos_is_registry_ordered_and_rejects_unknown_names():
     assert [spec.slug for spec in resolve_repos("senses,lexicon")] == ["lexicon", "senses"]
-    assert resolve_repos("opengloss-v2.0-queries")[0].slug == "queries"
+    assert resolve_repos("opengloss-v2.1-queries")[0].slug == "queries"
+    assert resolve_repos("opengloss-v2.0-queries", release="v2.0")[0].slug == "queries"
     assert len(resolve_repos("all")) == len(REPOS)
     with pytest.raises(ValueError, match="unknown repo"):
         resolve_repos("nope")
@@ -231,7 +232,7 @@ def test_resolve_repos_is_registry_ordered_and_rejects_unknown_names():
 def test_data_globs_are_distinct_per_config():
     for spec in REPOS:
         globs = {spec.data_glob(config) for config in spec.configs}
-        assert len(globs) == len(spec.configs), spec.name
+        assert len(globs) == len(spec.configs), spec.name()
 
 
 # --------------------------------------------------------------------------------------
@@ -245,9 +246,9 @@ def test_written_parquet_schema_matches_the_declared_schema(tmp_path):
         for config in spec.configs:
             directory = hf.data_dir(result.out_dir, spec, config)
             paths = sorted(directory.glob("*.parquet"))
-            assert paths, f"{spec.name}/{config.name} wrote no shard"
+            assert paths, f"{spec.name()}/{config.name} wrote no shard"
             for path in paths:
-                assert pq.read_schema(path).equals(config.schema), f"{spec.name}/{config.name}"
+                assert pq.read_schema(path).equals(config.schema), f"{spec.name()}/{config.name}"
 
 
 def test_a_row_with_an_unknown_column_is_refused(tmp_path):
@@ -397,6 +398,97 @@ def test_etymology_is_one_row_per_entry_that_has_one(tmp_path):
     assert rows[0]["cognates"] == ["German Rücken"]
 
 
+# --------------------------------------------------------------------------------------
+# Inflections (D-75)
+# --------------------------------------------------------------------------------------
+
+
+def _multi_pos_entry() -> Lexeme:
+    """Return one headword with a noun, a verb and an adjective POS entry.
+
+    Each POS entry's morphology exercises a different subset of inflected fields plus a
+    derivation, so the projection is checked across relation kinds and across POS entries
+    of the same lexeme.
+    """
+    return Lexeme.empty(
+        "Record",
+        kind=LexemeKind.SIMPLEX,
+        pos_entries=[
+            POSEntry(
+                pos=PartOfSpeech.NOUN,
+                senses=[_sense(0, "A stored account of something.")],
+                morphology=Morphology(plural="Records", derivations=["Recorder"]),
+            ),
+            POSEntry(
+                pos=PartOfSpeech.VERB,
+                senses=[_sense(0, "To set something down for later reference.")],
+                morphology=Morphology(
+                    past_tense="recorded",
+                    past_participle="recorded",
+                    present_participle="recording",
+                    third_person_singular="records",
+                ),
+            ),
+            POSEntry(
+                pos=PartOfSpeech.ADJECTIVE,
+                senses=[_sense(0, "Preserved in a fixed form.")],
+                morphology=Morphology(comparative="more recorded", superlative="most recorded"),
+            ),
+        ],
+    )
+
+
+def test_inflection_rows_cover_every_pos_and_the_lemma_row(tmp_path):
+    result = _export(tmp_path, [_multi_pos_entry()])
+    rows = _read(result, "inflections")
+
+    by_pos = {}
+    for row in rows:
+        by_pos.setdefault(row["pos"], []).append(row)
+
+    noun = {row["relation"]: row for row in by_pos["noun"]}
+    assert set(noun) == {"lemma", "plural", "derivation"}
+    assert noun["lemma"]["form"] == "Record"
+    assert noun["plural"]["form"] == "Records"
+    assert noun["derivation"]["form"] == "Recorder"
+
+    verb = {row["relation"]: row for row in by_pos["verb"]}
+    assert set(verb) == {
+        "lemma",
+        "past_tense",
+        "past_participle",
+        "present_participle",
+        "third_person_singular",
+    }
+    assert verb["past_tense"]["form"] == "recorded"
+    assert verb["present_participle"]["form"] == "recording"
+
+    adjective = {row["relation"]: row for row in by_pos["adjective"]}
+    assert set(adjective) == {"lemma", "comparative", "superlative"}
+    assert adjective["comparative"]["form"] == "more recorded"
+
+    # Every row carries the shared lexeme_id/headword/tier regardless of POS.
+    assert {row["lexeme_id"] for row in rows} == {"record"}
+    assert {row["headword"] for row in rows} == {"Record"}
+    assert {row["tier"] for row in rows} == {"unknown"}
+
+    assert result.stats.inflection_forms == len(rows) == 3 + 5 + 3
+    assert result.stats.inflection_relations["lemma"] == 3
+
+
+def test_inflection_form_normalized_is_lower_cased(tmp_path):
+    result = _export(tmp_path, [_multi_pos_entry()])
+    rows = _read(result, "inflections")
+    for row in rows:
+        assert row["form_normalized"] == row["form"].lower()
+    lemma_noun = next(row for row in rows if row["pos"] == "noun" and row["relation"] == "lemma")
+    assert lemma_noun["form"] == "Record"
+    assert lemma_noun["form_normalized"] == "record"
+    comparative = next(row for row in rows if row["relation"] == "comparative")
+    assert comparative["form"] == "more recorded"
+    assert comparative["form_normalized"] == "more recorded"
+
+
 def test_provenance_rows_carry_the_cost_and_a_truncated_note(tmp_path):
     entry = _rich_entry()
     entry.add_provenance(
@@ -445,9 +537,23 @@ def test_from_list_restricts_every_repo(tmp_path):
 def test_repos_selects_which_directories_are_written(tmp_path):
     result = _export(tmp_path, [_rich_entry()], repos="senses,queries")
     written = {path.name for path in result.out_dir.iterdir()}
-    assert written == {"opengloss-v2.0-senses", "opengloss-v2.0-queries"}
+    assert written == {
+        REPOS_BY_SLUG["senses"].name(),
+        REPOS_BY_SLUG["queries"].name(),
+    }
     # The store pass still ran, so the cards can quote release-wide numbers.
     assert result.stats.lexemes == 1
+
+
+def test_release_overrides_the_default_repo_naming_everywhere(tmp_path):
+    result = _export(tmp_path, [_rich_entry()], repos="senses", release="v2.0")
+    written = {path.name for path in result.out_dir.iterdir()}
+    assert written == {"opengloss-v2.0-senses"}
+    assert result.repos == ["opengloss-v2.0-senses"]
+    text = (result.out_dir / "opengloss-v2.0-senses" / "README.md").read_text(encoding="utf-8")
+    assert "# OpenGloss v2.0 — Senses" in text
+    assert "opengloss-v2.1-" not in text
+    assert "opengloss-v2.0-lexicon" in text
 
 
 # --------------------------------------------------------------------------------------
@@ -455,8 +561,15 @@ def test_repos_selects_which_directories_are_written(tmp_path):
 # --------------------------------------------------------------------------------------
 
 
-def _write_tier_files(directory: Path) -> Path:
-    """Write the three rank TSVs, with one word deliberately on two of them."""
+def _write_tier_files(directory: Path, *, with_tier4: bool = False) -> Path:
+    """Write the rank TSVs, with one word deliberately on two of the first three.
+
+    Args:
+        directory: Where to write the files.
+        with_tier4: Also write ``tier4.tsv``, with a ``group`` column carrying both
+            ``stopword`` and ``wf10`` values and one multi-word entry, to exercise D-75's
+            group-collapsing and space-tolerant slugification.
+    """
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "core_10k.tsv").write_text(
         "rank\tword\twiki_frequency\n1\tridge\t100\n", encoding="utf-8"
@@ -467,6 +580,14 @@ def _write_tier_files(directory: Path) -> Path:
     (directory / "tier3_final.tsv").write_text(
         "rank\tword\twiki_frequency\n40000\tmarl\t5\n", encoding="utf-8"
     )
+    if with_tier4:
+        (directory / "tier4.tsv").write_text(
+            "rank\tword\twiki_frequency\tgroup\n"
+            "1\tthe\t100000\tstopword\n"
+            "2\tto be\t5000\tstopword\n"
+            "3\tlive people\t400\twf10\n",
+            encoding="utf-8",
+        )
     return directory
 
 
@@ -482,6 +603,34 @@ def test_a_missing_tier_directory_is_not_an_error(tmp_path):
     index = TierIndex.from_dir(tmp_path / "absent")
     assert len(index) == 0
     assert index.tier_of("ridge") == "unknown"
+
+
+def test_a_missing_tsv_is_tolerated_and_logged_not_crashed(tmp_path, capsys, caplog):
+    directory = _write_tier_files(tmp_path / "core")
+    (directory / "tier3_final.tsv").unlink()
+    index = TierIndex.from_dir(directory)
+    # The entry that was only on the deleted file falls to unknown, not to an exception.
+    assert index.tier_of("marl") == "unknown"
+    # The other files are read normally.
+    assert index.tier_of("ridge") == "core"
+    assert index.tier_of("crest") == "tier2"
+    # structlog routes through stdlib logging when something in the process has already
+    # configured it (caplog then sees it) and through its own default printer otherwise
+    # (capsys sees it) — check both rather than depend on which is active this run.
+    warning = capsys.readouterr().out + caplog.text
+    assert "tier_file_missing" in warning
+    assert "tier3_final.tsv" in warning
+
+
+def test_tier4_group_column_collapses_to_a_single_tier_and_tolerates_spaces(tmp_path):
+    index = TierIndex.from_dir(_write_tier_files(tmp_path / "core", with_tier4=True))
+    # Both `stopword` and `wf10` groups surface as plain `tier4` (D-75) — the group
+    # itself is not a separate exported tier.
+    assert index.tier_of("the") == "tier4"
+    assert index.tier_of("live_people") == "tier4"
+    # A `word` column entry with a space is slugified the same way a lexeme_id is.
+    assert index.tier_of("to_be") == "tier4"
+    assert index.tier_of("to be") == "unknown"
 
 
 def test_the_tier_column_is_stamped_on_every_grain(tmp_path):
@@ -593,7 +742,7 @@ def test_every_card_has_valid_front_matter_naming_its_own_config_globs(tmp_path)
         for entry, config in zip(configs, spec.configs, strict=True):
             assert entry["data_files"] == [{"split": "train", "path": spec.data_glob(config)}]
             files = sorted(hf.data_dir(result.out_dir, spec, config).glob("*.parquet"))
-            assert files, f"{spec.name}/{config.name}"
+            assert files, f"{spec.name()}/{config.name}"
 
 
 def test_every_card_states_the_row_count_the_parquet_files_actually_hold(tmp_path):
@@ -612,7 +761,7 @@ def test_every_card_documents_every_column_it_writes(tmp_path):
         text = (hf.repo_dir(result.out_dir, spec) / "README.md").read_text(encoding="utf-8")
         for config in spec.configs:
             for field in config.fields:
-                assert f"| `{field.name}` |" in text, f"{spec.name}/{config.name}.{field.name}"
+                assert f"| `{field.name}` |" in text, f"{spec.name()}/{config.name}.{field.name}"
 
 
 def test_every_card_carries_the_family_table_the_citation_and_the_limitations(tmp_path):
@@ -620,9 +769,9 @@ def test_every_card_carries_the_family_table_the_citation_and_the_limitations(tm
     for spec in REPOS:
         text = (hf.repo_dir(result.out_dir, spec) / "README.md").read_text(encoding="utf-8")
         assert "## Related datasets" in text
-        assert f"**`{spec.name}`** (this one)" in text
+        assert f"**`{spec.name()}`** (this one)" in text
         for other in REPOS:
-            assert other.name in text
+            assert other.name() in text
         assert "## Known limitations" in text
         assert "arxiv.org/abs/2511.18622" in text
         assert "Creative Commons Attribution 4.0" in text
@@ -649,6 +798,39 @@ def test_the_scope_note_compares_against_the_published_v13_figures(tmp_path):
     assert f"{hf_cards.V13.LEXEMES:,}" in text
     assert "not** a superset of v1.3" in text
     assert hf_cards.V13.URL in text
+
+
+def test_card_renders_with_four_tiers_present(tmp_path):
+    tiers = _write_tier_files(tmp_path / "core", with_tier4=True)
+    entries = [
+        _rich_entry(),  # ridge -> core
+        _target_entry(),  # crest -> tier2
+        _entry("marl", [_sense(0, "A lime-rich mudstone.")]),  # tier3
+        _entry("the", [_sense(0, "Used to refer to a specific thing.")]),  # tier4
+    ]
+    result = _export(tmp_path, entries, tiers_dir=tiers)
+    assert result.stats.tiers_present == ("core", "tier2", "tier3", "tier4")
+    text = (hf.repo_dir(result.out_dir, REPOS_BY_SLUG["senses"]) / "README.md").read_text(
+        encoding="utf-8"
+    )
+    assert "| Field | Of | `core` | `tier2` | `tier3` | `tier4` |" in text
+    assert "- `core` — top 10K by composite frequency" in text
+    assert "- `tier4` — stopwords, plus compounds and names at Wikipedia frequency ≥ 10" in text
+    assert "built in 4 frequency-ranked passes (`core`, `tier2`, `tier3` and `tier4`)" in text
+
+
+def test_card_renders_with_two_tiers_present(tmp_path):
+    tiers = _write_tier_files(tmp_path / "core")
+    result = _export(tmp_path, [_rich_entry(), _target_entry()], tiers_dir=tiers)
+    assert result.stats.tiers_present == ("core", "tier2")
+    text = (hf.repo_dir(result.out_dir, REPOS_BY_SLUG["senses"]) / "README.md").read_text(
+        encoding="utf-8"
+    )
+    assert "| Field | Of | `core` | `tier2` |" in text
+    assert "built in 2 frequency-ranked passes (`core` and `tier2`)" in text
+    assert "- `core` — top 10K by composite frequency" in text
+    assert "- `tier3`" not in text
+    assert "- `tier4`" not in text
 
 
 def test_the_coverage_table_reports_per_tier_shares_that_match_the_data(tmp_path):
@@ -741,17 +923,17 @@ def test_push_creates_each_repo_then_uploads_its_folder(tmp_path):
         result.out_dir, resolve_repos("senses,queries"), owner="acme", private=True, api=api
     )
     assert [call["repo_id"] for call in api.created] == [
-        "acme/opengloss-v2.0-senses",
-        "acme/opengloss-v2.0-queries",
+        "acme/opengloss-v2.1-senses",
+        "acme/opengloss-v2.1-queries",
     ]
     assert all(call["repo_type"] == "dataset" for call in api.created)
     assert all(call["private"] is True for call in api.created)
     assert all(call["exist_ok"] is True for call in api.created)
     assert [Path(call["folder_path"]).name for call in api.uploaded] == [
-        "opengloss-v2.0-senses",
-        "opengloss-v2.0-queries",
+        "opengloss-v2.1-senses",
+        "opengloss-v2.1-queries",
     ]
-    assert pushed[0]["url"] == "https://huggingface.co/datasets/acme/opengloss-v2.0-senses"
+    assert pushed[0]["url"] == "https://huggingface.co/datasets/acme/opengloss-v2.1-senses"
 
 
 def test_export_does_not_push_by_itself(tmp_path):

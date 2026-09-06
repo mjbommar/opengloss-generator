@@ -25,7 +25,12 @@ from opengloss_generator.export.hf import (
     export_hf,
     push_repos,
 )
-from opengloss_generator.export.hf_schemas import ALL_REPO_SLUGS, DEFAULT_OWNER, resolve_repos
+from opengloss_generator.export.hf_schemas import (
+    ALL_REPO_SLUGS,
+    DEFAULT_OWNER,
+    DEFAULT_RELEASE,
+    resolve_repos,
+)
 from opengloss_generator.export.pairs import export_pairs as _export_pairs
 from opengloss_generator.export.pretrain import TEMPLATES as PRETRAIN_TEMPLATES
 from opengloss_generator.export.pretrain import export_pretrain
@@ -1713,7 +1718,10 @@ def export_hf_cmd(
     ] = DEFAULT_MAX_SHARD_BYTES // 1_000_000,
     tiers_dir: Annotated[
         Path,
-        typer.Option("--tiers-dir", help="Directory holding core_10k/tier2_50k/tier3_final TSVs."),
+        typer.Option(
+            "--tiers-dir",
+            help="Directory holding core_10k/tier2_50k/tier3_final/tier4 TSVs.",
+        ),
     ] = Path("data/core"),
     levels: Annotated[
         str | None,
@@ -1732,6 +1740,14 @@ def export_hf_cmd(
     owner: Annotated[
         str, typer.Option("--owner", help="Hugging Face namespace used in card cross-links.")
     ] = DEFAULT_OWNER,
+    release: Annotated[
+        str,
+        typer.Option(
+            "--release",
+            help="Release label for repo ids and cards. Pass an older label (e.g. v2.0) "
+            "to reproduce that release's naming exactly.",
+        ),
+    ] = DEFAULT_RELEASE,
     push: Annotated[
         bool, typer.Option("--push", help="Upload each repo to the Hub after writing it.")
     ] = False,
@@ -1741,14 +1757,17 @@ def export_hf_cmd(
     store: _StoreOpt = None,
     config_path: _ConfigOpt = None,
 ) -> None:
-    """Build the v2.0 Hugging Face release family: parquet shards plus a dataset card (D-72).
+    """Build the Hugging Face release family: parquet shards plus a dataset card (D-72, D-75).
 
     Free: makes no model call and never writes to the store. One streaming pass produces
-    the eleven store-derived repos (the two nested canonical ones, `lexicon` and `senses`,
+    the twelve store-derived repos (the two nested canonical ones, `lexicon` and `senses`,
     and the flat one-row-per-item views), and the four free retrieval exporters produce
     the rest. Every column has an explicit type, every card's statistics are counted from
     the rows actually written, and shards roll at `--shard-rows` or `--max-shard-mb`,
     whichever comes first.
+
+    `--release` names the repos and their cards; the default moves forward with the
+    family, and an older label stays reproducible for as long as its own store shape does.
 
     Nothing is uploaded unless `--push` is given, which is also the only path that needs
     `huggingface_hub` installed or a token in the environment.
@@ -1770,10 +1789,17 @@ def export_hf_cmd(
         pair_easy_negatives=pair_easy_negatives,
         pretrain_levels=selected_levels,
         owner=owner,
+        release=release,
     )
     summary = {"store": str(lexeme_store.root), **result.as_summary()}
     if push:
-        summary["pushed"] = push_repos(out, resolve_repos(repos), owner=owner, private=private)
+        summary["pushed"] = push_repos(
+            out,
+            resolve_repos(repos, release=release),
+            owner=owner,
+            release=release,
+            private=private,
+        )
     _echo_summary(summary)
 
 

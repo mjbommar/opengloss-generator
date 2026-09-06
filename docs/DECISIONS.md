@@ -4685,3 +4685,85 @@ orchestration, sharding and push), `cli.py`'s `export-hf`, `tests/test_export_hf
 extra, and a `per-file-ignores` entry for the three card modules: their string literals
 are *published prose*, so RUF001-003 would flag correct typography, and the SQL in a code
 sample is shown to a reader rather than executed, so S608 does not apply.
+
+## D-75 (2026-09-06) — v2.1: a sixteenth repo for inflections, tier 4 wired into the release, `--release` as a first-class parameter
+
+**Context.** Two things landed independently of the exporter and both belong in the next
+release. First, tier 4 (`data/core/tier4.tsv`) exists now — stopwords and high-frequency
+compounds/names, folded into one `group` column distinguishing `stopword` from `wf10` —
+and the tier-4 enrichment pass is running against the store as this is written. Second,
+every card in D-72's family already carries `plural`, `past_tense` and the rest of
+`Morphology` *inside* the nested `lexicon` row, but a consumer who wants to resolve one
+surface string ("geese" -> "goose", noun) has to load the nested repo and explode it —
+exactly the shape D-72 built the flat views to avoid.
+
+**Decision, part 1: `inflections` is its own flat repo, not a config of `lexicon`.**
+`opengloss-v2.1-inflections` gets one row per stored inflected or derived form, plus one
+`lemma` row for the headword itself, per POS entry — so a homograph like "record" (noun,
+verb) resolves the same headword to two different parts of speech rather than one
+ambiguous row. Columns: `form` (case preserved), `form_normalized` (`form.lower()`, the
+column a consumer filters on when the input's casing is unknown), `lexeme_id`,
+`headword`, `tier`, `pos`, `relation` (`lemma`, one of the seven `Morphology` fields, or
+`derivation`). It is a sibling repo rather than a config of `lexicon` for the same reason
+D-72 gave etymology and relations their own repos: the grain is different (one row per
+*form*, not per *lexeme*), and a repo carrying the join keys stands alone without forcing
+a consumer through a `list<struct>` first. `hf_rows.RowBuilder._inflection_rows` reads
+straight off each `POSEntry.morphology`, so it is a store-derived repo like the other
+eleven, now twelve.
+
+**Decision, part 2: tier 4 is a fourth value of the same `tier` column, not a new axis.**
+`TIER_FILES` gains `(TIER_TIER4, "tier4.tsv")`; `TIERS` becomes `(core, tier2, tier3,
+tier4, unknown)`. The source file's own `group` column (`stopword` vs. `wf10`) is *not*
+surfaced as a fifth tier or a new column — both collapse into plain `tier4`, because the
+release's tier granularity is "which frequency-ranked pass," not "which sub-population of
+that pass." `TierIndex.from_dir` now logs a structured warning (`tier_file_missing`) for
+any of the four files that is not on disk, rather than skipping it silently — the
+tier-4 pass finishing after the exporter's next few runs is expected, not exceptional, and
+a chain running unattended should say so in its own log rather than make a reader diff two
+exports to notice a file went missing. `_read_tsv_words` already slugified the `word`
+column before this change, so `"to be"` was already read as `to_be`; nothing there needed
+to move, only confirming it in a test with tier 4's actual multi-word entries.
+
+**Decision, part 3: nothing about tier count is hard-coded any more.** D-72's cards said
+"three frequency-ranked passes" and named `tier3` specifically as the partial one, in
+`hf_cards.py` prose and in `_lexeme_keys()`/`_sense_keys()`'s field descriptions. Both are
+now computed: `_passes_note` counts and names `stats.tiers_present` (minus `unknown`)
+for the "Coverage by tier" intro, and `_partial_tiers` derives which tiers are
+"deliberately partial" from the coverage numbers themselves — a tier lacks full coverage
+of queries, QA pairs or contrasts — rather than assuming tier 3 is the one that is short.
+An export with two tiers, four tiers, or (once tier 5 or a tier-3b exists) five gets
+correct prose without a further code change. `TIER_DESCRIPTIONS` gives the "By tier"
+section its one required line each: core = top 10K by composite frequency; tier2 = ranks
+to ~42K; tier3 = the rest of the frequency-ranked single words; tier4 = stopwords, plus
+compounds and names at Wikipedia frequency >= 10.
+
+**Decision, part 4: `--release` is a parameter everywhere a version used to be a
+constant.** `hf_schemas.VERSION` (a module constant) becomes `DEFAULT_RELEASE = "v2.1"`
+(a default argument): `RepoSpec.name`/`.repo_id`, `resolve_repos`, `hf.repo_dir`/
+`data_dir`, `push_repos`, and `hf_cards.render_card` all take `release: str =
+DEFAULT_RELEASE`. `export-hf` gains `--release`, so `--release v2.0` reproduces the old
+family's naming exactly — same repo ids, same card headings, same cross-links — while the
+default moves forward. The one place this could not be a plain function argument: a
+repo's own `blurb`/`snippet` text is a module-level string constant naming *other* repos
+in the family (`"...joined to opengloss-v2.0-senses..."`), fixed at import time, long
+before any particular export's release is known. Those strings are now authored against
+`PLACEHOLDER_RELEASE = "vX"` (`opengloss-vX-senses`) and `render_card` does one
+`str.replace("opengloss-vX-", f"opengloss-{release}-")` pass over the fully assembled
+card before returning it — the only substitution in the module, and it touches nothing
+but this exact, deliberately-unreal token, so it cannot collide with genuine content.
+
+**Measured on `data/sample-300`** (all 300 entries core; sixteen repos): the same counts
+D-72 recorded, plus 3,023 inflection rows (one `lemma` row per POS entry plus every
+non-empty `Morphology` field and recorded derivation) across those 300 lexemes.
+
+**Consequence.** Changed: `export/hf_schemas.py` (`DEFAULT_RELEASE`,
+`PLACEHOLDER_RELEASE`, `RepoSpec.name`/`.repo_id` take `release`, new `_INFLECTIONS`
+`RepoSpec`, `_lexeme_keys()`/`_sense_keys()` tier descriptions generalized),
+`export/hf_rows.py` (`TIER_TIER4`, `TIER_DESCRIPTIONS`, `TierIndex.from_dir` warns on a
+missing file, `RowBuilder._inflection_rows`), `export/hf_cards.py` (`_passes_note`,
+`_partial_tiers`, `_join_ticked`, `render_card`'s placeholder substitution, `release`
+threaded through `_title`/`_family_table`/`_limitations`/`_loading_section`),
+`export/hf.py` and `cli.py`'s `export-hf` (`--release`, threaded through), `tests/`
+(+7: inflection rows including the lemma row and lower-casing, a missing-TSV warning, a
+spaced multi-word tier-4 entry, card rendering with four tiers and with two, and
+`--release v2.0` reproducing the old naming everywhere it appears).

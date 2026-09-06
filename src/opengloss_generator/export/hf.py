@@ -1,7 +1,7 @@
 """``export-hf``: build the whole v2.0 Hugging Face release family from one store.
 
 One command writes one local directory per dataset repo — parquet shards plus a finished
-``README.md`` — for the fifteen repos registered in
+``README.md`` — for the sixteen repos registered in
 :mod:`opengloss_generator.export.hf_schemas`. Nothing here talks to the network unless
 ``push_repos`` is called explicitly; the export itself is offline and free, like every
 other module in this package.
@@ -9,7 +9,7 @@ other module in this package.
 How it is put together
 ----------------------
 
-* **One streaming pass over the store** builds every row of the eleven store-derived
+* **One streaming pass over the store** builds every row of the twelve store-derived
   repos and, at the same time, every statistic the cards print
   (:class:`~opengloss_generator.export.hf_rows.RowBuilder`). The pass runs even when
   ``--repos`` selects only a derived repo, because a card that says "54,724 lexemes"
@@ -41,6 +41,7 @@ from opengloss_generator.export.hf_cards import render_card
 from opengloss_generator.export.hf_rows import RowBuilder, Stats, TierIndex
 from opengloss_generator.export.hf_schemas import (
     DEFAULT_OWNER,
+    DEFAULT_RELEASE,
     REPOS_BY_SLUG,
     ConfigSpec,
     RepoSpec,
@@ -241,7 +242,13 @@ class _WriterSet:
     __slots__ = ("_max_bytes", "_max_rows", "_out_dir", "_writers")
 
     def __init__(
-        self, out_dir: Path, specs: Sequence[RepoSpec], *, max_rows: int, max_bytes: int
+        self,
+        out_dir: Path,
+        specs: Sequence[RepoSpec],
+        *,
+        max_rows: int,
+        max_bytes: int,
+        release: str = DEFAULT_RELEASE,
     ) -> None:
         """Open a writer for every config of every selected repo.
 
@@ -250,6 +257,7 @@ class _WriterSet:
             specs: The selected repos.
             max_rows: Rows per shard.
             max_bytes: Byte ceiling per shard.
+            release: The release label the repo directories are named for.
         """
         self._out_dir = out_dir
         self._max_rows = max_rows
@@ -258,7 +266,7 @@ class _WriterSet:
         for spec in specs:
             for config in spec.configs:
                 self._writers[spec.slug, config.name] = _ShardWriter(
-                    data_dir(out_dir, spec, config),
+                    data_dir(out_dir, spec, config, release),
                     config.schema,
                     max_rows=max_rows,
                     max_bytes=max_bytes,
@@ -299,25 +307,29 @@ class _WriterSet:
                 stats.example_rows[key] = writer.first_row
 
 
-def repo_dir(out_dir: Path, spec: RepoSpec) -> Path:
+def repo_dir(out_dir: Path, spec: RepoSpec, release: str = DEFAULT_RELEASE) -> Path:
     """Return the local directory one repo is written to.
 
     Args:
         out_dir: The export root.
         spec: The repo.
+        release: The release label the directory is named for.
     """
-    return out_dir / spec.name
+    return out_dir / spec.name(release)
 
 
-def data_dir(out_dir: Path, spec: RepoSpec, config: ConfigSpec) -> Path:
+def data_dir(
+    out_dir: Path, spec: RepoSpec, config: ConfigSpec, release: str = DEFAULT_RELEASE
+) -> Path:
     """Return the directory one config's shards are written to.
 
     Args:
         out_dir: The export root.
         spec: The repo.
         config: The config.
+        release: The release label the repo directory is named for.
     """
-    base = repo_dir(out_dir, spec) / "data"
+    base = repo_dir(out_dir, spec, release) / "data"
     return base if spec.single_config else base / config.name
 
 
@@ -431,8 +443,9 @@ def export_hf(
     pair_easy_negatives: int = 3,
     pretrain_levels: Sequence[ReadingLevel] = DEFAULT_PRETRAIN_LEVELS,
     owner: str = DEFAULT_OWNER,
+    release: str = DEFAULT_RELEASE,
 ) -> HfExportResult:
-    """Write the v2.0 release family from ``store`` into ``out_dir``.
+    """Write the release family from ``store`` into ``out_dir``.
 
     Args:
         store: The store to read. Never written.
@@ -442,8 +455,10 @@ def export_hf(
             builders take no word list (``retrieval-triples``, ``qrels``) are built over
             the whole store and then filtered to the same set, so their *negatives* may
             still be drawn from outside it — which is deliberate, and better supervision.
-        tiers_dir: Directory holding the three rank TSVs. Entries on none of them are
-            exported with ``tier = "unknown"``.
+        tiers_dir: Directory holding the rank TSVs (``core_10k``, ``tier2_50k``,
+            ``tier3_final``, ``tier4``). A missing file is not an error: entries it would
+            have named fall to a lower tier, or to ``tier = "unknown"`` when they are on
+            none of them.
         shard_rows: Rows per parquet shard before rolling over.
         max_shard_bytes: Byte ceiling per shard.
         seed: Seed for the derived exporters' deterministic sampling.
@@ -452,15 +467,19 @@ def export_hf(
             ``retrieval-pairs``.
         pretrain_levels: Reading levels the pretraining corpus is rendered at.
         owner: Hugging Face namespace, used only for the cross-links in the cards.
+        release: Release label the repos are written and named for (D-75). Pass an
+            older label (e.g. ``v2.0``) to reproduce a previous release's naming.
 
     Returns:
         The statistics, the repos written, and where each card landed.
     """
-    specs = resolve_repos(repos)
+    specs = resolve_repos(repos, release=release)
     out_dir.mkdir(parents=True, exist_ok=True)
     tiers = TierIndex.from_dir(tiers_dir)
     builder = RowBuilder(tiers)
-    writers = _WriterSet(out_dir, specs, max_rows=shard_rows, max_bytes=max_shard_bytes)
+    writers = _WriterSet(
+        out_dir, specs, max_rows=shard_rows, max_bytes=max_shard_bytes, release=release
+    )
 
     selected_ids = None if lexeme_ids is None else {slugify(word) for word in lexeme_ids}
 
@@ -485,19 +504,23 @@ def export_hf(
         easy_negatives=easy_negatives,
         pair_easy_negatives=pair_easy_negatives,
         pretrain_levels=pretrain_levels,
+        release=release,
     )
 
     writers.close(stats)
 
     cards: dict[str, Path] = {}
     for spec in specs:
-        path = repo_dir(out_dir, spec) / "README.md"
+        path = repo_dir(out_dir, spec, release) / "README.md"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(render_card(spec, stats, owner=owner), encoding="utf-8")
+        path.write_text(render_card(spec, stats, owner=owner, release=release), encoding="utf-8")
         cards[spec.slug] = path
 
     return HfExportResult(
-        out_dir=out_dir, stats=stats, repos=[spec.name for spec in specs], cards=cards
+        out_dir=out_dir,
+        stats=stats,
+        repos=[spec.name(release) for spec in specs],
+        cards=cards,
     )
 
 
@@ -525,6 +548,7 @@ def _export_derived(
     easy_negatives: int,
     pair_easy_negatives: int,
     pretrain_levels: Sequence[ReadingLevel],
+    release: str = DEFAULT_RELEASE,
 ) -> None:
     """Build the four repos derived from the existing free retrieval exporters.
 
@@ -542,6 +566,7 @@ def _export_derived(
         easy_negatives: Easy negatives per query for triples.
         pair_easy_negatives: Sampled negatives per sense for pairs.
         pretrain_levels: Reading levels for the pretraining corpus.
+        release: Release label the qrels repo directory is named for.
     """
     if writers.wants("retrieval-pairs"):
         _export_retrieval_pairs(
@@ -558,7 +583,9 @@ def _export_derived(
             store, writers=writers, stats=stats, keep=keep, seed=seed, easy=easy_negatives
         )
     if writers.wants("qrels"):
-        _export_qrels(store, out_dir, writers=writers, stats=stats, keep=keep, seed=seed)
+        _export_qrels(
+            store, out_dir, writers=writers, stats=stats, keep=keep, seed=seed, release=release
+        )
     if writers.wants("pretrain"):
         _export_pretrain(
             store,
@@ -665,6 +692,7 @@ def _export_qrels(
     stats: Stats,
     keep: set[str] | None,
     seed: int,
+    release: str = DEFAULT_RELEASE,
 ) -> None:
     """Convert the free qrels exporter's result into the ``qrels`` repo.
 
@@ -716,7 +744,7 @@ def _export_qrels(
         )
 
     spec = REPOS_BY_SLUG["qrels"]
-    trec_path = repo_dir(out_dir, spec) / "qrels.trec"
+    trec_path = repo_dir(out_dir, spec, release) / "qrels.trec"
     trec_path.parent.mkdir(parents=True, exist_ok=True)
     with trec_path.open("w", encoding="utf-8") as handle:
         for entry in result.qrels:
@@ -793,6 +821,7 @@ def push_repos(
     specs: Iterable[RepoSpec],
     *,
     owner: str = DEFAULT_OWNER,
+    release: str = DEFAULT_RELEASE,
     private: bool = False,
     api: Any = None,  # noqa: ANN401 - huggingface_hub.HfApi, injected for tests
     token: str | None = None,
@@ -808,6 +837,7 @@ def push_repos(
         out_dir: The export root the directories were written under.
         specs: The repos to upload.
         owner: The namespace to publish under.
+        release: The release label the repos were written and named for.
         private: Whether a newly created repo starts private.
         api: An ``HfApi``-shaped object. Injected by the tests; when ``None``, a real
             ``huggingface_hub.HfApi`` is built, which is also the only place this package
@@ -824,8 +854,8 @@ def push_repos(
 
     pushed: list[dict[str, Any]] = []
     for spec in specs:
-        repo_id = spec.repo_id(owner)
-        folder = repo_dir(out_dir, spec)
+        repo_id = spec.repo_id(owner, release)
+        folder = repo_dir(out_dir, spec, release)
         api.create_repo(repo_id=repo_id, repo_type="dataset", private=private, exist_ok=True)
         api.upload_large_folder(repo_id=repo_id, repo_type="dataset", folder_path=str(folder))
         pushed.append(

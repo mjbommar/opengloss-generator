@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 from opengloss_generator import spans
 from opengloss_generator.identity import edge_id as make_edge_id
 from opengloss_generator.identity import slugify
+from opengloss_generator.log import get_logger
 from opengloss_generator.schema import (
     ReadingLevel,
     Register,
@@ -44,6 +45,8 @@ from opengloss_generator.workflows.relation_reconcile import (
     TOMBSTONE_LINE_PREFIX,
     TOMBSTONE_RECORD_PREFIX,
 )
+
+_LOG = get_logger(__name__)
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -62,8 +65,10 @@ __all__ = [
     "COVERAGE_FEATURES",
     "TIERS",
     "TIER_CORE",
+    "TIER_DESCRIPTIONS",
     "TIER_TIER2",
     "TIER_TIER3",
+    "TIER_TIER4",
     "TIER_UNKNOWN",
     "CoverageFeature",
     "RowBuilder",
@@ -75,20 +80,36 @@ __all__ = [
 TIER_CORE = "core"
 TIER_TIER2 = "tier2"
 TIER_TIER3 = "tier3"
-#: Assigned to an entry that is in the store but on none of the three rank lists. It is
-#: a real value in the exported data rather than a null, so a consumer filtering by tier
-#: never silently loses rows.
+#: Stopwords, plus compounds and names at Wikipedia frequency >= 10 (D-75). The source
+#: TSV's own ``group`` column (``stopword`` vs. ``wf10``) is not surfaced as a distinct
+#: tier — both collapse into ``tier4`` here, per the release's own tier granularity.
+TIER_TIER4 = "tier4"
+#: Assigned to an entry that is in the store but on none of the rank lists. It is a real
+#: value in the exported data rather than a null, so a consumer filtering by tier never
+#: silently loses rows.
 TIER_UNKNOWN = "unknown"
 
 #: Tiers in coverage-table order.
-TIERS: tuple[str, ...] = (TIER_CORE, TIER_TIER2, TIER_TIER3, TIER_UNKNOWN)
+TIERS: tuple[str, ...] = (TIER_CORE, TIER_TIER2, TIER_TIER3, TIER_TIER4, TIER_UNKNOWN)
 
-#: The three rank lists under ``data/core/``, in precedence order: an entry is assigned
-#: the first tier whose list names it.
+#: One line saying what each tier is, for the card's "By tier" section (D-75). Keyed so a
+#: tier absent from a given export is simply not looked up, rather than needing its own
+#: conditional at the call site.
+TIER_DESCRIPTIONS: dict[str, str] = {
+    TIER_CORE: "top 10K by composite frequency",
+    TIER_TIER2: "ranks to ~42K",
+    TIER_TIER3: "the rest of the frequency-ranked single words",
+    TIER_TIER4: "stopwords, plus compounds and names at Wikipedia frequency ≥ 10",
+}
+
+#: The rank lists under ``data/core/``, in precedence order: an entry is assigned the
+#: first tier whose list names it. A file missing from disk is not an error (D-75) — see
+#: :meth:`TierIndex.from_dir`.
 TIER_FILES: tuple[tuple[str, str], ...] = (
     (TIER_CORE, "core_10k.tsv"),
     (TIER_TIER2, "tier2_50k.tsv"),
     (TIER_TIER3, "tier3_final.tsv"),
+    (TIER_TIER4, "tier4.tsv"),
 )
 
 #: How much of a provenance ``note`` the flat provenance repo keeps. Long enough for
@@ -120,6 +141,23 @@ SOURCE_PER_SENSE = "per_sense"
 #: ``source`` value for an example that is a reading-level or register rewrite, or that
 #: came from the original generation call.
 SOURCE_RENDITIONS = "renditions"
+
+#: ``relation`` value for the headword itself, in the ``inflections`` repo.
+RELATION_LEMMA = "lemma"
+#: ``relation`` value for a recorded derivation, in the ``inflections`` repo.
+RELATION_DERIVATION = "derivation"
+#: The single-valued :class:`~opengloss_generator.schema.Morphology` fields, in the order
+#: the ``inflections`` repo reports them. Each attribute name doubles as its own
+#: ``relation`` value, so there is exactly one place that pairs a field with its name.
+_MORPHOLOGY_RELATIONS: tuple[str, ...] = (
+    "plural",
+    "past_tense",
+    "past_participle",
+    "present_participle",
+    "third_person_singular",
+    "comparative",
+    "superlative",
+)
 
 #: The reconcile steps that remove an edge, with the provenance record header and the
 #: per-edge line prefix each writes. Imported from the pass itself so the two cannot
@@ -224,10 +262,11 @@ def _qa_flags(rendition: Rendition[Any]) -> list[str]:
 class TierIndex:
     """Maps a lexeme id onto the frequency tier its headword was drawn from.
 
-    The three rank lists under ``data/core/`` are the record of which slice of the
-    frequency ranking an entry belongs to, and therefore of which pipeline stages it
-    received: core and tier 2 got every stage, tier 3 got the text stages only. Every
-    exported row carries its tier so that difference is filterable rather than a footnote.
+    The rank lists under ``data/core/`` are the record of which slice of the frequency
+    ranking an entry belongs to, and therefore roughly which pipeline stages it received
+    — earlier tiers received more; the coverage table in every card gives the exact
+    per-field share rather than this class asserting one. Every exported row carries its
+    tier so the difference is filterable rather than a footnote.
     """
 
     __slots__ = ("_tiers",)
@@ -243,13 +282,17 @@ class TierIndex:
 
     @classmethod
     def from_dir(cls, directory: Path | None) -> TierIndex:
-        """Read the three rank lists from a directory.
+        """Read the rank lists from a directory.
 
         Args:
-            directory: The directory holding ``core_10k.tsv``, ``tier2_50k.tsv`` and
-                ``tier3_final.tsv``. ``None``, a missing directory, or a missing file is
-                not an error: every entry it would have named falls to
-                :data:`TIER_UNKNOWN`, which the export reports so the omission is visible.
+            directory: The directory holding ``core_10k.tsv``, ``tier2_50k.tsv``,
+                ``tier3_final.tsv`` and ``tier4.tsv``. ``None`` or a missing directory
+                yields an empty index. A missing individual file is *not* an error either
+                (D-75): it is logged as a warning and skipped, so a chain that has not
+                produced ``tier4.tsv`` yet does not crash an export — every entry that
+                file would have named falls to a lower tier, or to :data:`TIER_UNKNOWN`
+                when it is on none of the files present, which the export reports so the
+                omission stays visible rather than silent.
 
         Returns:
             The index.
@@ -260,6 +303,7 @@ class TierIndex:
         for tier, filename in TIER_FILES:
             path = directory / filename
             if not path.is_file():
+                _LOG.warning("tier_file_missing", path=str(path), tier=tier)
                 continue
             for lexeme_id in _read_tsv_words(path):
                 tiers.setdefault(lexeme_id, tier)
@@ -382,6 +426,8 @@ class Stats:
     explanation_renditions: int = 0
     etymologies: int = 0
     etymology_segments: int = 0
+    inflection_forms: int = 0
+    inflection_relations: Counter[str] = field(default_factory=Counter)
     queries: int = 0
     queries_headword_free: int = 0
     query_styles: Counter[str] = field(default_factory=Counter)
@@ -561,6 +607,7 @@ class RowBuilder:
         yield "lexicon", "default", self._lexicon_row(entry, tier, sense_ids, len(all_senses))
         yield from self._prose_rows(entry, tier)
         yield from self._etymology_rows(entry, tier)
+        yield from self._inflection_rows(entry, tier)
         yield from self._provenance_rows(entry, tier)
         yield from self._tombstoned_rows(entry, tier)
         self._buffer_contrasts(entry, tier)
@@ -961,6 +1008,57 @@ class RowBuilder:
                 "n_segments": len(etymology.segments),
             },
         )
+
+    def _inflection_rows(
+        self, entry: Lexeme, tier: str
+    ) -> Iterator[tuple[str, str, dict[str, Any]]]:
+        """Yield the flat form→lemma rows for every POS entry's morphology (D-75).
+
+        One row per non-empty inflected field, one per recorded derivation, and one
+        ``lemma`` row for the headword itself — per POS entry, since a homograph like
+        "record" (noun and verb) resolves the same headword to two different parts of
+        speech. Emitted regardless of sense liveness or entry status, matching how the
+        nested ``lexicon`` row's own ``morphology`` list is built from every POS entry.
+        """
+        stats = self.stats
+        for pos_entry in entry.pos_entries:
+            morphology = pos_entry.morphology
+            keys = {
+                "lexeme_id": entry.lexeme_id,
+                "headword": entry.headword,
+                "pos": pos_entry.pos.value,
+                "tier": tier,
+            }
+            for form, relation in self._forms_of(entry.headword, morphology):
+                stats.inflection_forms += 1
+                stats.inflection_relations[relation] += 1
+                yield (
+                    "inflections",
+                    "default",
+                    {
+                        "form": form,
+                        "form_normalized": form.lower(),
+                        **keys,
+                        "relation": relation,
+                    },
+                )
+
+    @staticmethod
+    def _forms_of(headword: str, morphology: Any) -> Iterator[tuple[str, str]]:  # noqa: ANN401
+        """Yield ``(form, relation)`` pairs for one POS entry's morphology.
+
+        Args:
+            headword: The owning entry's headword, emitted once as the ``lemma`` row.
+            morphology: The POS entry's :class:`~opengloss_generator.schema.Morphology`.
+        """
+        yield headword, RELATION_LEMMA
+        for relation in _MORPHOLOGY_RELATIONS:
+            form = getattr(morphology, relation)
+            if form:
+                yield form, relation
+        for derivation in morphology.derivations:
+            if derivation:
+                yield derivation, RELATION_DERIVATION
 
     def _provenance_rows(
         self, entry: Lexeme, tier: str

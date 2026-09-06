@@ -6,7 +6,7 @@ finished ``README.md``. Everything numeric in a card is a live count from that e
 row counts, coverage by tier, histograms, the example row — because a card that is typed
 by hand drifts from its data on the first re-run and nobody notices. The prose that is
 *not* numeric (what the release is, how ids compose, what the reading levels mean, what
-is wrong with it) is shared here, so fifteen cards cannot disagree with each other.
+is wrong with it) is shared here, so sixteen cards cannot disagree with each other.
 
 Templates are plain f-strings: no Jinja, no template files to keep in step with the
 package, and a rendering bug is a Python error rather than a silently empty section.
@@ -17,11 +17,16 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from opengloss_generator.export.hf_rows import COVERAGE_FEATURES, TIERS
+from opengloss_generator.export.hf_rows import (
+    COVERAGE_FEATURES,
+    TIER_DESCRIPTIONS,
+    TIER_UNKNOWN,
+)
 from opengloss_generator.export.hf_schemas import (
     DEFAULT_OWNER,
+    DEFAULT_RELEASE,
+    PLACEHOLDER_RELEASE,
     REPOS,
-    VERSION,
 )
 
 if TYPE_CHECKING:
@@ -310,19 +315,26 @@ relations, spans, or retrieval supervision, use v2.0.
 def _release_stats(stats: Stats) -> str:
     """Return the release-wide statistics block every card shares.
 
+    Whatever tiers this export actually contains — never a hard-coded three or four — get
+    a one-line description followed by the lexeme/sense counts table (D-75).
+
     Args:
         stats: The export's statistics.
     """
+    tiers = stats.tiers_present
+    descriptions = "\n".join(
+        f"- `{tier}` — {TIER_DESCRIPTIONS[tier]}" for tier in tiers if tier in TIER_DESCRIPTIONS
+    )
     tier_rows = [
         (
             f"`{tier}`",
             _n(stats.lexemes_by_tier.get(tier, 0)),
             _n(stats.senses_by_tier.get(tier, 0)),
         )
-        for tier in TIERS
-        if stats.lexemes_by_tier.get(tier, 0)
+        for tier in tiers
     ]
-    return _table(("Tier", "Lexemes", "Live senses"), tier_rows)
+    table = _table(("Tier", "Lexemes", "Live senses"), tier_rows)
+    return f"{descriptions}\n\n{table}" if descriptions else table
 
 
 def _coverage_table(stats: Stats) -> str:
@@ -397,54 +409,101 @@ this column.
 """
 
 
-def _family_table(current: RepoSpec, owner: str) -> str:
+def _family_table(current: RepoSpec, owner: str, release: str) -> str:
     """Return the family table, identical in every card, with the current repo marked.
 
     Args:
         current: The repo whose card this is.
         owner: The Hugging Face namespace.
+        release: The release label the repos in the table are named for.
     """
     rows: list[tuple[str, ...]] = []
     for spec in REPOS:
         grains = " · ".join(config.grain for config in spec.configs)
         if spec.slug == current.slug:
-            name = f"**`{spec.name}`** (this one)"
+            name = f"**`{spec.name(release)}`** (this one)"
         else:
-            name = f"[`{spec.name}`](https://huggingface.co/datasets/{spec.repo_id(owner)})"
+            name = (
+                f"[`{spec.name(release)}`]"
+                f"(https://huggingface.co/datasets/{spec.repo_id(owner, release)})"
+            )
         rows.append((name, grains, spec.summary))
     return _table(("Dataset", "Grain", "What it holds"), rows)
 
 
-def _limitations(spec: RepoSpec, stats: Stats) -> str:
+def _join_ticked(names: Sequence[str]) -> str:
+    """Return backtick-quoted names, joined with "and" the way a sentence would.
+
+    Args:
+        names: The names to quote and join. Never empty.
+    """
+    ticked = [f"`{name}`" for name in names]
+    if len(ticked) == 1:
+        return ticked[0]
+    return ", ".join(ticked[:-1]) + f" and {ticked[-1]}"
+
+
+def _partial_tiers(stats: Stats) -> list[str]:
+    """Return the present tiers (``unknown`` excluded) that did not receive every stage.
+
+    A tier counts as partial when it falls short of full coverage on any of the
+    stage-defining features that the text-only passes never ran — queries, QA pairs, and
+    contrasts. Whichever tiers this export's own coverage numbers say are partial are the
+    ones named; nothing here assumes there are three tiers, or that tier 3 is the one
+    that is short (D-75).
+
+    Args:
+        stats: The export's statistics.
+    """
+    grains = {feature.key: feature.grain for feature in COVERAGE_FEATURES}
+    partial: list[str] = []
+    for tier in stats.tiers_present:
+        if tier == TIER_UNKNOWN:
+            continue
+        full = all(
+            (stats.coverage_share(feature, grains[feature], tier) or 0.0) >= 1.0
+            for feature in ("queries", "qa", "contrasts")
+        )
+        if not full:
+            partial.append(tier)
+    return partial
+
+
+def _limitations(spec: RepoSpec, stats: Stats, release: str) -> str:
     """Return the known-limitations section, tailored where the repo differs.
 
     Args:
         spec: The repo.
         stats: The export's statistics.
+        release: The release label, for the cross-link to the ``senses`` repo.
     """
-    tier3_lexemes = stats.lexemes_by_tier.get("tier3", 0)
-    if tier3_lexemes:
-        tier3 = (
-            f"- **Tier 3 is deliberately partial.** {_n(tier3_lexemes)} lexemes received "
-            "the text stages (glosses, examples, encyclopedia) but not the queries, QA "
-            "pairs, contrasts or register renditions. The coverage table above gives the "
-            "exact per-field share; nothing is hidden behind an average."
+    partial = _partial_tiers(stats)
+    if partial:
+        partial_lexemes = sum(stats.lexemes_by_tier.get(tier, 0) for tier in partial)
+        names = _join_ticked(partial)
+        verb = "is" if len(partial) == 1 else "are"
+        tier_note = (
+            f"- **{names} {verb} deliberately partial.** {_n(partial_lexemes)} lexemes "
+            f"across {names} received the text stages (glosses, examples, encyclopedia) "
+            "but not the queries, QA pairs, contrasts or register renditions. The coverage "
+            "table above gives the exact per-field share; nothing is hidden behind an "
+            "average."
         )
     else:
-        tier3 = (
-            "- **The tiers received different stages.** The release is built in three "
-            "frequency-ranked passes, and the lowest receives the text stages but not the "
-            "queries, QA pairs, contrasts or register renditions. This export contains no "
-            "tier-3 entries, so the coverage table above is the whole story for what is "
-            "in it."
+        tier_note = (
+            "- **Every tier in this export received every stage.** Nothing here was built "
+            "in a text-only pass, so the coverage table above is the whole story for what "
+            "is in it."
         )
     extra = ""
-    if spec.slug in {"queries", "qa-pairs", "contrasts"} and tier3_lexemes:
+    if spec.slug in {"queries", "qa-pairs", "contrasts"} and partial:
+        names = _join_ticked(partial)
+        that_tier = "That tier" if len(partial) == 1 else "Those tiers"
         extra = (
-            "\n- **This repo is core + tier 2 only.** The tier-3 slice "
-            f"({_n(tier3_lexemes)} lexemes) never ran this stage, so its senses are "
-            "absent here entirely rather than present-and-empty. Join against "
-            f"`opengloss-{VERSION}-senses` if you need to know which senses have nothing."
+            f"\n- **This repo excludes {names}.** {that_tier} never ran this stage, so "
+            "its senses are absent here entirely rather than present-and-empty. Join "
+            f"against `opengloss-{release}-senses` if you need to know which senses have "
+            "nothing."
         )
     if spec.slug in {"retrieval-triples", "qrels"}:
         extra = (
@@ -469,7 +528,7 @@ def _limitations(spec: RepoSpec, stats: Stats) -> str:
   {_pct(SYNONYM_RECIPROCITY)} for synonyms and {_pct(ANTONYM_RECIPROCITY)} for antonyms,
   and {_n(SENSES_WITHOUT_RELATIONS)} senses were left with no relation at all. Treat a
   single edge as a hypothesis, not a fact; treat the aggregate graph as usable.
-{tier3}
+{tier_note}
 - **The encyclopedia is entry-level.** One article per *headword*, about the headword as
   a whole. On a polysemous entry it is not a description of any one sense, and it is
   never used as a positive for one (D-71). It is entry-level reference prose, not a
@@ -575,6 +634,17 @@ def _etymology_stats(stats: Stats) -> list[tuple[str, str]]:
     ]
 
 
+def _inflections_stats(stats: Stats) -> list[tuple[str, str]]:
+    """Return the `inflections` repo's own key statistics."""
+    lemma_rows = stats.inflection_relations.get("lemma", 0)
+    per_lexeme = _ratio(stats.inflection_forms, stats.lexemes)
+    return [
+        ("Forms", _n(stats.inflection_forms)),
+        ("Lemma rows", _n(lemma_rows)),
+        ("Rows per lexeme (mean)", f"{per_lexeme:.1f}"),
+    ]
+
+
 def _relations_stats(stats: Stats) -> list[tuple[str, str]]:
     """Return the `relations` repo's own key statistics."""
     share = _ratio(stats.relations_resolved, stats.relations_total)
@@ -630,6 +700,7 @@ _STAT_ROWS: dict[str, Callable[[Stats], list[tuple[str, str]]]] = {
     "examples": _examples_stats,
     "encyclopedia": _encyclopedia_stats,
     "etymology": _etymology_stats,
+    "inflections": _inflections_stats,
     "relations": _relations_stats,
     "queries": _queries_stats,
     "qa-pairs": _qa_stats,
@@ -708,6 +779,11 @@ def _histograms(spec: RepoSpec, stats: Stats) -> str:
                 "### Tombstoned edges, by reconcile step\n\n"
                 + _histogram_table(("Step", "Edges"), stats.tombstoned_by_step)
             )
+    if spec.slug == "inflections":
+        blocks.append(
+            "### By relation\n\n"
+            + _histogram_table(("Relation", "Rows"), stats.inflection_relations)
+        )
     if spec.slug == "queries":
         blocks.append(
             "### Query styles\n\n" + _histogram_table(("Style", "Queries"), stats.query_styles)
@@ -741,14 +817,15 @@ def _histograms(spec: RepoSpec, stats: Stats) -> str:
 # --------------------------------------------------------------------------------------
 
 
-def _loading_section(spec: RepoSpec, owner: str) -> str:
+def _loading_section(spec: RepoSpec, owner: str, release: str) -> str:
     """Return the "loading it" section: `datasets`, then parquet directly.
 
     Args:
         spec: The repo.
         owner: The Hugging Face namespace.
+        release: The release label this repo was published under.
     """
-    repo_id = spec.repo_id(owner)
+    repo_id = spec.repo_id(owner, release)
     if spec.single_config:
         load = f'ds = load_dataset("{repo_id}", split="train")'
         glob = f"hf://datasets/{repo_id}/data/train-*.parquet"
@@ -802,14 +879,15 @@ duckdb.sql("SELECT count(*) FROM '{glob}'").show()
 # --------------------------------------------------------------------------------------
 
 
-def _title(spec: RepoSpec) -> str:
+def _title(spec: RepoSpec, release: str) -> str:
     """Return the card's H1.
 
     Args:
         spec: The repo.
+        release: The release label this card is for.
     """
     pretty = spec.slug.replace("-", " ").title().replace("Qa", "QA").replace("Qrels", "Qrels")
-    return f"# OpenGloss {VERSION} — {pretty}"
+    return f"# OpenGloss {release} — {pretty}"
 
 
 def _fields_section(spec: RepoSpec, stats: Stats) -> str:
@@ -859,7 +937,29 @@ def _files_section(spec: RepoSpec, stats: Stats) -> str:
     return _table(("Files", "Config", "Rows", "Shards", "Size"), rows)
 
 
-def render_card(spec: RepoSpec, stats: Stats, *, owner: str = DEFAULT_OWNER) -> str:
+def _passes_note(stats: Stats) -> str:
+    """Return the "how many frequency-ranked passes" sentence, counted from the data.
+
+    Never a hard-coded "three": names whichever tiers this export actually contains
+    (D-75).
+
+    Args:
+        stats: The export's statistics.
+    """
+    ranked = [tier for tier in stats.tiers_present if tier != TIER_UNKNOWN]
+    if not ranked:
+        return "This export's entries are not on any frequency-ranked list."
+    names = _join_ticked(ranked)
+    plural = "passes" if len(ranked) != 1 else "pass"
+    return (
+        f"The release was built in {len(ranked)} frequency-ranked {plural} ({names}) and "
+        "they did not all receive the same stages."
+    )
+
+
+def render_card(
+    spec: RepoSpec, stats: Stats, *, owner: str = DEFAULT_OWNER, release: str = DEFAULT_RELEASE
+) -> str:
     """Render one repo's complete ``README.md``.
 
     Args:
@@ -869,6 +969,10 @@ def render_card(spec: RepoSpec, stats: Stats, *, owner: str = DEFAULT_OWNER) -> 
             wrote the shards beside it.
         owner: The Hugging Face namespace the family is published under, used for the
             cross-links in the family table and the loading snippets.
+        release: The release label this export was built for (D-75). Every repo id, in
+            the front matter, the family table and the loading snippets, is named for
+            this rather than a literal, so ``--release v2.0`` reproduces the older
+            release's naming exactly.
 
     Returns:
         The card, as markdown with YAML front matter.
@@ -885,13 +989,13 @@ def render_card(spec: RepoSpec, stats: Stats, *, owner: str = DEFAULT_OWNER) -> 
     histograms = _histograms(spec, stats)
     histogram_block = f"\n\n{histograms}" if histograms else ""
 
-    return f"""{_front_matter(spec, stats)}
+    card = f"""{_front_matter(spec, stats)}
 
-{_title(spec)}
+{_title(spec, release)}
 
 {spec.blurb}
 
-Part of the **OpenGloss {VERSION}** release family — {len(REPOS)} datasets built from one
+Part of the **OpenGloss {release}** release family — {len(REPOS)} datasets built from one
 store of {_n(stats.lexemes)} lexemes and {_n(stats.live_senses)} live senses, all joinable
 on derived ids. See [Related datasets](#related-datasets) for the rest.
 
@@ -906,9 +1010,8 @@ on derived ids. See [Related datasets](#related-datasets) for the rest.
 
 ### Coverage by tier
 
-The release was built in three frequency-ranked passes and they did not all receive the
-same stages. This table is per-field and per-tier so the gaps are visible rather than
-averaged away.
+{_passes_note(stats)} This table is per-field and per-tier so the gaps are visible rather
+than averaged away.
 
 {_coverage_table(stats)}{histogram_block}
 
@@ -920,14 +1023,19 @@ averaged away.
 
 {_fields_section(spec, stats)}
 
-{_loading_section(spec, owner)}
+{_loading_section(spec, owner, release)}
 {_ids_section()}
 {_levels_section()}
 ## Related datasets
 
 Everything below is built from the same store and joins on `lexeme_id` / `sense_id`.
 
-{_family_table(spec, owner)}
+{_family_table(spec, owner, release)}
 
-{_limitations(spec, stats)}
+{_limitations(spec, stats, release)}
 {_citation()}"""
+    # Every repo's blurb and code sample cross-references a sibling by name using the
+    # placeholder release (PLACEHOLDER_RELEASE) rather than a literal, so this one
+    # substitution is what makes ``--release v2.0`` reproduce the old repo names
+    # everywhere they are mentioned in prose or in a code sample (D-75).
+    return card.replace(f"opengloss-{PLACEHOLDER_RELEASE}-", f"opengloss-{release}-")
