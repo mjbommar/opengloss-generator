@@ -1584,3 +1584,64 @@ def _filler_rewrite_payload(prompt: str) -> dict[str, Any]:
 
 
 _PAYLOADS.update({"_draftfillerrewrites": _filler_rewrite_payload})
+
+# --------------------------------------------------------------------------------------
+# relation_regen.py's regeneration call (D-74). Appended for the same reason as the
+# blocks above: relation_regen.py is new on this branch and its module-private contract
+# has no home in the shared literal above.
+
+#: A headword whose scripted answer includes the sense's own first rejected term, so a
+#: test can confirm the post-check drops it rather than the model declining to propose it.
+#: A headword scripted to answer with no relations at all, to exercise the "marker is
+#: written even though nothing was accepted" path. A headword scripted to answer with
+#: more hypernyms than the reconcile cap allows, so a test can confirm the per-type cap is
+#: enforced on the response rather than trusted to the model's own six-item ceiling.
+RELATION_REGEN_EMPTY_HEADWORD = "regenemptyword"
+RELATION_REGEN_CAP_HEADWORD = "regencapword"
+
+_REGEN_REJECTED_RE = re.compile(r"^  - (.+)$", re.MULTILINE)
+
+
+def _relation_regen_payload(prompt: str) -> dict[str, Any]:
+    """Propose relations for one empty sense, scripted by headword and rejected list.
+
+    The default answer always includes an exact duplicate and a self-target (the
+    headword itself), so the post-check's duplicate and self drops are exercised by
+    every call that does not opt into one of the two special headwords below; when the
+    prompt lists any already-rejected terms, the first of them is proposed again too, so
+    a test can confirm it is dropped rather than written.
+    """
+    headword = _headword(prompt)
+    if headword == RELATION_REGEN_EMPTY_HEADWORD:
+        return {"relations": []}
+    if headword == RELATION_REGEN_CAP_HEADWORD:
+        return {
+            "relations": [
+                {"type": "hypernym", "term": f"broad_{i}", "justification": "a broader category"}
+                for i in range(4)
+            ]
+        }
+    relations = [
+        {
+            "type": "synonym",
+            "term": f"{headword}_synonym",
+            "justification": "means the same thing",
+        },
+        # Exact repeat: the post-check's duplicate drop, not the model, must catch this.
+        {
+            "type": "synonym",
+            "term": f"{headword}_synonym",
+            "justification": "means the same thing",
+        },
+        # The entry's own headword: the self-target drop must catch this.
+        {"type": "antonym", "term": headword, "justification": "not actually an antonym"},
+    ]
+    rejected = _REGEN_REJECTED_RE.findall(prompt)
+    if rejected:
+        relations.append(
+            {"type": "synonym", "term": rejected[0], "justification": "already rejected"}
+        )
+    return {"relations": relations}
+
+
+_PAYLOADS.update({"_draftregenrelations": _relation_regen_payload})
