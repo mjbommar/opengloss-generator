@@ -1645,3 +1645,46 @@ def _relation_regen_payload(prompt: str) -> dict[str, Any]:
 
 
 _PAYLOADS.update({"_draftregenrelations": _relation_regen_payload})
+# --------------------------------------------------------------------------------------
+# workflows/relation_reconcile.py `retype` contract (D-73)
+# --------------------------------------------------------------------------------------
+#
+# Appended and registered with ``_PAYLOADS.update`` for the reason every block above gives:
+# an append-only block at the end of this file cannot conflict with concurrent edits to any
+# of them, and ``_payload_for`` looks its builder up at call time.
+#
+# The answer is a function of the *target term* in the prompt, so one scripted model covers
+# every branch the step has: the four answers that name a relation type, the two that name
+# none, and — through the default — the answer that names the type the edge already carries,
+# which is the branch that keeps an edge ``verdicts`` would otherwise have demoted.
+
+#: Targets whose scripted answer is the enum they are named for.
+RETYPE_HYPERNYM_TARGET = "broaderword"
+RETYPE_HYPONYM_TARGET = "narrowerword"
+RETYPE_ANTONYM_TARGET = "oppositeword"
+RETYPE_CO_HYPONYM_TARGET = "siblingword"
+RETYPE_NONE_TARGET = "strangerword"
+
+_RETYPE_ANSWER_BY_TARGET = {
+    RETYPE_HYPERNYM_TARGET: "hypernym",
+    RETYPE_HYPONYM_TARGET: "hyponym",
+    RETYPE_ANTONYM_TARGET: "antonym",
+    RETYPE_CO_HYPONYM_TARGET: "co_hyponym",
+    RETYPE_NONE_TARGET: "none",
+}
+
+#: What every other target gets: the type a synonym edge already carries, which is the
+#: "the paragraph was wrong, leave it alone" branch.
+RETYPE_DEFAULT_ANSWER = "synonym"
+
+_RETYPE_TARGET_RE = re.compile(r'TARGET "([^"]*)"')
+
+
+def _contrast_retype_payload(prompt: str) -> dict[str, Any]:
+    """Answer one retype question, deterministically, by the target term it names."""
+    match = _RETYPE_TARGET_RE.search(prompt)
+    term = (match.group(1) if match else "").lower()
+    return {"relation": _RETYPE_ANSWER_BY_TARGET.get(term, RETYPE_DEFAULT_ANSWER)}
+
+
+_PAYLOADS.update({"_draftcontrastretype": _contrast_retype_payload})

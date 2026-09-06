@@ -47,13 +47,25 @@ from opengloss_generator.workflows.relation_reconcile import (
     CAP_RECORD_PREFIX,
     DEDUP_RECORD_PREFIX,
     MARKER_PREFIX,
+    RETYPE_FAR_SIDE_NOTE_PREFIX,
+    RETYPE_KEPT_NOTE_PREFIX,
+    RETYPE_MARKER_PREFIX,
+    RETYPE_NOTE_PREFIX,
     TOMBSTONE_LINE_PREFIX,
     TOMBSTONE_RECORD_PREFIX,
     VERDICT_NOTE_PREFIX,
     RelationCaps,
+    RelationReconcileOutcome,
     RelationReconcileStep,
     is_demotion_note,
     run_relation_reconcile,
+)
+from tests.conftest import (
+    RETYPE_ANTONYM_TARGET,
+    RETYPE_CO_HYPONYM_TARGET,
+    RETYPE_HYPERNYM_TARGET,
+    RETYPE_HYPONYM_TARGET,
+    RETYPE_NONE_TARGET,
 )
 
 DEFAULT_GLOSS = "A test definition written for the pass under test."
@@ -1206,3 +1218,349 @@ async def test_dedup_removes_exact_duplicate_edges_and_records_them(session):
         session.store, workers=2, only={RelationReconcileStep.DEDUP}
     )
     assert again.steps[RelationReconcileStep.DEDUP].removed == 0
+
+
+# --------------------------------------------------------------------------------------
+# Step 1 — retype (nano, D-73)
+# --------------------------------------------------------------------------------------
+#
+# Appended as its own block, and using the ``session`` fixture rather than this module's
+# ``store`` one, because this is the only step here that calls a model: it needs the
+# scripted model wired through a live :class:`RunSession`, and every test above must go on
+# proving that the five free steps run for $0 with no runner at all.
+#
+# The scripted answer is a function of the target term (``tests/conftest.py``), so each
+# test below picks its branch by naming a target.
+
+
+def _retype_pair(
+    target: str,
+    *,
+    relation_type: RelationType = RelationType.SYNONYM,
+    verdict: ContrastVerdict = ContrastVerdict.RELATED_DIFFERENTLY,
+    reverse: Relation | None = None,
+) -> tuple[Lexeme, Lexeme]:
+    """Return ``(alpha, target)``: a judged edge from ``alpha``, and the entry it points at.
+
+    ``alpha`` asserts one resolved edge toward ``target``'s only sense and carries the
+    contrast the ``contrasts`` stage would have written about it; ``target`` holds the
+    reverse the ``graph_hygiene`` reciprocity step would have given it, unless the caller
+    passes a different one.
+    """
+    alpha = _entry(
+        "alpha", relations=[_relation(relation_type, target, sense_id=f"{target}:noun:0")]
+    )
+    alpha.contrasts.append(
+        _contrast(
+            f"alpha:noun:0-{relation_type.value}->{target}",
+            verdict,
+            target_sense_id=f"{target}:noun:0",
+            text=(
+                "One of the two names the wider class and the other a particular case "
+                "of it, which is not what a synonym claims."
+            ),
+        )
+    )
+    far = _entry(
+        target,
+        relations=[
+            reverse or _relation(relation_type, "alpha", sense_id="alpha:noun:0"),
+        ],
+    )
+    return alpha, far
+
+
+async def _retype_only(session, **kwargs: object) -> RelationReconcileOutcome:
+    """Run a ``--only retype`` sweep over the session's store."""
+    return await run_relation_reconcile(
+        session.store,
+        session.stages,
+        workers=2,
+        only={RelationReconcileStep.RETYPE},
+        **kwargs,
+    )
+
+
+async def test_a_hypernym_answer_retypes_the_edge_and_inverts_the_reverse(session):
+    # "alpha is a kind of broaderword": the target is the broader term, so the near side
+    # is a hypernym and the far side is its inverse, a hyponym.
+    alpha, far = _retype_pair(RETYPE_HYPERNYM_TARGET)
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await _retype_only(session)
+
+    result = outcome.steps[RelationReconcileStep.RETYPE]
+    assert result.calls == 1
+    assert result.cost_usd > 0.0
+    assert result.accepted == 1
+    assert result.by_answer == {"hypernym": 1}
+    assert result.retyped == 2  # near side and far side
+    assert result.far_side_retyped == 1
+    assert result.by_retype == {"synonym→hypernym": 1, "synonym→hyponym": 1}
+
+    near = _relations_of(session.store.read("alpha"))[0]
+    assert near.type is RelationType.HYPERNYM
+    assert near.note == f"{RETYPE_NOTE_PREFIX}synonym→hypernym"
+    assert not is_demotion_note(near.note)
+
+    reverse = _relations_of(session.store.read(RETYPE_HYPERNYM_TARGET))[0]
+    assert reverse.type is RelationType.HYPONYM
+    assert reverse.note == (f"{RETYPE_FAR_SIDE_NOTE_PREFIX}alpha:noun:0 (contrast synonym→hyponym)")
+
+
+async def test_a_hyponym_answer_retypes_the_edge_the_other_way(session):
+    alpha, far = _retype_pair(RETYPE_HYPONYM_TARGET)
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await _retype_only(session)
+
+    assert outcome.steps[RelationReconcileStep.RETYPE].by_retype == {
+        "synonym→hyponym": 1,
+        "synonym→hypernym": 1,
+    }
+    assert _relations_of(session.store.read("alpha"))[0].type is RelationType.HYPONYM
+    assert _relations_of(session.store.read(RETYPE_HYPONYM_TARGET))[0].type is RelationType.HYPERNYM
+
+
+async def test_the_two_directions_of_one_pair_are_inverses(session):
+    # The direction check with nothing else in it: one pair of words, each end asserting a
+    # synonym toward the other and each carrying its own contrast, must never come back
+    # filed the same way round from both ends. "X is a kind of Y" is one claim, and a
+    # resource that reads it as "hypernym" from both ends has asserted a cycle.
+    general = _entry(
+        RETYPE_HYPERNYM_TARGET,
+        relations=[
+            _relation(
+                RelationType.SYNONYM,
+                RETYPE_HYPONYM_TARGET,
+                sense_id=f"{RETYPE_HYPONYM_TARGET}:noun:0",
+            )
+        ],
+    )
+    general.contrasts.append(
+        _contrast(
+            f"{RETYPE_HYPERNYM_TARGET}:noun:0-synonym->{RETYPE_HYPONYM_TARGET}",
+            ContrastVerdict.RELATED_DIFFERENTLY,
+            target_sense_id=f"{RETYPE_HYPONYM_TARGET}:noun:0",
+        )
+    )
+    special = _entry(
+        RETYPE_HYPONYM_TARGET,
+        relations=[
+            _relation(
+                RelationType.SYNONYM,
+                RETYPE_HYPERNYM_TARGET,
+                sense_id=f"{RETYPE_HYPERNYM_TARGET}:noun:0",
+            )
+        ],
+    )
+    special.contrasts.append(
+        _contrast(
+            f"{RETYPE_HYPONYM_TARGET}:noun:0-synonym->{RETYPE_HYPERNYM_TARGET}",
+            ContrastVerdict.RELATED_DIFFERENTLY,
+            target_sense_id=f"{RETYPE_HYPERNYM_TARGET}:noun:0",
+        )
+    )
+    session.store.write(general)
+    session.store.write(special)
+
+    await _retype_only(session)
+
+    # The general term holds the narrower one as a hyponym; the narrow one holds the
+    # general as a hypernym. Neither ended up with the other's type.
+    from_general = _relations_of(session.store.read(RETYPE_HYPERNYM_TARGET))[0]
+    from_special = _relations_of(session.store.read(RETYPE_HYPONYM_TARGET))[0]
+    assert from_general.type is RelationType.HYPONYM
+    assert from_special.type is RelationType.HYPERNYM
+
+
+async def test_an_antonym_answer_retypes_a_synonym_edge(session):
+    # A contrast may disagree with its own verdict about which type is right; the answer
+    # decides, not the verdict.
+    alpha, far = _retype_pair(RETYPE_ANTONYM_TARGET)
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await _retype_only(session)
+
+    assert outcome.steps[RelationReconcileStep.RETYPE].by_answer == {"antonym": 1}
+    assert _relations_of(session.store.read("alpha"))[0].type is RelationType.ANTONYM
+    # A symmetric type is its own inverse, so the far side becomes an antonym too.
+    assert _relations_of(session.store.read(RETYPE_ANTONYM_TARGET))[0].type is RelationType.ANTONYM
+
+
+async def test_an_answer_naming_the_filed_type_keeps_the_edge(session):
+    # The scripted default answer is "synonym", which is the type this edge already has.
+    alpha, far = _retype_pair("beta")
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await _retype_only(session)
+
+    result = outcome.steps[RelationReconcileStep.RETYPE]
+    assert result.by_answer == {"synonym": 1}
+    assert result.retyped == 0
+    relation = _relations_of(session.store.read("alpha"))[0]
+    assert relation.type is RelationType.SYNONYM
+    assert relation.note == f"{RETYPE_KEPT_NOTE_PREFIX}synonym confirmed"
+
+
+async def test_a_kept_edge_is_not_demoted_by_verdicts_in_the_same_sweep(session):
+    # The hand-off between the two steps, and the only case where the note is what does
+    # it: a kept edge still matches its contrast's edge id.
+    alpha, far = _retype_pair("beta")
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await run_relation_reconcile(session.store, session.stages, workers=2)
+
+    assert outcome.steps[RelationReconcileStep.VERDICTS].demoted == 0
+    relations = _relations_of(session.store.read("alpha"))
+    assert [r.type for r in relations] == [RelationType.SYNONYM]
+
+
+async def test_a_retyped_edge_is_never_demoted_or_tombstoned(session):
+    alpha, far = _retype_pair(RETYPE_HYPERNYM_TARGET)
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await run_relation_reconcile(session.store, session.stages, workers=2)
+
+    assert outcome.steps[RelationReconcileStep.VERDICTS].demoted == 0
+    assert outcome.steps[RelationReconcileStep.TOMBSTONE].removed == 0
+    assert _relations_of(session.store.read("alpha"))[0].type is RelationType.HYPERNYM
+
+
+async def test_a_co_hyponym_answer_leaves_the_verdicts_demotion_in_place(session):
+    alpha, far = _retype_pair(RETYPE_CO_HYPONYM_TARGET)
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await run_relation_reconcile(
+        session.store,
+        session.stages,
+        workers=2,
+        only={RelationReconcileStep.RETYPE, RelationReconcileStep.VERDICTS},
+    )
+
+    assert outcome.steps[RelationReconcileStep.RETYPE].by_answer == {"co_hyponym": 1}
+    assert outcome.steps[RelationReconcileStep.RETYPE].retyped == 0
+    assert outcome.steps[RelationReconcileStep.VERDICTS].demoted == 2  # near side and far
+    relation = _relations_of(session.store.read("alpha"))[0]
+    assert relation.type is RelationType.SEE_ALSO
+    assert relation.note == f"{VERDICT_NOTE_PREFIX}related_differently"
+
+
+async def test_a_none_answer_leaves_the_verdicts_demotion_in_place(session):
+    alpha, far = _retype_pair(RETYPE_NONE_TARGET)
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await run_relation_reconcile(
+        session.store,
+        session.stages,
+        workers=2,
+        only={RelationReconcileStep.RETYPE, RelationReconcileStep.VERDICTS},
+    )
+
+    assert outcome.steps[RelationReconcileStep.RETYPE].by_answer == {"none": 1}
+    assert outcome.steps[RelationReconcileStep.VERDICTS].by_verdict == {"related_differently": 2}
+    assert _relations_of(session.store.read("alpha"))[0].type is RelationType.SEE_ALSO
+
+
+async def test_a_demoted_reverse_see_also_becomes_the_inverse_type(session):
+    # The case D-68 left behind: an earlier sweep already demoted the reverse, so the far
+    # side is a see_also carrying a demotion note rather than the type the near side had.
+    alpha, far = _retype_pair(
+        RETYPE_HYPERNYM_TARGET,
+        reverse=_relation(
+            RelationType.SEE_ALSO, "alpha", sense_id="alpha:noun:0", note=NANO_INVALID_NOTE
+        ),
+    )
+    session.store.write(alpha)
+    session.store.write(far)
+
+    await _retype_only(session)
+
+    reverse = _relations_of(session.store.read(RETYPE_HYPERNYM_TARGET))[0]
+    assert reverse.type is RelationType.HYPONYM
+    # The old note is kept behind the new one, as every retype in this project does, and
+    # the edge is no longer a tombstone.
+    assert reverse.note.startswith(RETYPE_FAR_SIDE_NOTE_PREFIX)
+    assert NANO_INVALID_NOTE in reverse.note
+    assert not is_demotion_note(reverse.note)
+
+
+async def test_a_second_sweep_buys_no_second_opinion(session):
+    alpha, far = _retype_pair("beta")
+    session.store.write(alpha)
+    session.store.write(far)
+
+    first = await _retype_only(session)
+    second = await _retype_only(session)
+
+    assert first.steps[RelationReconcileStep.RETYPE].calls == 1
+    assert second.steps[RelationReconcileStep.RETYPE].calls == 0
+    assert second.steps[RelationReconcileStep.RETYPE].retyped == 0
+    marker = f"{RETYPE_MARKER_PREFIX}:"
+    notes = [n for n in _notes(session.store.read("alpha")) if n.startswith(marker)]
+    assert len(notes) == 1
+    assert notes[0].endswith(";attempts=1")
+
+
+async def test_only_a_related_differently_contrast_is_ever_asked_about(session):
+    for verdict in (ContrastVerdict.RELATED_AS_TYPED, ContrastVerdict.UNRELATED):
+        alpha, far = _retype_pair(RETYPE_HYPERNYM_TARGET, verdict=verdict)
+        session.store.write(alpha)
+        session.store.write(far)
+
+        outcome = await _retype_only(session)
+
+        assert outcome.steps[RelationReconcileStep.RETYPE].calls == 0
+        assert _relations_of(session.store.read("alpha"))[0].type is RelationType.SYNONYM
+
+
+async def test_an_asymmetric_edge_is_never_asked_about(session):
+    # The step judges synonym and antonym edges only: a hypernym edge with a contrast has
+    # already been filed under a type that says which way round the two are.
+    alpha, far = _retype_pair(RETYPE_HYPERNYM_TARGET, relation_type=RelationType.HYPERNYM)
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await _retype_only(session)
+
+    assert outcome.steps[RelationReconcileStep.RETYPE].calls == 0
+
+
+async def test_a_dry_run_prices_the_calls_instead_of_making_them(session):
+    alpha, far = _retype_pair(RETYPE_HYPERNYM_TARGET)
+    session.store.write(alpha)
+    session.store.write(far)
+
+    outcome = await _retype_only(session, dry_run=True)
+
+    result = outcome.steps[RelationReconcileStep.RETYPE]
+    assert result.calls == 0
+    assert result.cost_usd == 0.0
+    assert result.calls_planned == 1
+    assert _relations_of(session.store.read("alpha"))[0].type is RelationType.SYNONYM
+
+
+async def test_selecting_retype_without_a_runner_raises(store):
+    with pytest.raises(ValueError, match="stage runner"):
+        await run_relation_reconcile(store, workers=2, only={RelationReconcileStep.RETYPE})
+
+
+async def test_a_default_selection_without_a_runner_runs_the_five_free_steps(store):
+    alpha, beta = _judged_pair(ContrastVerdict.RELATED_DIFFERENTLY)
+    store.write(alpha)
+    store.write(beta)
+
+    outcome = await run_relation_reconcile(store, workers=2)
+
+    assert RelationReconcileStep.RETYPE not in outcome.steps
+    assert outcome.calls == 0
+    assert outcome.cost_usd == 0.0
+    assert outcome.steps[RelationReconcileStep.VERDICTS].demoted == 2

@@ -22,8 +22,32 @@ reciprocity fell 98.4% → 93.7% and antonym 99.7% → 96.9% after the validity 
 D-50's own far-side phase repairs the demotions *it* makes; it cannot repair a
 disagreement between two verdicts it made deliberately.
 
-Five steps, selectable by name through ``only=``, every one of them **free** — no model
-call is made anywhere in this module — and every one idempotent:
+Six steps, selectable by name through ``only=``, five of them **free** and every one
+idempotent. The sixth, ``retype``, is the one model call this module makes, and it is what
+gives the pass a ``--budget``:
+
+``retype``
+    Reads the contrast paragraph D-68 threw away. That decision demoted every
+    ``related_differently`` edge to ``see_also`` and wrote down both why that was the
+    honest disposal *and* what it cost: of fifteen such verdicts read against their
+    paragraphs, **eleven were a synonym that is really a hypernym or a hyponym** —
+    ``falcon→peregrine``, ``dictator→pharaoh``, ``accusation→indictment`` — and in every
+    one the paragraph says in prose which member is the broader term. Demoting to
+    ``see_also`` throws that away. This step buys it back. For each
+    ``related_differently`` contrast still keyed on a live ``synonym`` or ``antonym``
+    edge, one nano call (``HYGIENE`` policy) is shown the two headwords, both glosses, the
+    type the edge carries and the paragraph, and answers one strict enum —
+    ``hypernym | hyponym | co_hyponym | antonym | synonym | none``. A type other than the
+    one the edge carries **retypes** it, with the note ``retyped: contrast <old>→<new>``;
+    the type it already carries **keeps** it, with the note
+    ``kept: contrast <type> confirmed`` — a fresh, focused judgement about this one pair is
+    better evidence than the by-product verdict it disagrees with; ``co_hyponym`` and
+    ``none`` leave the edge exactly where it was, for ``verdicts`` to demote as before.
+    Either note makes ``verdicts`` skip the edge, so no contrast is ever acted on twice.
+    **First in the step order** for that reason. A retype queues the **inverse** type on
+    the reverse edge (``hypernym`` near side, ``hyponym`` far side), in the same second
+    phase and under the same rules as ``verdicts``' far-side demotion. D-47 marker keyed
+    on the contrast set, two attempts, so a swept entry is never re-billed. See D-73.
 
 ``verdicts``
     Applies what the ``contrasts`` stage (D-57) concluded. Each
@@ -34,13 +58,18 @@ call is made anywhere in this module — and every one idempotent:
     This is the pass that acts. ``unrelated`` and ``related_differently`` both demote the
     edge to ``see_also``, with the note ``demoted: contrast <verdict>``;
     ``related_as_typed`` leaves it alone. ``related_differently`` gets a demotion rather
-    than a retype because the paragraph says the two are related but *not how* — the
+    than a retype *here* because the paragraph says the two are related but not how — the
     contract never asked — and guessing a type out of prose written to answer a different
-    question would be this pass asserting something no model was shown. A demoted edge
-    that was symmetric and resolved queues a far-side demotion of its reverse, which no
-    contrast of its own will ever reach: D-57 §1 writes one contrast per *undirected*
-    pair. Counted per verdict as well as per relation type. **First in the step order**,
-    so its demotions are tombstoned in the same sweep.
+    question would be this step asserting something no model was shown. Reading the type
+    back out of the paragraph takes a model call, which is exactly what ``retype`` above
+    now makes: an edge that step acted on carries one of :data:`RETYPE_NOTE_PREFIXES` and
+    is skipped here, so what reaches this step is the contrasts ``retype`` could not type
+    (``co_hyponym``, ``none``) and, when ``retype`` was not selected, all of them. A
+    demoted edge that was symmetric and resolved queues a far-side demotion of its
+    reverse, which no contrast of its own will ever reach: D-57 §1 writes one contrast per
+    *undirected* pair. Counted per verdict as well as per relation type. **Second in the
+    step order**, behind ``retype`` and ahead of everything else, so its demotions are
+    tombstoned in the same sweep.
 
 ``asymmetric``
     For each symmetric type (``synonym``, ``antonym``, ``confusable_with``): where a live
@@ -127,8 +156,9 @@ The pass must not create new one-sidedness. Two places could:
    (D-31) — removes the reverse edges from the target entry, with the same provenance
    record.
 
-The far-side phase has two halves — ``verdicts``' demotions and ``cap``'s removals — and
-both run once the main sweep has fully drained. The demoting half deliberately writes no
+The far-side phase has three halves — ``retype``'s inverse retypes, ``verdicts``'
+demotions and ``cap``'s removals — and all three run once the main sweep has fully
+drained. The demoting half deliberately writes no
 marker on the entry it touches, because what it leaves behind is exactly what ``tombstone``
 exists to remove and that step has already visited the entry in this sweep; leaving the
 stale marker is what makes the next sweep re-examine it.
@@ -146,7 +176,10 @@ Idempotence, and the marker
 ---------------------------
 
 Every step is idempotent *by construction*, the way ``relation_hygiene``'s free steps are
-— they leave nothing behind for themselves to find. A demoted edge is a ``see_also`` and
+— they leave nothing behind for themselves to find. ``retype`` is idempotent the same way
+and then twice over: a retyped edge no longer matches its contrast's edge id, a kept one
+carries a note the candidate collector refuses, and D-47's marker over the contrast set
+stops a second sweep from re-buying the same answer at all. A demoted edge is a ``see_also`` and
 ``asymmetric`` only looks at live typed ones; a tombstoned edge is gone; a capped type is
 at or under its cap. ``verdicts`` gets this for free from the shape of an edge id, which
 carries the relation type: demoting ``s-synonym->b`` leaves ``s-see_also->b``, which
@@ -176,10 +209,12 @@ Concurrency and locking (D-31)
 ------------------------------
 
 Unlike ``relation_hygiene``, which drives one pooled sweep per step, every step here runs
-inside **one** handler under **one** hold of the entry's lock. They are free, they are
-ordered (``tombstone`` must see what ``verdicts`` and ``asymmetric`` demoted; ``cap`` must
-count what ``tombstone`` removed), and five sweeps would mean five read-modify-write cycles
-per entry to reach the same state. ``asymmetric``'s far-side *input* is collected up front by
+inside **one** handler under **one** hold of the entry's lock — ``retype``'s model calls
+included, exactly as ``relation_hygiene._validity_step`` holds the lock across its own.
+Five of the six are free, they are ordered (``tombstone`` must see what ``verdicts`` and
+``asymmetric`` demoted; ``cap`` must count what ``tombstone`` removed), and six sweeps
+would mean six read-modify-write cycles per entry to reach the same state. ``asymmetric``'s
+far-side *input* is collected up front by
 :func:`_collect_demoted_pairs`, a read-only projection of the whole store taken without
 locks — the discipline ``graph_hygiene._load_view`` and ``audit_store`` already use — and
 never restricted by ``lexeme_ids``, because the far side of an edge on the list is very
@@ -198,15 +233,21 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
-from opengloss_generator.errors import BudgetExceededError
+from pydantic import BaseModel, ConfigDict
+
+from opengloss_generator.errors import BudgetExceededError, GenerationError
 from opengloss_generator.identity import edge_id
 from opengloss_generator.log import get_logger
 from opengloss_generator.prompts import PROMPT_VERSION
 from opengloss_generator.runner import run_pool
 from opengloss_generator.schema import ContrastVerdict, Provenance, RelationType, StageName
-from opengloss_generator.workflows.content_hygiene import PROGRESS_EVERY, StepResult
+from opengloss_generator.workflows.content_hygiene import (
+    PROGRESS_EVERY,
+    UNRESOLVED_GLOSS,
+    StepResult,
+)
 from opengloss_generator.workflows.relation_hygiene import (
     FAR_SIDE_NOTE_PREFIX,
     HEADWORD_INFLECTION_NOTE,
@@ -220,15 +261,23 @@ from opengloss_generator.workflows.relation_hygiene import (
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Sequence
 
-    from opengloss_generator.schema import Lexeme, POSEntry, Relation, Sense
+    from opengloss_generator.schema import Contrast, Lexeme, POSEntry, Relation, Sense
+    from opengloss_generator.stages import StageRunner
     from opengloss_generator.store import LexemeStore
 
 __all__ = [
     "ASYMMETRIC_NOTE_PREFIX",
     "CAP_LINE_PREFIX",
     "CAP_RECORD_PREFIX",
+    "CONTRAST_RETYPE_INSTRUCTIONS",
     "DEMOTION_NOTE_PREFIXES",
     "MARKER_PREFIX",
+    "RETYPE_FAR_SIDE_NOTE_PREFIX",
+    "RETYPE_KEPT_NOTE_PREFIX",
+    "RETYPE_MARKER_PREFIX",
+    "RETYPE_MAX_ATTEMPTS",
+    "RETYPE_NOTE_PREFIX",
+    "RETYPE_NOTE_PREFIXES",
     "TOMBSTONE_LINE_PREFIX",
     "TOMBSTONE_RECORD_PREFIX",
     "VERDICT_NOTE_PREFIX",
@@ -266,6 +315,54 @@ ASYMMETRIC_NOTE_PREFIX = "reconcile:asymmetric:"
 #: note, so the reverse edge is annotated ``demoted: far side of <sense> (contrast
 #: unrelated)`` with no new convention invented here.
 VERDICT_NOTE_PREFIX = "demoted: contrast "
+
+#: Note written on an edge the ``retype`` step gives a new type, completed with
+#: ``<old>→<new>`` — ``retyped: contrast synonym→hyponym``. It deliberately mirrors
+#: ``relation_hygiene``'s ``NANO_RETYPE_NOTE`` (``retyped: nano <old>→<new>``) and names
+#: the evidence rather than the model, because that is what distinguishes the two: this
+#: verdict was bought by showing the model a paragraph the ``contrasts`` stage had already
+#: written. It is **not** a demotion prefix and must never become one — the edge it
+#: annotates is a repair, not a tombstone — so ``tombstone`` leaves it alone and
+#: ``graph_hygiene._asserted_pairs`` does not read it as "a pass judged this pair away".
+RETYPE_NOTE_PREFIX = "retyped: contrast "
+
+#: Note written on an edge ``retype`` looked at and left as it found it, completed with
+#: ``<type> confirmed``. The step asked because a ``related_differently`` verdict said the
+#: type was wrong; an answer naming the type the edge already carries is a second, better
+#: evidenced opinion that it is right, and the note is what stops ``verdicts`` from
+#: demoting the edge on the first opinion a moment later.
+RETYPE_KEPT_NOTE_PREFIX = "kept: contrast "
+
+#: Note written on the reverse of a retyped edge, completed with the near sense id and the
+#: retype in brackets — ``retyped: far side of falcon:noun:0 (contrast synonym→hypernym)``.
+#: Shaped like ``relation_hygiene.FAR_SIDE_NOTE_PREFIX`` but built on ``"retyped: "``
+#: rather than ``"demoted: "``, for the reason :data:`RETYPE_NOTE_PREFIX` gives.
+RETYPE_FAR_SIDE_NOTE_PREFIX = "retyped: far side of "
+
+#: Every note that marks an edge as one ``retype`` has already settled. ``verdicts`` skips
+#: an edge carrying one, which is the whole of the hand-off between the two steps: a
+#: retyped edge no longer matches its contrast's edge id anyway, but a *kept* one does,
+#: and without this the next step would demote what this one had just confirmed.
+RETYPE_NOTE_PREFIXES: tuple[str, ...] = (
+    RETYPE_NOTE_PREFIX,
+    RETYPE_KEPT_NOTE_PREFIX,
+    RETYPE_FAR_SIDE_NOTE_PREFIX,
+)
+
+#: The ``retype`` step's own D-47 sentinel prefix, written ``<prefix>:<digest>;attempts=<n>``
+#: exactly as ``relation_hygiene``'s model step writes its own. Distinct from
+#: :data:`MARKER_PREFIX`, which is the whole pass's free-step skip and carries no attempt
+#: counter: a step that spends money needs the counter, or an entry whose contrast set
+#: keeps changing would be re-billed without end (D-47).
+RETYPE_MARKER_PREFIX = "relation_reconcile:retype"
+
+#: How many times ``retype`` will ever call about one entry's contrast set (D-47), the
+#: same bound ``relation_hygiene.MAX_ATTEMPTS`` sets for the same reason.
+RETYPE_MAX_ATTEMPTS = 2
+
+#: Separator between a retype marker's digest and its attempt count, mirrored from
+#: ``relation_hygiene`` (module-private there).
+_ATTEMPTS_SEPARATOR = ";attempts="
 
 #: Header line of the provenance record ``tombstone`` writes for one sense, completed
 #: with the sense id. One record per sense per sweep, however many edges it removed.
@@ -338,6 +435,7 @@ _PROGRESS_EVERY = PROGRESS_EVERY
 class RelationReconcileStep:
     """Names of the steps :func:`run_relation_reconcile` can select between."""
 
+    RETYPE = "retype"
     VERDICTS = "verdicts"
     ASYMMETRIC = "asymmetric"
     TOMBSTONE = "tombstone"
@@ -360,7 +458,14 @@ class RelationReconcileStep:
     #: contrast in one sweep rather than splitting them across two. Nothing later in the
     #: order can undo it: ``asymmetric`` only looks at live *typed* edges and a demoted
     #: one is a ``see_also``.
-    ALL: tuple[str, ...] = (VERDICTS, ASYMMETRIC, TOMBSTONE, DEDUP, CAP)
+    #: ``retype`` is ahead of ``verdicts`` because the two act on the same contrasts and
+    #: only one of them may: an edge ``retype`` has typed or confirmed must not then be
+    #: demoted to ``see_also`` by the step whose whole reason for demoting was that nobody
+    #: had asked what the right type was. Running it first, in the same sweep, is also what
+    #: keeps a retyped edge out of ``tombstone``'s way — a demotion followed by a retype in
+    #: the next sweep would never happen, because ``tombstone`` removes the edge in
+    #: between.
+    ALL: tuple[str, ...] = (RETYPE, VERDICTS, ASYMMETRIC, TOMBSTONE, DEDUP, CAP)
 
 
 # --------------------------------------------------------------------------------------
@@ -437,17 +542,28 @@ class RelationReconcileStepResult(StepResult):
     """``StepResult`` plus the per-type breakdown each step is measured by.
 
     Attributes:
-        by_type: The step's edits per relation type — demotions for ``verdicts`` and
-            ``asymmetric``, removals for ``tombstone``, ``dedup`` and ``cap`` — keyed by
-            the type's string value. For ``verdicts`` the type counted is the one the
-            edge carried **before** the demotion, which is the type the contrast was
-            written about.
+        by_type: The step's edits per relation type — retypes for ``retype``, demotions
+            for ``verdicts`` and ``asymmetric``, removals for ``tombstone``, ``dedup`` and
+            ``cap`` — keyed by the type's string value. For ``retype`` and ``verdicts`` the
+            type counted is the one the edge carried **before** the edit, which is the type
+            the contrast was written about.
         by_verdict: ``verdicts`` only: the same demotions keyed by the
             :class:`~opengloss_generator.schema.ContrastVerdict` that decided them.
             ``related_as_typed`` never appears — that verdict leaves its edge alone — so
             the keys are ``unrelated`` and ``related_differently``. Far-side demotions are
             counted here too, under the verdict of the near-side contrast that implied
             them, so this and :attr:`by_type` sum to :attr:`StepResult.demoted`.
+        by_answer: ``retype`` only: every answer the model gave, keyed by the enum value,
+            ``co_hyponym`` and ``none`` included — those two act on nothing but were paid
+            for, and a step that hides what it bought cannot be measured. Sums to
+            :attr:`StepResult.accepted`.
+        by_retype: ``retype`` only: the retypes it made, keyed ``<old>→<new>``. The
+            direction is the thing this step can get wrong, so it is the thing the counter
+            is keyed by. Far-side inverse retypes are counted here too, under their own
+            ``<old>→<new>``.
+        calls_planned: ``retype`` under ``dry_run`` only: how many calls the step would
+            have made. It makes none in a dry run, so :attr:`StepResult.calls` and
+            :attr:`StepResult.cost_usd` are zero and this is the figure the CLI prices.
         senses_capped: How many senses lost at least one relation to a cap (``cap`` only).
         far_side_removed: How many of ``removed`` were the reverse of an edge this step
             capped on another entry (``cap`` only), folded into ``removed`` as well so
@@ -455,22 +571,33 @@ class RelationReconcileStepResult(StepResult):
         far_side_demoted: How many of ``demoted`` were the reverse of an edge this step
             demoted on another entry (``verdicts`` only), folded into ``demoted`` as well
             for the same reason and named as ``relation_hygiene`` names it.
+        far_side_retyped: How many of ``retyped`` were the reverse of an edge this step
+            retyped on another entry (``retype`` only), folded into ``retyped`` as well for
+            the same reason.
     """
 
     by_type: dict[str, int] = field(default_factory=dict)
     by_verdict: dict[str, int] = field(default_factory=dict)
+    by_answer: dict[str, int] = field(default_factory=dict)
+    by_retype: dict[str, int] = field(default_factory=dict)
+    calls_planned: int = 0
     senses_capped: int = 0
     far_side_removed: int = 0
     far_side_demoted: int = 0
+    far_side_retyped: int = 0
 
     def as_dict(self) -> dict[str, object]:
         """Return :meth:`StepResult.as_dict`'s view plus this pass's own counters."""
         data = super().as_dict()
         data["by_type"] = dict(sorted(self.by_type.items()))
         data["by_verdict"] = dict(sorted(self.by_verdict.items()))
+        data["by_answer"] = dict(sorted(self.by_answer.items()))
+        data["by_retype"] = dict(sorted(self.by_retype.items()))
+        data["calls_planned"] = self.calls_planned
         data["senses_capped"] = self.senses_capped
         data["far_side_removed"] = self.far_side_removed
         data["far_side_demoted"] = self.far_side_demoted
+        data["far_side_retyped"] = self.far_side_retyped
         return data
 
 
@@ -480,8 +607,9 @@ class RelationReconcileOutcome:
 
     Attributes:
         steps: One :class:`RelationReconcileStepResult` per selected step, keyed by name.
-            ``retyped``, ``rewritten``, ``calls`` and ``cost_usd`` are always zero: this
-            pass demotes and removes, and it makes no model call.
+            ``rewritten`` is always zero — this pass never rewrites text — and so are
+            ``retyped``, ``calls`` and ``cost_usd`` on every step but ``retype``, which is
+            the only one that calls a model.
         entries_scanned: Entries the single pooled sweep visited.
         entries_changed: Distinct entries written, across every step and the far-side
             phase — not the sum of the per-step figures, which counts an entry twice when
@@ -507,6 +635,21 @@ class RelationReconcileOutcome:
         return sum(result.removed for result in self.steps.values())
 
     @property
+    def retyped(self) -> int:
+        """Return how many relations were given a new type, near side and far side."""
+        return sum(result.retyped for result in self.steps.values())
+
+    @property
+    def calls(self) -> int:
+        """Return how many model calls the sweep made — ``retype``'s, and no others."""
+        return sum(result.calls for result in self.steps.values())
+
+    @property
+    def cost_usd(self) -> float:
+        """Return what those calls cost."""
+        return sum(result.cost_usd for result in self.steps.values())
+
+    @property
     def stopped_reason(self) -> str | None:
         """Return why the sweep stopped early, or ``None`` if it ran to the end."""
         for result in self.steps.values():
@@ -527,6 +670,9 @@ class RelationReconcileOutcome:
             "entries_skipped": self.entries_skipped,
             "demoted": self.demoted,
             "removed": self.removed,
+            "retyped": self.retyped,
+            "calls": self.calls,
+            "cost_usd": round(self.cost_usd, 6),
             "dry_run": self.dry_run,
             "stopped_reason": self.stopped_reason,
             "steps": {name: result.as_dict() for name, result in self.steps.items()},
@@ -543,6 +689,14 @@ class _EntryEdits:
     """What the steps did to one entry, before it is folded into the tally.
 
     Attributes:
+        retyped: ``retype``'s retypes, per pre-retype relation type value.
+        by_answer: every answer ``retype`` bought, per enum value.
+        by_retype: ``retype``'s retypes, per ``<old>→<new>``.
+        retype_calls: How many calls ``retype`` made on this entry.
+        retype_planned: How many it *would* have made, counted in a dry run instead.
+        retype_marked: Whether a retype marker was written, which is a change to the entry
+            even when no relation moved: the marker is what the calls bought, and losing
+            it re-bills the same answers on the next sweep.
         verdict_demoted: ``verdicts``' demotions, per pre-demotion relation type value.
         by_verdict: the same demotions, per ``ContrastVerdict`` value.
         demoted: ``asymmetric``'s demotions, per relation type value.
@@ -553,8 +707,16 @@ class _EntryEdits:
         far_side: Reverse edges ``cap``'s removals imply, for the second phase.
         far_side_demotions: Reverse edges ``verdicts``' demotions imply, for the same
             second phase.
+        far_side_retypes: Reverse edges ``retype``'s retypes imply, for the same second
+            phase.
     """
 
+    retyped: dict[str, int] = field(default_factory=dict)
+    by_answer: dict[str, int] = field(default_factory=dict)
+    by_retype: dict[str, int] = field(default_factory=dict)
+    retype_calls: int = 0
+    retype_planned: int = 0
+    retype_marked: bool = False
     verdict_demoted: dict[str, int] = field(default_factory=dict)
     by_verdict: dict[str, int] = field(default_factory=dict)
     demoted: dict[str, int] = field(default_factory=dict)
@@ -564,12 +726,25 @@ class _EntryEdits:
     senses_capped: int = 0
     far_side: list[_FarSideRemoval] = field(default_factory=list)
     far_side_demotions: list[_FarSideDemotion] = field(default_factory=list)
+    far_side_retypes: list[_FarSideRetype] = field(default_factory=list)
 
     @property
     def changed(self) -> bool:
-        """Return whether any step edited this entry."""
+        """Return whether any step edited this entry.
+
+        ``retype_marked`` counts: an entry whose calls all came back ``none`` has no
+        relation moved and still must be written, because the marker those calls bought is
+        the only thing standing between the next sweep and a second bill for the same
+        answers.
+        """
         return bool(
-            self.verdict_demoted or self.demoted or self.tombstoned or self.deduped or self.capped
+            self.retyped
+            or self.retype_marked
+            or self.verdict_demoted
+            or self.demoted
+            or self.tombstoned
+            or self.deduped
+            or self.capped
         )
 
 
@@ -674,8 +849,50 @@ class _Tally:
             if result is not None:
                 result.far_side_demoted += sum(edits.verdict_demoted.values())
 
+    async def call(self, cost_usd: float) -> None:
+        """Record one ``retype`` model call and what it cost.
+
+        Folded per call rather than per entry, as ``relation_hygiene._Tally.call`` is and
+        for its reason: a budget stop unwinds the entry in hand without folding its edits,
+        and a call that has already been billed by the provider must still appear in the
+        run's own accounting.
+
+        Args:
+            cost_usd: What the call cost.
+        """
+        async with self._lock:
+            result = self._results.get(RelationReconcileStep.RETYPE)
+            if result is not None:
+                result.calls += 1
+                result.cost_usd += cost_usd
+
+    async def far_side_retype(self, lexeme_id: str, edits: _EntryEdits) -> None:
+        """Fold one ``retype`` far-side visit into that step's result, not as a scan.
+
+        The retyping mirror of :meth:`far_side`; see that method for why a far-side visit
+        is not counted as a scan.
+
+        Args:
+            lexeme_id: The far entry visited.
+            edits: What was retyped on it.
+        """
+        async with self._lock:
+            self._fold(lexeme_id, edits)
+            result = self._results.get(RelationReconcileStep.RETYPE)
+            if result is not None:
+                result.far_side_retyped += sum(edits.retyped.values())
+
     def _fold(self, lexeme_id: str, edits: _EntryEdits) -> None:
         """Apply one entry's edits to the results. Caller holds the lock."""
+        self._apply(RelationReconcileStep.RETYPE, edits.retyped, retyped=True)
+        retype = self._results.get(RelationReconcileStep.RETYPE)
+        if retype is not None:
+            for key, amount in edits.by_answer.items():
+                retype.by_answer[key] = retype.by_answer.get(key, 0) + amount
+                retype.accepted += amount
+            for key, amount in edits.by_retype.items():
+                retype.by_retype[key] = retype.by_retype.get(key, 0) + amount
+            retype.calls_planned += edits.retype_planned
         self._apply(RelationReconcileStep.VERDICTS, edits.verdict_demoted, demoted=True)
         self._apply(RelationReconcileStep.ASYMMETRIC, edits.demoted, demoted=True)
         self._apply(RelationReconcileStep.TOMBSTONE, edits.tombstoned)
@@ -693,14 +910,18 @@ class _Tally:
             for result in self._results.values():
                 result.entries_changed = len(self._changed)
 
-    def _apply(self, step: str, counts: dict[str, int], *, demoted: bool = False) -> None:
+    def _apply(
+        self, step: str, counts: dict[str, int], *, demoted: bool = False, retyped: bool = False
+    ) -> None:
         """Fold one step's per-type counts into its result. Caller holds the lock."""
         result = self._results.get(step)
         if result is None:
             return
         for key, amount in counts.items():
             result.by_type[key] = result.by_type.get(key, 0) + amount
-            if demoted:
+            if retyped:
+                result.retyped += amount
+            elif demoted:
                 result.demoted += amount
             else:
                 result.removed += amount
@@ -1058,7 +1279,675 @@ def _already_reconciled(entry: Lexeme, marker: str) -> bool:
 
 
 # --------------------------------------------------------------------------------------
-# Step 1 — verdicts
+# Step 1 — retype (nano, HYGIENE policy)
+# --------------------------------------------------------------------------------------
+#
+# The instructions and the output contract live here rather than in prompts.py /
+# contracts.py, exactly as ``relation_hygiene``'s ``validity`` step keeps its own, and for
+# the same reason that module gives: every call site of this step stays in one file, so
+# this work cannot conflict with concurrent edits to those two. Nothing outside this
+# module depends on the names below.
+
+
+#: Instructions for the ``retype`` call, byte-stable across calls so the provider's prompt
+#: cache can match on them.
+#:
+#: Direction is what this prompt is for. D-68 measured that eleven of fifteen
+#: ``related_differently`` verdicts were a synonym that is really a hypernym or a hyponym,
+#: which means the answer is nearly always one of a pair that differ *only* in which way
+#: round they are read — and the schema's convention (the type names what the **target**
+#: is to the source, ``relation_hygiene.RELATION_VALIDITY_INSTRUCTIONS``' "this sense IS A
+#: KIND OF the target") is the opposite of the one a reader is likelier to have met, where
+#: "X is a hyponym of Y" describes X. So the two types are defined here by the sentence
+#: that has to read as true, with the source and the target named in it, and then shown
+#: twice in worked examples that run the *same* pair in both directions.
+CONTRAST_RETYPE_INSTRUCTIONS = """\
+You are re-filing one relation in a dictionary. You are given a SOURCE word and a TARGET \
+word, the definition of the sense each is being taken in, the relation type the dictionary \
+currently files the pair under, and a paragraph written earlier saying how the two \
+actually differ. That paragraph is your evidence: an earlier judgement already found the \
+filed type wrong, and your job is to say which type would be right.
+
+Answer with exactly one of these six words and nothing else.
+
+Every relation is stated FROM the source TO the target, and your answer names what the \
+TARGET is to the SOURCE. Decide first which of the two words is the broader one, then read \
+the answer off:
+
+- "hypernym": the TARGET is the BROADER word and the source is one kind of it. "A SOURCE \
+is a kind of TARGET" must read as true.
+- "hyponym": the TARGET is the NARROWER word and is one kind of the source. "A TARGET is a \
+kind of SOURCE" must read as true.
+- "co_hyponym": neither is broader than the other. Both are kinds of some third, wider \
+thing, and neither one contains the other.
+- "antonym": the target is the opposite of the source along one clear axis -- hot/cold, \
+buy/sell, always/never. Not merely another member of the same set, and not merely a word \
+that lacks the quality.
+- "synonym": the two mean roughly the same thing, closely enough that either could stand \
+in for the other in an ordinary sentence without changing what is meant. Answer this when \
+the paragraph, read against the two definitions, does not actually establish that one of \
+them is broader.
+- "none": none of the above holds of the two definitions shown -- they belong to the same \
+subject and nothing more, or one of the two is not really a word a dictionary would carry, \
+or the two definitions are about different things entirely. Answer "none" in particular \
+when the two definitions are for different parts of speech, or when one of the two is an \
+inflected form of the other rather than a second word.
+
+The one way this question is commonly got wrong is answering with the word that describes \
+the SOURCE. Your answer always describes the TARGET. When the source is the broad, \
+ordinary, general word and the target is the specific one, the answer is "hyponym" -- NOT \
+"hypernym", however plainly the source is the more general term. When the target is the \
+broader word, the answer is "hypernym".
+
+Worked examples. The same pair, filed both ways round, gets opposite answers:
+
+  SOURCE "falcon": A bird of prey with long pointed wings. TARGET "peregrine": A large \
+falcon found on every continent, the fastest bird alive. Filed as: synonym.
+  -> hyponym. A peregrine is a kind of falcon, so the target is the narrower term.
+
+  SOURCE "peregrine": A large falcon found on every continent, the fastest bird alive. \
+TARGET "falcon": A bird of prey with long pointed wings. Filed as: synonym.
+  -> hypernym. A peregrine is a kind of falcon, so the target is the broader term.
+
+  SOURCE "accusation": A claim that someone has done something wrong. TARGET \
+"indictment": A formal criminal charge brought by a grand jury. Filed as: synonym.
+  -> hyponym. An indictment is a kind of accusation, one made formally and in law.
+
+  SOURCE "falcon": A bird of prey with long pointed wings. TARGET "hawk": A bird of prey \
+with broad rounded wings and a long tail. Filed as: synonym.
+  -> co_hyponym. Both are birds of prey and neither is a kind of the other.
+
+  SOURCE "die": To stop living; to no longer be alive. TARGET "drown": To die by \
+submersion in water. Filed as: synonym.
+  -> hyponym. Drowning is a kind of dying, so the target is the narrower word. The answer \
+is not "hypernym": "die" is indeed the broad word here, but the answer names the target, \
+not the source.
+
+  SOURCE "agency": An enterprise that represents people or coordinates services for \
+clients. TARGET "firm": A business organization that sells goods or services. Filed as: \
+synonym.
+  -> hypernym. An agency is a kind of firm, so the target is the broader word -- even \
+though "agency" is the word the entry is about.
+
+  SOURCE "moving": To be in motion; to travel from one place to another. TARGET "travel": \
+The act of moving from one place to another. Filed as: synonym.
+  -> none. The two are the same idea in different parts of speech, a verb against a noun, \
+which is not a relation between two senses.
+
+Judge from the two definitions you are given, not from the words alone: a word with \
+several meanings is being taken in the one definition shown, and the paragraph was written \
+about those two definitions. Do not answer "synonym" merely because the two words are \
+close, when one of them is plainly the general term and the other a special case of it -- \
+that is the distinction this question exists to draw. Answer one word."""
+
+
+class _DraftContrastRetype(BaseModel):
+    """The one strict-enum answer the ``retype`` call is allowed to give.
+
+    One field, no free text and no reason: the paragraph the model is shown *is* the
+    reason, it is already on disk, and every token this contract does not ask for is a
+    token the step does not pay for on each of its one-call-per-edge questions.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    relation: Literal["hypernym", "hyponym", "co_hyponym", "antonym", "synonym", "none"]
+
+
+#: The edge types ``retype`` will ask about. ``confusable_with`` is the third symmetric
+#: type and is deliberately not here: that type's claim is about spelling and misuse rather
+#: than sense, its schema requires a note that *is* the content, and "which of these two is
+#: the broader term" is not a question its contrasts were written to answer.
+_RETYPE_KINDS: frozenset[RelationType] = frozenset({RelationType.SYNONYM, RelationType.ANTONYM})
+
+#: The relation each answer names, or ``None`` for the two that name no edge type.
+#: ``co_hyponym`` is in the enum without being in this mapping on purpose: it is a real and
+#: common answer — two co-ordinate terms under one parent — and there is no
+#: :class:`~opengloss_generator.schema.RelationType` for it, so offering it is what stops
+#: the model from rounding a sibling pair up to ``synonym`` or down to ``none``. Both
+#: unmapped answers leave the edge exactly as ``verdicts`` would have found it.
+_RETYPE_ANSWERS: dict[str, RelationType | None] = {
+    "hypernym": RelationType.HYPERNYM,
+    "hyponym": RelationType.HYPONYM,
+    "antonym": RelationType.ANTONYM,
+    "synonym": RelationType.SYNONYM,
+    "co_hyponym": None,
+    "none": None,
+}
+
+#: What the reverse edge becomes when the near side is retyped. ``hypernym`` and
+#: ``hyponym`` swap — "A is a kind of B" read from B's end is "B has A as a kind" — and the
+#: two symmetric types are their own inverse. A type not in this mapping queues no
+#: far-side work at all.
+_INVERSE_RETYPE: dict[RelationType, RelationType] = {
+    RelationType.HYPERNYM: RelationType.HYPONYM,
+    RelationType.HYPONYM: RelationType.HYPERNYM,
+    RelationType.SYNONYM: RelationType.SYNONYM,
+    RelationType.ANTONYM: RelationType.ANTONYM,
+}
+
+
+@dataclass(frozen=True, slots=True)
+class _FarSideRetype:
+    """One reverse edge a ``retype`` retype implies, for the second phase.
+
+    The retyping counterpart of :class:`_FarSideDemotion`, queued for the same reason:
+    a contrast is written once per *undirected* pair (D-57 §1), so the reverse edge has no
+    contrast of its own and nothing but this queue will ever act on it. Leaving it alone
+    would be strictly worse than doing nothing — ``A --hypernym--> B`` beside
+    ``B --synonym--> A`` is a pair that contradicts itself, where before it was merely
+    wrong in both directions the same way.
+
+    Attributes:
+        lexeme_id: The entry to visit — the retyped relation's target lexeme (B).
+        source_lexeme: The entry the retype happened on (A).
+        source_sense: The sense of A whose relation was retyped, so the far side is
+            identified positively rather than plausibly.
+        relation_type: The type the near relation had **before** the retype, which is the
+            type the untouched reverse still carries.
+        new_type: What the near side became. The reverse gets :data:`_INVERSE_RETYPE` of
+            it.
+    """
+
+    lexeme_id: str
+    source_lexeme: str
+    source_sense: str
+    relation_type: RelationType
+    new_type: RelationType
+
+
+@dataclass(slots=True)
+class _RetypeCandidate:
+    """One live edge with a ``related_differently`` contrast, and its prompt material.
+
+    Attributes:
+        relation: The relation itself, mutated in place when an answer says so.
+        sense_id: The asserting sense.
+        source_gloss: That sense's canonical gloss.
+        target_gloss: The target sense's canonical gloss, or
+            :data:`~opengloss_generator.workflows.content_hygiene.UNRESOLVED_GLOSS`.
+        contrast: The stored contrast, whose paragraph is the evidence and whose edge id
+            and verdict are the marker's ref.
+    """
+
+    relation: Relation
+    sense_id: str
+    source_gloss: str
+    target_gloss: str
+    contrast: Contrast
+
+    @property
+    def ref(self) -> str:
+        """Return the marker ref for this candidate.
+
+        The contrast's edge id **and** its verdict, exactly as :func:`_contrast_refs`
+        keys the pass's own marker: a re-judged edge is a different question even though
+        the key did not move.
+        """
+        return f"{self.contrast.edge_id}={self.contrast.verdict.value}"
+
+
+def _target_gloss(store: LexemeStore, sense_id: str | None, cache: dict[str, str]) -> str:
+    """Return the canonical gloss of a resolved relation target, for the prompt.
+
+    Read *without* the target's lock: this is a read-only lookup for prompt context, never
+    one this pass then writes back from, so the discipline that matters — no entry is
+    written from a read taken outside its own lock — is untouched. Mirrors
+    ``relation_hygiene._target_gloss`` and ``content_hygiene``'s.
+
+    Args:
+        store: The store to read from.
+        sense_id: The resolved target sense, or ``None`` if the relation is unresolved.
+        cache: Per-sweep memo, ``sense_id -> gloss``.
+
+    Returns:
+        The target sense's canonical gloss, or
+        :data:`~opengloss_generator.workflows.content_hygiene.UNRESOLVED_GLOSS`.
+    """
+    if sense_id is None:
+        return UNRESOLVED_GLOSS
+    cached = cache.get(sense_id)
+    if cached is not None:
+        return cached
+    entry = store.read(sense_id.rsplit(":", 2)[0])
+    gloss = UNRESOLVED_GLOSS
+    if entry is not None:
+        for _, sense, sid in entry.iter_senses():
+            if sid == sense_id:
+                gloss = sense.canonical_gloss()
+                break
+    cache[sense_id] = gloss
+    return gloss
+
+
+def _is_retyped(relation: Relation) -> bool:
+    """Return whether ``retype`` has already settled this edge in some earlier sweep."""
+    return bool(relation.note) and relation.note.startswith(RETYPE_NOTE_PREFIXES)
+
+
+def _collect_retype_candidates(
+    entry: Lexeme, store: LexemeStore, cache: dict[str, str]
+) -> list[_RetypeCandidate]:
+    """Return every edge on one entry this step would buy an answer about.
+
+    The join is by **edge id**, as ``verdicts``' is: a contrast's key is
+    ``<sense id>-<type>-><target lexeme>``, which is what :meth:`Lexeme.edges` derives, so
+    a contrast written about a sense D-52 has since retired matches nothing here and is
+    left alone, as D-62 requires.
+
+    Args:
+        entry: The entry to inspect. Never mutated.
+        store: The store, read only for target glosses.
+        cache: The sweep's target-gloss memo.
+
+    Returns:
+        One candidate per live ``synonym`` or ``antonym`` edge carrying a
+        ``related_differently`` contrast and no note from an earlier retype, in document
+        order.
+    """
+    keyed = {
+        contrast.edge_id: contrast
+        for contrast in entry.contrasts
+        if contrast.verdict is ContrastVerdict.RELATED_DIFFERENTLY
+    }
+    if not keyed:
+        return []
+    candidates: list[_RetypeCandidate] = []
+    for _, sense, sense_id in _live_senses(entry):
+        source_gloss = sense.canonical_gloss()
+        for relation in sense.relations:
+            if relation.type not in _RETYPE_KINDS or _is_retyped(relation):
+                continue
+            contrast = keyed.get(edge_id(sense_id, relation.type.value, relation.target.lexeme_id))
+            if contrast is None:
+                continue
+            candidates.append(
+                _RetypeCandidate(
+                    relation=relation,
+                    sense_id=sense_id,
+                    source_gloss=source_gloss,
+                    target_gloss=_target_gloss(store, relation.target.sense_id, cache),
+                    contrast=contrast,
+                )
+            )
+    return candidates
+
+
+def _latest_retype_marker(entry: Lexeme) -> tuple[str, int] | None:
+    """Return ``(digest, attempts)`` from the last retype sentinel on an entry.
+
+    Args:
+        entry: The entry to inspect.
+
+    Returns:
+        The most recent marker's digest and attempt count, or ``None`` when this step has
+        never called about the entry. Read through
+        :meth:`~opengloss_generator.schema.Lexeme.provenance_in_order`, because the store
+        writes provenance with sorted keys and ``p9`` sorts after ``p10``.
+    """
+    latest: tuple[str, int] | None = None
+    for record in entry.provenance_in_order():
+        note = record.note or ""
+        if not note.startswith(f"{RETYPE_MARKER_PREFIX}:"):
+            continue
+        digest, _, attempts = note[len(RETYPE_MARKER_PREFIX) + 1 :].partition(_ATTEMPTS_SEPARATOR)
+        latest = (digest, int(attempts) if attempts.isdigit() else 1)
+    return latest
+
+
+def _retype_attempt(entry: Lexeme, refs: Sequence[str]) -> int | None:
+    """Return which retype attempt is due on an entry, or ``None`` if none is (D-47).
+
+    Args:
+        entry: The entry being considered.
+        refs: The candidate refs as they stand now.
+
+    Returns:
+        The 1-based attempt number, or ``None`` when the entry must be skipped — which is
+        also the "do not bill this" signal. An entry is due an attempt when it has
+        something to ask about and either this step has never called about it or its
+        contrast set has changed since, and it has not already had
+        :data:`RETYPE_MAX_ATTEMPTS` of them.
+    """
+    if not refs:
+        return None
+    marker = _latest_retype_marker(entry)
+    if marker is None:
+        return 1
+    digest, attempts = marker
+    if digest == _digest(refs) or attempts >= RETYPE_MAX_ATTEMPTS:
+        return None
+    return attempts + 1
+
+
+def _retype_marker_note(refs: Iterable[str], attempt: int) -> str:
+    """Return the retype sentinel to stamp for one attempt, in D-47's form.
+
+    The digest is over the candidate set **as collected**, not as the answers leave it.
+    That is the opposite of ``relation_hygiene``'s ``validity`` marker and it is the right
+    way round here: an answer of ``co_hyponym`` or ``none`` leaves its edge untouched and
+    still matching its contrast, so a digest over survivors would be a digest over exactly
+    the questions already paid for and answered, and every later sweep would ask them
+    again.
+
+    Args:
+        refs: The candidate refs the attempt covered.
+        attempt: The 1-based attempt number.
+
+    Returns:
+        ``relation_reconcile:retype:<digest>;attempts=<n>``.
+    """
+    return f"{RETYPE_MARKER_PREFIX}:{_digest(refs)}{_ATTEMPTS_SEPARATOR}{attempt}"
+
+
+def _build_retype_prompt(headword: str, candidate: _RetypeCandidate) -> str:
+    """Return the volatile half of the ``retype`` prompt for one edge.
+
+    Args:
+        headword: The asserting entry's surface form.
+        candidate: The edge in question.
+
+    Returns:
+        The per-call prompt body: both words, both definitions, the type on file and the
+        paragraph that says the type is wrong.
+    """
+    return "\n".join(
+        [
+            f'SOURCE "{headword}": {candidate.source_gloss}',
+            f'TARGET "{candidate.relation.target.term}": {candidate.target_gloss}',
+            f"Filed as: {candidate.relation.type.value}",
+            "How they differ, written earlier about these two definitions:",
+            candidate.contrast.canonical_text(),
+        ]
+    )
+
+
+def _apply_retype(
+    entry: Lexeme,
+    candidate: _RetypeCandidate,
+    answer: str,
+    provenance_id: str,
+    *,
+    edits: _EntryEdits,
+    known: frozenset[str],
+) -> _FarSideRetype | None:
+    """Apply one answer to one edge, in place.
+
+    Args:
+        entry: The entry the edge belongs to (A), read for its lexeme id.
+        candidate: The edge the answer is about.
+        answer: The enum the model returned.
+        provenance_id: The entry's record for this call's edits.
+        edits: The running per-entry counts, extended in place.
+        known: Every lexeme id in the store, for deciding whether a far-side retype has an
+            entry to land on.
+
+    Returns:
+        The far-side retype this one implies, or ``None`` — when the answer named no type,
+        when it named the type the edge already carries, or when the target is unresolved,
+        outside the store, or this same entry.
+    """
+    edits.by_answer[answer] = edits.by_answer.get(answer, 0) + 1
+    proposed = _RETYPE_ANSWERS.get(answer)
+    if proposed is None:
+        return None
+    relation = candidate.relation
+    current = relation.type
+    if proposed is current:
+        # A second, better evidenced opinion that the type on file is right. Noted rather
+        # than left bare, because the note is the only thing that stops ``verdicts`` from
+        # demoting the edge on the first opinion a few lines further down.
+        _retype(
+            relation,
+            current,
+            f"{RETYPE_KEPT_NOTE_PREFIX}{current.value} confirmed",
+            provenance_id,
+        )
+        return None
+    far_side = _far_side_retype(entry, candidate.sense_id, relation, proposed, known)
+    _add(edits.retyped, current)
+    key = f"{current.value}→{proposed.value}"
+    edits.by_retype[key] = edits.by_retype.get(key, 0) + 1
+    _retype(relation, proposed, f"{RETYPE_NOTE_PREFIX}{key}", provenance_id)
+    return far_side
+
+
+def _far_side_retype(
+    entry: Lexeme,
+    sense_id: str,
+    relation: Relation,
+    proposed: RelationType,
+    known: frozenset[str],
+) -> _FarSideRetype | None:
+    """Return the far-side retype one retype implies, or ``None``.
+
+    Must be called *before* ``relation`` is retyped: it reads ``relation.type`` to learn
+    what the untouched reverse edge still carries. Mirrors :func:`_far_side_demotion`,
+    including its two extra conditions — the target must be resolved and must be an entry
+    in this store — for that function's reasons.
+
+    Args:
+        entry: The entry the retype is happening on (A).
+        sense_id: The sense whose relation is being retyped (S).
+        relation: The relation about to be retyped, inspected before the edit.
+        proposed: What it is about to become.
+        known: Every lexeme id in the store.
+
+    Returns:
+        The queued retype, or ``None``.
+    """
+    if proposed not in _INVERSE_RETYPE or not relation.target.resolved:
+        return None
+    target_lexeme = relation.target.lexeme_id
+    if target_lexeme == entry.lexeme_id or target_lexeme not in known:
+        return None
+    return _FarSideRetype(
+        lexeme_id=target_lexeme,
+        source_lexeme=entry.lexeme_id,
+        source_sense=sense_id,
+        relation_type=relation.type,
+        new_type=proposed,
+    )
+
+
+def _is_far_side_retype_of(relation: Relation, request: _FarSideRetype) -> bool:
+    """Return whether a far-side relation is the reciprocal a retype implies.
+
+    Sense-level, for :func:`_is_far_side_demotion_of`'s reason: a contrast is a judgement
+    about *these two senses*, and a relation the far entry holds about a different sense is
+    none of this step's business.
+
+    Two shapes qualify. The reverse may still carry the type the near side carried, which
+    is the ordinary case — both ends asserted the pair and only one end had a contrast. Or
+    it may be a ``see_also`` a previous sweep demoted (``verdicts``' far-side half, or
+    ``relation_hygiene``'s), which is the case this step exists to rescue: the reverse of
+    an edge some pass judged is exactly where the missing half of a hypernym pair ends up.
+
+    Args:
+        relation: The far-side relation under consideration.
+        request: The retype that prompted the check.
+
+    Returns:
+        Whether it points back at the source lexeme, resolves to the retyped sense or to
+        nothing, and is either the pre-retype type or a demoted ``see_also``.
+    """
+    if relation.target.lexeme_id != request.source_lexeme:
+        return False
+    if relation.target.sense_id not in (None, request.source_sense):
+        return False
+    if relation.type is request.relation_type:
+        return True
+    return relation.type is RelationType.SEE_ALSO and is_demotion_note(relation.note)
+
+
+async def _retype_far_side(
+    request: _FarSideRetype, store: LexemeStore, tally: _Tally, *, dry_run: bool
+) -> None:
+    """Give the reverse edge the inverse type, for $0.
+
+    Visits ``request.lexeme_id`` (B) under its own lock, and only ever after the main sweep
+    has fully drained and released A's lock, so no two entry locks are ever held at once
+    (D-31). No second model call is made or needed: the direction was decided on the near
+    side and the inverse of a decided direction is arithmetic, not judgement.
+
+    **No marker is written or refreshed here**, for :func:`_demote_far_side`'s reason: this
+    phase runs after the sweep in which ``tombstone`` already visited B, and freezing a new
+    digest would skip the entry on the next sweep. Idempotent without one: a reverse
+    already carrying the inverse type is neither the pre-retype type nor a demoted
+    ``see_also``, so :func:`_is_far_side_retype_of` refuses it.
+
+    Args:
+        request: The far-side retype to perform.
+        store: The store.
+        tally: The tally to fold the visit into, as a far-side visit rather than a scan.
+        dry_run: Compute the retype and report it without writing.
+    """
+    inverse = _INVERSE_RETYPE[request.new_type]
+    edits = _EntryEdits()
+    async with store.locked(request.lexeme_id):
+        entry = store.read(request.lexeme_id)
+        if entry is None:
+            return
+        editor = _Editor(entry)
+        for _, sense, _ in _live_senses(entry):
+            for relation in sense.relations:
+                if not _is_far_side_retype_of(relation, request) or relation.type is inverse:
+                    continue
+                key = f"{relation.type.value}→{inverse.value}"
+                note = f"{RETYPE_FAR_SIDE_NOTE_PREFIX}{request.source_sense} (contrast {key})"
+                _add(edits.retyped, relation.type)
+                edits.by_retype[key] = edits.by_retype.get(key, 0) + 1
+                _retype(relation, inverse, note, editor.provenance_id())
+        if edits.changed and not dry_run:
+            store.write(entry)
+    if edits.changed:
+        await tally.far_side_retype(request.lexeme_id, edits)
+
+
+async def _retype_far_side_all(
+    requests: Sequence[_FarSideRetype],
+    store: LexemeStore,
+    tally: _Tally,
+    *,
+    workers: int,
+    dry_run: bool,
+) -> None:
+    """Run the ``retype`` far-side phase over every retype the main sweep queued.
+
+    **Takes no stop event, deliberately**, for the reason :func:`_remove_far_side_all`
+    gives at length and by the same mechanism: ``run_pool``'s workers return before pulling
+    their first item once the event is set, so a phase that honoured it would silently do
+    nothing and leave ``A --hypernym--> B`` standing beside ``B --synonym--> A``. It buys
+    nothing (no model call, one local read-modify-write per target) and is bounded by the
+    retypes the run actually made.
+
+    Args:
+        requests: Every far-side retype the main sweep queued, in any order and with
+            duplicates; deduplicated here and processed in a stable order.
+        store: The store.
+        tally: The tally to accumulate into.
+        workers: Pool size.
+        dry_run: Compute the retypes and report them without writing.
+    """
+    ordered = sorted(
+        set(requests),
+        key=lambda r: (r.lexeme_id, r.source_lexeme, r.source_sense, r.relation_type.value),
+    )
+
+    async def visit(request: _FarSideRetype) -> None:
+        await _retype_far_side(request, store, tally, dry_run=dry_run)
+
+    await _drive(ordered, visit, tally, workers=workers, stop_event=None)
+
+
+async def _apply_retypes(
+    entry: Lexeme,
+    store: LexemeStore,
+    runner: StageRunner,
+    tally: _Tally,
+    *,
+    edits: _EntryEdits,
+    cache: dict[str, str],
+    known: frozenset[str],
+    dry_run: bool,
+) -> None:
+    """Ask nano what each ``related_differently`` edge really is, and act on the answers.
+
+    One call per edge. The question is narrow enough that a batch would only make the
+    contract harder to keep strict, and an entry rarely carries more than a few candidates.
+
+    Under ``dry_run`` the candidates are counted into
+    :attr:`_EntryEdits.retype_planned` and **no call is made**: a dry run of this pass must
+    stay free, and what a caller wants from it here is the bill it would have run up, which
+    is a function of the candidate count and the ``HYGIENE`` policy's price row.
+
+    Args:
+        entry: The entry being judged, mutated in place.
+        store: The store, read only for target glosses.
+        runner: The stage runner.
+        tally: The step tally, for each call and its cost.
+        edits: The running per-entry counts and far-side requests, extended in place.
+        cache: The sweep's target-gloss memo.
+        known: Every lexeme id in the store.
+        dry_run: Count the calls instead of making them.
+
+    Raises:
+        BudgetExceededError: A budget stop is a run-level condition and propagates.
+    """
+    candidates = _collect_retype_candidates(entry, store, cache)
+    attempt = _retype_attempt(entry, [candidate.ref for candidate in candidates])
+    if attempt is None:
+        return
+    if dry_run:
+        edits.retype_planned += len(candidates)
+        return
+    answered = False
+    for candidate in candidates:
+        try:
+            stage_result = await runner.run(
+                # Reuses hygiene's model policy (nano): a structural verdict about two
+                # definitions, exactly as ``relation_hygiene``'s ``validity`` step is.
+                stage=StageName.HYGIENE,
+                output_type=_DraftContrastRetype,
+                instructions=CONTRAST_RETYPE_INSTRUCTIONS,
+                prompt=_build_retype_prompt(entry.headword, candidate),
+                prompt_version=PROMPT_VERSION,
+            )
+        except BudgetExceededError:
+            raise
+        except GenerationError as exc:
+            _LOG.warning(
+                "relation_reconcile_retype_failed",
+                headword=entry.headword,
+                edge=candidate.contrast.edge_id,
+                error=str(exc),
+            )
+            continue
+        await tally.call(stage_result.cost_usd)
+        answered = True
+        far_side = _apply_retype(
+            entry,
+            candidate,
+            stage_result.output.relation,
+            entry.add_provenance(stage_result.provenance),
+            edits=edits,
+            known=known,
+        )
+        if far_side is not None:
+            edits.far_side_retypes.append(far_side)
+    if answered:
+        # Written even when every answer was ``none``: the marker is what the calls
+        # bought, and losing it re-bills the same answers on the next sweep.
+        entry.add_provenance(
+            _rule_provenance(
+                _retype_marker_note([candidate.ref for candidate in candidates], attempt)
+            )
+        )
+        edits.retype_marked = True
+
+
+# --------------------------------------------------------------------------------------
+# Step 2 — verdicts
 # --------------------------------------------------------------------------------------
 
 
@@ -1140,6 +2029,12 @@ def _apply_verdicts(
     about a sense that D-52 has since retired matches nothing here (retired senses are not
     in :func:`_live_senses`) and is left alone, as D-62 requires.
 
+    An edge the ``retype`` step has already settled is skipped by its note (one of
+    :data:`RETYPE_NOTE_PREFIXES`). The note is load-bearing for exactly one of the two
+    outcomes: a *retyped* edge no longer matches its contrast's edge id and would be
+    skipped anyway, but a *kept* one still matches, and demoting it here would undo, a few
+    lines after it was made, the only judgement anybody ever bought about this pair.
+
     Because the edge id carries the *type*, a demoted edge no longer matches its own
     contrast — ``s-synonym->b`` becomes ``s-see_also->b`` — so this step is idempotent by
     construction, the way every other step here is, and does not need to read its own note
@@ -1164,7 +2059,7 @@ def _apply_verdicts(
         return
     for _, sense, sense_id in _live_senses(entry):
         for relation in sense.relations:
-            if relation.type is RelationType.SEE_ALSO:
+            if relation.type is RelationType.SEE_ALSO or _is_retyped(relation):
                 continue
             target_lexeme = relation.target.lexeme_id
             contrast = acted.get(edge_id(sense_id, relation.type.value, target_lexeme))
@@ -1339,7 +2234,7 @@ async def _demote_far_side_all(
 
 
 # --------------------------------------------------------------------------------------
-# Step 2 — asymmetric
+# Step 3 — asymmetric
 # --------------------------------------------------------------------------------------
 
 
@@ -1431,7 +2326,7 @@ def _demote_asymmetric(
 
 
 # --------------------------------------------------------------------------------------
-# Step 3 — tombstone, and dedup
+# Step 4 — tombstone, and dedup
 # --------------------------------------------------------------------------------------
 
 
@@ -1489,7 +2384,7 @@ def _dedup(entry: Lexeme, editor: _Editor, edits: _EntryEdits) -> None:
 
 
 # --------------------------------------------------------------------------------------
-# Step 5 — cap
+# Step 6 — cap
 # --------------------------------------------------------------------------------------
 
 
@@ -1737,26 +2632,29 @@ async def _remove_far_side_all(
 
 def _reconcile_entry(
     entry: Lexeme,
+    edits: _EntryEdits,
     *,
     steps: Sequence[str],
     index: set[tuple[str, str, str]],
     known: frozenset[str],
     caps: RelationCaps,
-) -> _EntryEdits:
-    """Apply every selected step to one entry, in :attr:`RelationReconcileStep.ALL` order.
+) -> None:
+    """Apply every free step to one entry, in :attr:`RelationReconcileStep.ALL` order.
+
+    ``retype`` is not here: it is the one step that awaits a model, and it has already run
+    on this entry, under the same lock, by the time this is called.
 
     Args:
         entry: The entry, mutated in place.
+        edits: The running per-entry counts, which may already carry ``retype``'s, extended
+            in place.
         steps: The selected step names.
         index: :func:`_collect_demoted_pairs`' projection, empty when ``asymmetric``
             was not selected.
-        known: Every lexeme id in the store, empty when ``verdicts`` was not selected.
+        known: Every lexeme id in the store, empty when neither ``verdicts`` nor ``retype``
+            was selected.
         caps: The per-type allowances.
-
-    Returns:
-        What the steps did.
     """
-    edits = _EntryEdits()
     editor = _Editor(entry)
     if RelationReconcileStep.VERDICTS in steps:
         _apply_verdicts(entry, editor, known, edits)
@@ -1768,56 +2666,43 @@ def _reconcile_entry(
         _dedup(entry, editor, edits)
     if RelationReconcileStep.CAP in steps:
         _cap(entry, editor, caps, edits)
-    return edits
 
 
-async def run_relation_reconcile(
-    store: LexemeStore,
-    *,
-    workers: int,
-    stop_event: asyncio.Event | None = None,
-    only: set[str] | None = None,
-    lexeme_ids: Sequence[str] | None = None,
-    caps: RelationCaps | None = None,
-    dry_run: bool = False,
-) -> RelationReconcileOutcome:
-    """Reconcile the relation lists the hygiene passes' demotions left behind (D-65).
+def _select_steps(only: set[str] | None, *, runner: StageRunner | None) -> tuple[str, ...]:
+    """Return the steps to run, in :attr:`RelationReconcileStep.ALL` order, or raise.
 
-    Five free steps, described in full in the module docstring: ``verdicts`` demotes every
-    edge a stored :class:`~opengloss_generator.schema.Contrast` says is not what it claims
-    (D-68), ``asymmetric`` applies the stricter of two disagreeing directional verdicts on
-    a symmetric pair, ``tombstone`` takes every demoted ``see_also`` out of
-    ``Sense.relations`` and writes it to provenance instead, ``dedup`` drops exact
-    duplicate edges, and ``cap`` trims each sense's per-type runs to
-    :class:`RelationCaps`. No model call is made anywhere.
+    A default selection (``only=None``) is **every step the caller has equipped the pass to
+    run**: all six with a runner, the five free ones without. That rule is what keeps a
+    library caller who has always called this pass for $0 — every test in
+    ``tests/test_relation_reconcile.py``, and any pipeline that reaches for it as a
+    deterministic cleanup — running for $0 after this module learned to spend. Naming
+    ``retype`` explicitly with no runner is a different thing entirely and raises: a caller
+    who asked for the step by name and silently got a free sweep that changed nothing is
+    owed an error, not a surprise.
 
     Args:
-        store: The store to reconcile.
-        workers: Pool size for the main sweep and the far-side phase.
-        stop_event: Shared stop event. A caller may set it to end the main sweep after the
-            entries in hand; the outcome then reports ``stopped_reason="stopped"``. The
-            far-side phase is deliberately not given it (see :func:`_remove_far_side_all`).
-        only: Step names to run; defaults to all of :attr:`RelationReconcileStep.ALL`.
-            Steps are applied in that attribute's order whatever order they are given in.
-        lexeme_ids: Ids to visit; defaults to every id in the store, sorted. ``asymmetric``
-            still reads the *whole* store for its index, and ``verdicts`` for its id set,
-            because the far side of an edge on the list is very often not on it.
-        caps: Per-type allowances for ``cap``; defaults to :class:`RelationCaps`' own.
-        dry_run: Compute every edit and report it without writing anything.
+        only: The caller's selection, or ``None`` for every step the runner allows.
+        runner: The stage runner the caller passed, which ``retype`` cannot do without.
 
     Returns:
-        A :class:`RelationReconcileOutcome` carrying per-step counts and per-type
-        breakdowns.
+        The selected step names, ordered.
 
     Raises:
-        ValueError: If ``only`` names a step that does not exist.
+        ValueError: If a named step does not exist, or ``retype`` is selected by name with
+            no runner to make its calls.
     """
-    selected = set(only) if only is not None else set(RelationReconcileStep.ALL)
+    if only is None:
+        default = set(RelationReconcileStep.ALL)
+        if runner is None:
+            default.discard(RelationReconcileStep.RETYPE)
+        return tuple(name for name in RelationReconcileStep.ALL if name in default)
+    selected = set(only)
     unknown = sorted(selected - set(RelationReconcileStep.ALL))
     if unknown:
         raise ValueError(f"unknown relation reconcile step(s): {unknown}")
     steps = tuple(name for name in RelationReconcileStep.ALL if name in selected)
-
+    if RelationReconcileStep.RETYPE in steps and runner is None:
+        raise ValueError("the 'retype' step needs a stage runner; pass one or deselect it")
     # Removing a demotion tombstone also removes graph_hygiene's own signal not to
     # re-create the pair (_asserted_pairs). That is safe only once the steps that demote
     # the live half have run, which is why the default sweep runs all of them; `verdicts`
@@ -1832,11 +2717,72 @@ async def run_relation_reconcile(
                 steps=list(steps),
                 missing=missing,
             )
+    return steps
 
+
+async def run_relation_reconcile(
+    store: LexemeStore,
+    runner: StageRunner | None = None,
+    *,
+    workers: int,
+    stop_event: asyncio.Event | None = None,
+    only: set[str] | None = None,
+    lexeme_ids: Sequence[str] | None = None,
+    caps: RelationCaps | None = None,
+    dry_run: bool = False,
+) -> RelationReconcileOutcome:
+    """Reconcile the relation lists the hygiene passes' demotions left behind (D-65).
+
+    Six steps, described in full in the module docstring. ``retype`` asks nano what each
+    edge a contrast called ``related_differently`` really is and files it under that type
+    (D-73) — the one step here that spends. ``verdicts`` demotes every edge a stored
+    :class:`~opengloss_generator.schema.Contrast` says is not what it claims and ``retype``
+    could not type (D-68), ``asymmetric`` applies the stricter of two disagreeing
+    directional verdicts on a symmetric pair, ``tombstone`` takes every demoted ``see_also``
+    out of ``Sense.relations`` and writes it to provenance instead, ``dedup`` drops exact
+    duplicate edges, and ``cap`` trims each sense's per-type runs to :class:`RelationCaps`.
+
+    Args:
+        store: The store to reconcile.
+        runner: The stage runner, required only by ``retype``; the five free steps never
+            touch it. A selection containing ``retype`` without one is a programming error
+            rather than a silent free run, so it raises.
+        workers: Pool size for the main sweep and the far-side phases.
+        stop_event: Shared stop event. A caller may set it to end the main sweep after the
+            entries in hand; the outcome then reports ``stopped_reason="stopped"``. A
+            budget stop sets it too, through ``run_pool``. The far-side phases are
+            deliberately not given it (see :func:`_remove_far_side_all`).
+        only: Step names to run; defaults to every step this call is equipped for — all of
+            :attr:`RelationReconcileStep.ALL` when ``runner`` is given, and the five free
+            ones when it is not, so a caller who has always run this pass for $0 still
+            does. Steps are applied in that attribute's order whatever order they are given
+            in, and naming ``retype`` with no runner raises rather than skipping it.
+        lexeme_ids: Ids to visit; defaults to every id in the store, sorted. ``asymmetric``
+            still reads the *whole* store for its index, and ``verdicts`` and ``retype``
+            for their id set, because the far side of an edge on the list is very often not
+            on it.
+        caps: Per-type allowances for ``cap``; defaults to :class:`RelationCaps`' own.
+        dry_run: Compute every edit and report it without writing anything. ``retype``
+            makes **no call** in a dry run and reports what it would have spent through
+            :attr:`RelationReconcileStepResult.calls_planned` instead, so a dry run of this
+            pass is still free. The other steps' counts are then the counts for a sweep in
+            which ``retype`` changed nothing — every candidate edge is demoted by
+            ``verdicts`` and tombstoned, which is what a real sweep would *not* do.
+
+    Returns:
+        A :class:`RelationReconcileOutcome` carrying per-step counts and per-type
+        breakdowns.
+
+    Raises:
+        ValueError: If ``only`` names a step that does not exist, or selects ``retype``
+            with no ``runner`` to make its calls.
+    """
+    steps = _select_steps(only, runner=runner)
     caps = caps or RelationCaps()
     ids = list(lexeme_ids) if lexeme_ids is not None else sorted(store.iter_ids())
     index = _collect_demoted_pairs(store) if RelationReconcileStep.ASYMMETRIC in steps else set()
-    known = frozenset(store.iter_ids()) if RelationReconcileStep.VERDICTS in steps else frozenset()
+    needs_ids = {RelationReconcileStep.VERDICTS, RelationReconcileStep.RETYPE}
+    known = frozenset(store.iter_ids()) if needs_ids & set(steps) else frozenset()
     _LOG.info(
         "relation_reconcile_index",
         demoted_reverses=len(index),
@@ -1847,7 +2793,9 @@ async def run_relation_reconcile(
     tally = _Tally(steps)
     removals: list[_FarSideRemoval] = []
     demotions: list[_FarSideDemotion] = []
+    retypes: list[_FarSideRetype] = []
     removals_lock = asyncio.Lock()
+    gloss_cache: dict[str, str] = {}
 
     async def reconcile(lexeme_id: str) -> None:
         edits = _EntryEdits()
@@ -1859,19 +2807,33 @@ async def run_relation_reconcile(
             if _already_reconciled(entry, marker):
                 await tally.skipped()
                 return
-            edits = _reconcile_entry(entry, steps=steps, index=index, known=known, caps=caps)
+            if RelationReconcileStep.RETYPE in steps and runner is not None:
+                await _apply_retypes(
+                    entry,
+                    store,
+                    runner,
+                    tally,
+                    edits=edits,
+                    cache=gloss_cache,
+                    known=known,
+                    dry_run=dry_run,
+                )
+            _reconcile_entry(entry, edits, steps=steps, index=index, known=known, caps=caps)
             if edits.changed and not dry_run:
                 entry.add_provenance(_rule_provenance(_marker_note(steps, entry)))
                 store.write(entry)
-        if edits.far_side or edits.far_side_demotions:
+        if edits.far_side or edits.far_side_demotions or edits.far_side_retypes:
             async with removals_lock:
                 removals.extend(edits.far_side)
                 demotions.extend(edits.far_side_demotions)
+                retypes.extend(edits.far_side_retypes)
         await tally.entry(lexeme_id, edits)
 
     await _drive(ids, reconcile, tally, workers=workers, stop_event=stop_event)
-    # Both halves of the far-side phase, run once the main sweep has fully drained so no
-    # two entry locks are ever held at once (D-31), and neither given the stop event.
+    # Every half of the far-side phase, run once the main sweep has fully drained so no
+    # two entry locks are ever held at once (D-31), none of them given the stop event, and
+    # in the steps' own order.
+    await _retype_far_side_all(retypes, store, tally, workers=workers, dry_run=dry_run)
     await _demote_far_side_all(demotions, store, tally, workers=workers, dry_run=dry_run)
     await _remove_far_side_all(
         removals, store, tally, workers=workers, steps=steps, dry_run=dry_run
