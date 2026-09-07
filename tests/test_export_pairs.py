@@ -120,6 +120,32 @@ def test_three_examples_make_three_positive_pairs(tmp_path):
     assert len(positives) == 3  # C(3, 2)
 
 
+def test_duplicate_model_visible_examples_do_not_duplicate_positive_pairs(tmp_path):
+    repeated = "The child carried a gavel."
+    sense = Sense(
+        index=0,
+        gloss=Renditions[str](root=[canonical_rendition("A definition.")]),
+        examples=Renditions[Example](
+            root=[
+                _example(repeated, level=ReadingLevel.GRADE_1),
+                _example(repeated, level=ReadingLevel.GRADE_5),
+                _example("The judge raised the gavel.", level=ReadingLevel.NEUTRAL),
+            ]
+        ),
+    )
+    store = _store(tmp_path)
+    store.write(_entry("gavel", [sense]))
+
+    outcome = export_pairs(store, tmp_path / "pairs.jsonl")
+
+    positives = [r for r in _read_jsonl(tmp_path / "pairs.jsonl") if r["kind"] == "wic_positive"]
+    assert len(positives) == 1
+    assert positives[0]["text_a"] == repeated
+    assert positives[0]["level_a"] == ReadingLevel.GRADE_1.value
+    assert positives[0]["text_b"] == "The judge raised the gavel."
+    assert outcome.by_kind["wic_positive"] == 1
+
+
 def test_a_single_example_makes_no_positive_pair(tmp_path):
     sense = Sense(
         index=0,

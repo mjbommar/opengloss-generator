@@ -150,9 +150,22 @@ def _live_senses(entry: Lexeme) -> list[tuple[Sense, str]]:
 def _wic_positive_pairs(
     entry: Lexeme, live: Sequence[tuple[Sense, str]], live_senses: int
 ) -> Iterator[Pair]:
-    """Yield every same-sense pair among one sense's own example renditions."""
+    """Yield every distinct model-visible same-sense example pair.
+
+    Reading-level or register renditions can occasionally carry identical text and target span.
+    Those annotations are useful in the source examples release, but the retrieval-pair model view
+    contains only text and span.  Collapse such renditions before taking combinations so the
+    derived release neither emits indistinguishable duplicate pairs nor a degenerate positive that
+    presents the same text twice.
+    """
     for sense, sid in live:
-        examples = list(sense.examples)
+        examples = []
+        seen: set[tuple[str, tuple[int, int] | None]] = set()
+        for example in sense.examples:
+            key = (example.content.text, example.content.span)
+            if key not in seen:
+                seen.add(key)
+                examples.append(example)
         if len(examples) < 2:  # noqa: PLR2004 - "a pair" needs at least two
             continue
         for a, b in itertools.combinations(examples, 2):
