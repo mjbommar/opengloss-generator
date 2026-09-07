@@ -165,3 +165,29 @@ tier: 62.2 at chain end → **67.0** after the closing passes (QA-DIARY it. 18�
 Store: 109,633 lexemes, 250,003 live senses. Released as **OpenGloss v2.1** (16 HF
 datasets) 2026-09-07 07:50 after an OOM on the first export attempt (D-77 fixed it:
 90 GB → 2.2 GB).
+
+## 10. Tier 5 — closing the WordNet gap (2026-09-07)
+
+Direction (author, 2026-09-07): add the WordNet lemmas the release lacks — the rare
+single words and the common compounds/technical nouns — and use WordNet in QA/QC to
+fold the inflected-form headwords. From the diff in
+`opengloss-paper/docs/v2.0/review/F-wordnet-diff.md` (WordNet 3.0: 147,306 lemmas;
+v2.1 covers 44.0%; v1.3 covered 46.1%):
+
+| tier-5 candidates (`data/core/tier5_candidates.tsv`) | entries |
+|---|---|
+| WordNet-only nouns: common compounds and technical terms (multiword 24,107 / single 5,195; +3,505 from v1.3) | 32,807 |
+| WordNet-only adjectives and adverbs (+1,223 from v1.3) | 7,058 |
+| WordNet-only verbs and phrasal verbs (+452 from v1.3) | 3,787 |
+| **total** | **43,652** — 5,180 from v1.3 files, 38,472 imported from WordNet |
+| excluded for now: WordNet instances (9,076), Linnaean taxa (8,994), organisms (19,806) | 37,876 |
+
+Sources: v1.3 file where one exists (richer), else a new WordNet importer (D-78: synset
+gloss → canonical gloss, examples, synset relations as unresolved targets, `migrate`
+provenance naming WordNet 3.0 and its licence). Expected cost at the tier-4 unit rate:
+**~$214** (recipe A). Concurrently (D-79): a `lexeme-hygiene` pass with
+`inflection_fold` (13,139 core/tier-2 headwords that are plurals/past tenses/
+comparatives of another lexeme; WordNet-as-lemma and a nano verdict decide keep vs
+fold; folded entries become tombstones resolvable through `inflections`) and
+`fragments` (306 "is not"/"produce energy" headwords). After both: v2.2 export with an
+honest lemma count and a WordNet coverage figure that rises from 44% to ~74%.
