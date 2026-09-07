@@ -1734,3 +1734,12 @@ cap $200 — a cost class the $214 recipe-A estimate did not include; expected
 $150–230) → gloss/example/encyclopedia levels → hygiene block with 6-hour stage
 timeouts (gotcha #8) → reconcile → judge → audit. Caps sum $513; expected ≈ $400.
 Runs concurrently with the store-wide fold pass (both nano at first; per-entry locks).
+
+**Fold pass, store-wide (10:52 → 11:06, $1.14):** `inflection_fold` 13,047 candidates
+→ **4,377 retired** (plural 4,171, comparative 68, superlative 63, past tense 42,
+other 23), 1,476 kept (352 on WordNet evidence, 1,124 by verdict), 7,194 never asked
+(4,542 are themselves the lemma of other forms, 2,652 POS mismatch); 8,066 senses
+tombstoned, 51,706 relations demoted. `fragments` 662 candidates → **172 retired**
+(leading determiner 72, preposition 39, article/auxiliary 28, trailing 33), 236 kept.
+Net: 4,549 headwords retired as tombstones, all resolvable through `inflections`.
+Reconcile + graph-hygiene running behind it.
