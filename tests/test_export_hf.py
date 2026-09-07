@@ -55,6 +55,24 @@ from opengloss_generator.taxonomy import DomainTag
 # --------------------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _fill_v22_placeholders_for_tests(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fill `hf_cards.V22`'s "measured at release time" placeholders, in the test only.
+
+    `DEFAULT_RELEASE` is `v2.2` (D-80) and rendering a v2.2 card refuses to run while any
+    of `V22.PRETRAIN_DOCS`/`PRETRAIN_WORDS`/`PRETRAIN_TOKENS`/`JUDGE` is still `None` —
+    that refusal is the point (`test_v22_card_refuses_to_render_with_an_unfilled_placeholder`
+    below exercises it directly). Every other test in this module exports the default
+    release incidentally, so this autouse fixture fills the four here, in the test
+    process only; `hf_cards.py` itself keeps them `None` until a real release measures
+    them.
+    """
+    monkeypatch.setattr(hf_cards.V22, "PRETRAIN_DOCS", 1_234_567)
+    monkeypatch.setattr(hf_cards.V22, "PRETRAIN_WORDS", 345_000_000)
+    monkeypatch.setattr(hf_cards.V22, "PRETRAIN_TOKENS", 490_000_000)
+    monkeypatch.setattr(hf_cards.V22, "JUDGE", "70.0 (test placeholder, not a real score)")
+
+
 def _store(tmp_path: Path) -> LexemeStore:
     """Return an empty store rooted under ``tmp_path``."""
     return LexemeStore(StoreConfig(root=tmp_path / "store", fsync_on_write=False))
@@ -222,7 +240,7 @@ def test_every_field_is_documented_and_uniquely_named():
 
 def test_resolve_repos_is_registry_ordered_and_rejects_unknown_names():
     assert [spec.slug for spec in resolve_repos("senses,lexicon")] == ["lexicon", "senses"]
-    assert resolve_repos("opengloss-v2.1-queries")[0].slug == "queries"
+    assert resolve_repos("opengloss-v2.2-queries")[0].slug == "queries"
     assert resolve_repos("opengloss-v2.0-queries", release="v2.0")[0].slug == "queries"
     assert len(resolve_repos("all")) == len(REPOS)
     with pytest.raises(ValueError, match="unknown repo"):
@@ -423,6 +441,143 @@ def test_etymology_is_one_row_per_entry_that_has_one(tmp_path):
 
 
 # --------------------------------------------------------------------------------------
+# Source, and lexemes with zero live senses (D-80)
+# --------------------------------------------------------------------------------------
+
+
+def _migrated_entry(headword: str, *, model: str) -> Lexeme:
+    """Return a one-sense entry carrying a ``migrate``-stage provenance record."""
+    entry = _entry(headword, [_sense(0, f"A sense of {headword}.")])
+    entry.add_provenance(
+        Provenance(
+            stage=StageName.MIGRATE,
+            model=model,
+            prompt_version="0",
+            note=f"gloss: imported from {model}",
+        )
+    )
+    return entry
+
+
+def test_source_is_wordnet_for_a_wordnet_migrate_record(tmp_path):
+    result = _export(tmp_path, [_migrated_entry("aardwolf", model="wordnet-3.0")])
+    lexicon = _read(result, "lexicon")[0]
+    assert lexicon["source"] == "wordnet-3.0"
+    senses = _read(result, "senses")
+    assert senses[0]["source"] == "wordnet-3.0"
+    assert result.stats.source_histogram["wordnet-3.0"] == 1
+
+
+def test_source_is_opengloss_for_a_v13_migrate_record(tmp_path):
+    result = _export(tmp_path, [_migrated_entry("gizmo", model="opengloss-v1.3")])
+    assert _read(result, "lexicon")[0]["source"] == "opengloss-v1.3"
+    assert result.stats.source_histogram["opengloss-v1.3"] == 1
+
+
+def test_source_is_opengloss_for_a_v2_migrate_record(tmp_path):
+    # `opengloss-v2.0` (the intermediate legacy payload format) collapses onto the same
+    # `source` value as `opengloss-v1.3` — the column exists to flag WordNet content,
+    # not to distinguish which of this project's own two migrations touched a field.
+    result = _export(tmp_path, [_migrated_entry("widget", model="opengloss-v2.0")])
+    assert _read(result, "lexicon")[0]["source"] == "opengloss-v1.3"
+
+
+def test_source_falls_back_to_opengloss_with_no_migrate_record(tmp_path):
+    # `_rich_entry` predates D-78 part 4: its one provenance record is `senses`, not
+    # `migrate` — the shape of an entry migrated before inherited fields carried their
+    # own provenance.
+    result = _export(tmp_path, [_rich_entry()])
+    assert _read(result, "lexicon")[0]["source"] == "opengloss-v1.3"
+
+
+def _fully_retired_entry(headword: str, sense_id: str, *, note: str) -> Lexeme:
+    """Return an entry every one of whose senses is tombstoned, with a retirement note."""
+    entry = _entry(headword, [_sense(0, "An inflected form.", retired=True)])
+    entry.add_provenance(
+        Provenance(
+            stage=StageName.HYGIENE,
+            model="rule:lexeme_hygiene",
+            prompt_version="0",
+            note=note,
+        )
+    )
+    return entry
+
+
+def test_a_lexeme_with_zero_live_senses_is_not_counted_but_still_appears(tmp_path):
+    retired = _fully_retired_entry(
+        "gizmos", "gizmos:noun:0", note="retired sense gizmos:noun:0: inflection_fold: gizmo"
+    )
+    result = _export(tmp_path, [_rich_entry(), retired])
+    stats = result.stats
+
+    # Not a lexeme: excluded from the headline count, its tier, and the lexeme coverage
+    # denominator.
+    assert stats.lexemes == 1
+    assert stats.retired_lexemes == 1
+    assert sum(stats.lexemes_by_tier.values()) == 1
+    # Both entries land on `unknown` (no `tiers_dir` was given); only the live one
+    # (`ridge`) counts toward the coverage denominator.
+    assert stats.coverage_totals.get("lexeme", {}).get("unknown", 0) == 1
+
+    # No `senses` row.
+    assert "gizmos" not in {row["lexeme_id"] for row in _read(result, "senses")}
+
+    # Still resolvable: a `lexicon` row, flagged retired, plus its inflections.
+    lexicon_by_id = {row["lexeme_id"]: row for row in _read(result, "lexicon")}
+    assert lexicon_by_id["gizmos"]["retired"] is True
+    assert lexicon_by_id["gizmos"]["retired_reason"] == "inflection_fold: gizmo"
+    assert lexicon_by_id["ridge"]["retired"] is False
+    assert lexicon_by_id["ridge"]["retired_reason"] is None
+    forms = {row["form"] for row in _read(result, "inflections") if row["lexeme_id"] == "gizmos"}
+    assert "gizmos" in forms
+
+
+def test_retired_reason_reads_each_hygiene_passs_note_shape(tmp_path):
+    cases = [
+        ("gizmos", "retired sense gizmos:noun:0: inflection_fold: gizmo", "inflection_fold: gizmo"),
+        (
+            "is not",
+            "retired sense is_not:verb:0: fragment: leading_determiner",
+            "fragment: leading_determiner",
+        ),
+        (
+            "blank cell",
+            "retired sense blank_cell:adjective:0: phantom_pos: defines the adjective 'blank'",
+            "phantom_pos: defines the adjective 'blank'",
+        ),
+    ]
+    entries = [
+        _fully_retired_entry(headword, f"{headword.replace(' ', '_')}:noun:0", note=note)
+        for headword, note, _ in cases
+    ]
+    result = _export(tmp_path, entries)
+    lexicon_by_id = {row["lexeme_id"]: row for row in _read(result, "lexicon")}
+    for headword, _, expected_reason in cases:
+        lexeme_id = headword.replace(" ", "_")
+        assert lexicon_by_id[lexeme_id]["retired_reason"] == expected_reason
+
+
+def test_retired_by_reason_categorises_by_the_leading_hygiene_pass_name(tmp_path):
+    result = _export(
+        tmp_path,
+        [
+            _fully_retired_entry(
+                "gizmos",
+                "gizmos:noun:0",
+                note="retired sense gizmos:noun:0: inflection_fold: gizmo",
+            ),
+            _fully_retired_entry(
+                "is not",
+                "is_not:verb:0",
+                note="retired sense is_not:verb:0: fragment: leading_verb",
+            ),
+        ],
+    )
+    assert result.stats.retired_by_reason == {"inflection_fold": 1, "fragment": 1}
+
+
+# --------------------------------------------------------------------------------------
 # Inflections (D-75)
 # --------------------------------------------------------------------------------------
 
@@ -591,7 +746,7 @@ def test_release_overrides_the_default_repo_naming_everywhere(tmp_path):
     assert result.repos == ["opengloss-v2.0-senses"]
     text = (result.out_dir / "opengloss-v2.0-senses" / "README.md").read_text(encoding="utf-8")
     assert "# OpenGloss v2.0 — Senses" in text
-    assert "opengloss-v2.1-" not in text
+    assert "opengloss-v2.2-" not in text
     assert "opengloss-v2.0-lexicon" in text
 
 
@@ -600,7 +755,9 @@ def test_release_overrides_the_default_repo_naming_everywhere(tmp_path):
 # --------------------------------------------------------------------------------------
 
 
-def _write_tier_files(directory: Path, *, with_tier4: bool = False) -> Path:
+def _write_tier_files(
+    directory: Path, *, with_tier4: bool = False, with_tier5: bool = False
+) -> Path:
     """Write the rank TSVs, with one word deliberately on two of the first three.
 
     Args:
@@ -608,6 +765,8 @@ def _write_tier_files(directory: Path, *, with_tier4: bool = False) -> Path:
         with_tier4: Also write ``tier4.tsv``, with a ``group`` column carrying both
             ``stopword`` and ``wf10`` values and one multi-word entry, to exercise D-75's
             group-collapsing and space-tolerant slugification.
+        with_tier5: Also write ``tier5.tsv`` (D-80), with a ``source`` column carrying
+            both ``v1.3`` and ``wordnet`` and one multi-word entry.
     """
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "core_10k.tsv").write_text(
@@ -625,6 +784,11 @@ def _write_tier_files(directory: Path, *, with_tier4: bool = False) -> Path:
             "1\tthe\t100000\tstopword\n"
             "2\tto be\t5000\tstopword\n"
             "3\tlive people\t400\twf10\n",
+            encoding="utf-8",
+        )
+    if with_tier5:
+        (directory / "tier5.tsv").write_text(
+            "word\tsource\naardwolf\twordnet\nbattery acid\twordnet\ncatbird seat\tv1.3\n",
             encoding="utf-8",
         )
     return directory
@@ -670,6 +834,27 @@ def test_tier4_group_column_collapses_to_a_single_tier_and_tolerates_spaces(tmp_
     # A `word` column entry with a space is slugified the same way a lexeme_id is.
     assert index.tier_of("to_be") == "tier4"
     assert index.tier_of("to be") == "unknown"
+
+
+def test_tier5_is_read_from_its_own_tsv_and_described_on_the_card(tmp_path):
+    tiers = _write_tier_files(tmp_path / "core", with_tier5=True)
+    index = TierIndex.from_dir(tiers)
+    assert index.tier_of("aardwolf") == "tier5"
+    assert index.tier_of("battery_acid") == "tier5"
+    # A `word` column entry with a space is slugified the same way a lexeme_id is.
+    assert index.tier_of("battery acid") == "unknown"
+    assert index.tier_of("catbird_seat") == "tier5"
+
+    result = _export(
+        tmp_path,
+        [_rich_entry(), _entry("aardwolf", [_sense(0, "A hyena-like mammal.")])],
+        tiers_dir=tiers,
+    )
+    assert result.stats.lexemes_by_tier["tier5"] == 1
+    text = (hf.repo_dir(result.out_dir, REPOS_BY_SLUG["senses"]) / "README.md").read_text(
+        encoding="utf-8"
+    )
+    assert "- `tier5` — " + hf_rows.TIER_DESCRIPTIONS["tier5"] in text
 
 
 def test_the_tier_column_is_stamped_on_every_grain(tmp_path):
@@ -784,6 +969,40 @@ def test_every_card_has_valid_front_matter_naming_its_own_config_globs(tmp_path)
             assert files, f"{spec.name()}/{config.name}"
 
 
+def test_front_matter_names_the_source_datasets(tmp_path):
+    result = _export(tmp_path, [_rich_entry(), _target_entry()])
+    for spec in REPOS:
+        text = (hf.repo_dir(result.out_dir, spec) / "README.md").read_text(encoding="utf-8")
+        meta = _front_matter(text)
+        assert meta["source_datasets"] == ["princeton-wordnet-3.0", "opengloss-v1.3"]
+        assert meta["license"] == "cc-by-4.0"
+
+
+def test_sources_and_licences_quotes_the_notice_on_lexicon_and_senses_only(tmp_path):
+    result = _export(tmp_path, [_migrated_entry("aardwolf", model="wordnet-3.0"), _rich_entry()])
+    lexicon_text = (hf.repo_dir(result.out_dir, REPOS_BY_SLUG["lexicon"]) / "README.md").read_text(
+        encoding="utf-8"
+    )
+    senses_text = (hf.repo_dir(result.out_dir, REPOS_BY_SLUG["senses"]) / "README.md").read_text(
+        encoding="utf-8"
+    )
+    other_text = (
+        hf.repo_dir(result.out_dir, REPOS_BY_SLUG["definitions"]) / "README.md"
+    ).read_text(encoding="utf-8")
+
+    for text in (lexicon_text, senses_text, other_text):
+        assert "## Sources and licences" in text
+        assert hf_cards.WORDNET_LICENSE_URL in text
+        # Exactly 1 of 2 lexemes in this export is WordNet-derived.
+        assert "**1**" in text
+
+    for text in (lexicon_text, senses_text):
+        assert "Princeton University. All rights reserved." in text
+
+    assert "Princeton University. All rights reserved." not in other_text
+    assert "quoted in full on the" in other_text
+
+
 def test_every_card_states_the_row_count_the_parquet_files_actually_hold(tmp_path):
     result = _export(tmp_path, [_rich_entry(), _target_entry()])
     for spec in REPOS:
@@ -837,6 +1056,36 @@ def test_the_scope_note_compares_against_the_published_v13_figures(tmp_path):
     assert f"{hf_cards.V13.LEXEMES:,}" in text
     assert "not** a superset of v1.3" in text
     assert hf_cards.V13.URL in text
+
+
+def test_v22_card_carries_both_changelog_sections_newest_first(tmp_path):
+    result = _export(tmp_path, [_rich_entry()], release="v2.2")
+    text = (
+        hf.repo_dir(result.out_dir, REPOS_BY_SLUG["lexicon"], release="v2.2") / "README.md"
+    ).read_text(encoding="utf-8")
+    assert "## What changed since v2.1" in text
+    assert "## What changed since v2.0" in text
+    # Newest first.
+    assert text.index("## What changed since v2.1") < text.index("## What changed since v2.0")
+    assert f"{hf_cards.V22.TIER5_CANDIDATES:,}" in text
+    assert f"{hf_cards.V22.INFLECTION_FOLDED:,}" in text
+    assert f"{hf_cards.V22.FRAGMENTS_RETIRED:,}" in text
+    assert f"{hf_cards.V22.RETIRED_LEXEMES:,}" in text
+
+
+def test_v20_v21_card_omits_the_v22_section(tmp_path):
+    result = _export(tmp_path, [_rich_entry()], release="v2.1")
+    text = (
+        hf.repo_dir(result.out_dir, REPOS_BY_SLUG["lexicon"], release="v2.1") / "README.md"
+    ).read_text(encoding="utf-8")
+    assert "## What changed since v2.0" in text
+    assert "## What changed since v2.1" not in text
+
+
+def test_v22_card_refuses_to_render_with_an_unfilled_placeholder(tmp_path, monkeypatch):
+    monkeypatch.setattr(hf_cards.V22, "JUDGE", None)
+    with pytest.raises(ValueError, match="JUDGE"):
+        _export(tmp_path, [_rich_entry()], release="v2.2")
 
 
 def test_card_renders_with_four_tiers_present(tmp_path):
@@ -962,17 +1211,17 @@ def test_push_creates_each_repo_then_uploads_its_folder(tmp_path):
         result.out_dir, resolve_repos("senses,queries"), owner="acme", private=True, api=api
     )
     assert [call["repo_id"] for call in api.created] == [
-        "acme/opengloss-v2.1-senses",
-        "acme/opengloss-v2.1-queries",
+        "acme/opengloss-v2.2-senses",
+        "acme/opengloss-v2.2-queries",
     ]
     assert all(call["repo_type"] == "dataset" for call in api.created)
     assert all(call["private"] is True for call in api.created)
     assert all(call["exist_ok"] is True for call in api.created)
     assert [Path(call["folder_path"]).name for call in api.uploaded] == [
-        "opengloss-v2.1-senses",
-        "opengloss-v2.1-queries",
+        "opengloss-v2.2-senses",
+        "opengloss-v2.2-queries",
     ]
-    assert pushed[0]["url"] == "https://huggingface.co/datasets/acme/opengloss-v2.1-senses"
+    assert pushed[0]["url"] == "https://huggingface.co/datasets/acme/opengloss-v2.2-senses"
 
 
 def test_export_does_not_push_by_itself(tmp_path):

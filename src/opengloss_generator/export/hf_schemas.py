@@ -45,7 +45,7 @@ __all__ = [
 #: The release label these repos publish under by default. Part of every repo name
 #: (D-72); overridable per export via ``--release`` (D-75) so an older label (``v2.0``)
 #: stays reproducible after the default moves on.
-DEFAULT_RELEASE = "v2.1"
+DEFAULT_RELEASE = "v2.2"
 
 #: The token a repo's own ``blurb``/``snippet`` text is authored with in place of a
 #: literal release, wherever it names *another* member of this same family. Rendering
@@ -265,20 +265,32 @@ _F64 = pa.float64()
 _BOOL = pa.bool_()
 
 
+#: The `tier` column's field description, shared by every lexeme- and sense-grained
+#: repo (D-75, D-80) so the five real values and `unknown` are documented identically
+#: everywhere the column appears.
+_TIER_DESCRIPTION = (
+    "`core` (top 10K by composite frequency), `tier2` (ranks to ~42K), `tier3` "
+    "(the rest of the frequency-ranked single words), `tier4` (stopwords, plus "
+    "compounds and names at Wikipedia frequency ≥ 10), `tier5` (the WordNet 3.0 gap "
+    "the earlier tiers lacked) or `unknown` (on none of the rank lists); an export may "
+    "contain only some of these — see the coverage table."
+)
+
+#: The `source` column's field description, shared by `lexicon` and `senses` (D-80).
+_SOURCE_DESCRIPTION = (
+    "`opengloss-v1.3` for content this project generated or migrated from its own "
+    "legacy releases; `wordnet-3.0` for a tier-5 entry imported directly from Princeton "
+    "WordNet 3.0. Derived from the entry's `migrate`-stage provenance record; see "
+    "Sources and licences."
+)
+
+
 def _lexeme_keys() -> tuple[FieldSpec, ...]:
     """Return the join keys every lexeme-grained flat repo carries."""
     return (
         FieldSpec("lexeme_id", _STR, "Entry id: `slugify(headword)`. Join key across the family."),
         FieldSpec("headword", _STR, "The entry's surface headword."),
-        FieldSpec(
-            "tier",
-            _STR,
-            "`core` (top 10K by composite frequency), `tier2` (ranks to ~42K), `tier3` "
-            "(the rest of the frequency-ranked single words), `tier4` (stopwords, plus "
-            "compounds and names at Wikipedia frequency ≥ 10) or `unknown` (on none of "
-            "the rank lists); an export may contain only some of these — see the "
-            "coverage table.",
-        ),
+        FieldSpec("tier", _STR, _TIER_DESCRIPTION),
     )
 
 
@@ -291,12 +303,7 @@ def _sense_keys() -> tuple[FieldSpec, ...]:
         FieldSpec("pos", _STR, "Part of speech of the owning POS entry (`noun`, `verb`, …)."),
         FieldSpec("sense_index", _I32, "Zero-based position of the sense within its POS entry."),
         FieldSpec("domain", _STR, "Controlled domain leaf, `root.leaf` (nullable)."),
-        FieldSpec(
-            "tier",
-            _STR,
-            "`core`, `tier2`, `tier3`, `tier4` or `unknown`; see the coverage table for "
-            "which of these an export actually contains.",
-        ),
+        FieldSpec("tier", _STR, _TIER_DESCRIPTION),
     )
 
 
@@ -455,8 +462,32 @@ print(grade5.head())""",
                     "Lexeme kind discriminator: `simplex`, `compound`, `phrasal_verb`, "
                     "`idiom`, `proper_noun`, `abbreviation`, `affix`, `function_word`.",
                 ),
-                FieldSpec("status", _STR, "`complete`, `partial` or `retired`."),
-                FieldSpec("tier", _STR, "`core`, `tier2` or `tier3` (see coverage table)."),
+                FieldSpec(
+                    "status",
+                    _STR,
+                    "`complete`, `partial` or `retired` — a schema value this pipeline has "
+                    "never yet set (no stage marks a whole entry `retired`). Whether the "
+                    "entry actually has zero live senses is the `retired` column below, "
+                    "computed by the exporter itself rather than read off this field.",
+                ),
+                FieldSpec("tier", _STR, _TIER_DESCRIPTION),
+                FieldSpec("source", _STR, _SOURCE_DESCRIPTION),
+                FieldSpec(
+                    "retired",
+                    _BOOL,
+                    "True when every sense this entry ever had is now tombstoned — it is "
+                    "not counted as a lexeme anywhere in this release's statistics, but the "
+                    "row is kept so a consumer can resolve why a headword they expected is "
+                    "missing (D-80). Its forms still resolve through "
+                    "`opengloss-vX-inflections`.",
+                ),
+                FieldSpec(
+                    "retired_reason",
+                    _STR,
+                    "Why, when `retired`: the hygiene pass and its detail, e.g. "
+                    "`inflection_fold: database`, `fragment: leading_determiner` or "
+                    "`phantom_pos: <reason>`. Null for a live entry.",
+                ),
                 FieldSpec(
                     "pos_list", pa.list_(_STR), "Parts of speech this entry has, in stored order."
                 ),
@@ -558,6 +589,7 @@ for row in bank:
                 FieldSpec(
                     "secondary_domains", pa.list_(_STR), "Additional domain leaves, when tagged."
                 ),
+                FieldSpec("source", _STR, _SOURCE_DESCRIPTION),
                 FieldSpec("gloss", _STR, "The canonical `(neutral, plain)` definition."),
                 FieldSpec(
                     "gloss_renditions",

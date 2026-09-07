@@ -21,6 +21,7 @@ Two things cannot be answered from one entry alone and are therefore deferred:
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -63,17 +64,22 @@ if TYPE_CHECKING:
 
 __all__ = [
     "COVERAGE_FEATURES",
+    "SOURCE_OPENGLOSS",
+    "SOURCE_WORDNET",
     "TIERS",
     "TIER_CORE",
     "TIER_DESCRIPTIONS",
     "TIER_TIER2",
     "TIER_TIER3",
     "TIER_TIER4",
+    "TIER_TIER5",
     "TIER_UNKNOWN",
     "CoverageFeature",
     "RowBuilder",
     "Stats",
     "TierIndex",
+    "retired_reason_of",
+    "source_of",
     "truncate_note",
 ]
 
@@ -84,13 +90,28 @@ TIER_TIER3 = "tier3"
 #: TSV's own ``group`` column (``stopword`` vs. ``wf10``) is not surfaced as a distinct
 #: tier — both collapse into ``tier4`` here, per the release's own tier granularity.
 TIER_TIER4 = "tier4"
+#: The WordNet 3.0 gap the earlier tiers lacked (D-72/D-78/D-80): common compounds and
+#: technical nouns, adjectives, adverbs and verbs, whether matched against v1.3's own
+#: files or imported outright. The source TSV's own ``source`` column (``v1.3`` vs.
+#: ``wordnet``) is not surfaced as a distinct tier, for the same reason tier 4's
+#: ``group`` column is not — the release's tier granularity is "which pass," not "which
+#: sub-population of that pass." Which of the two an entry actually is remains visible on
+#: every row through the ``source`` column (:func:`source_of`).
+TIER_TIER5 = "tier5"
 #: Assigned to an entry that is in the store but on none of the rank lists. It is a real
 #: value in the exported data rather than a null, so a consumer filtering by tier never
 #: silently loses rows.
 TIER_UNKNOWN = "unknown"
 
 #: Tiers in coverage-table order.
-TIERS: tuple[str, ...] = (TIER_CORE, TIER_TIER2, TIER_TIER3, TIER_TIER4, TIER_UNKNOWN)
+TIERS: tuple[str, ...] = (
+    TIER_CORE,
+    TIER_TIER2,
+    TIER_TIER3,
+    TIER_TIER4,
+    TIER_TIER5,
+    TIER_UNKNOWN,
+)
 
 #: One line saying what each tier is, for the card's "By tier" section (D-75). Keyed so a
 #: tier absent from a given export is simply not looked up, rather than needing its own
@@ -100,6 +121,11 @@ TIER_DESCRIPTIONS: dict[str, str] = {
     TIER_TIER2: "ranks to ~42K",
     TIER_TIER3: "the rest of the frequency-ranked single words",
     TIER_TIER4: "stopwords, plus compounds and names at Wikipedia frequency ≥ 10",
+    TIER_TIER5: (
+        "the WordNet 3.0 lemmas the earlier tiers lacked: common compounds and "
+        "technical nouns, adjectives, adverbs and verbs (instances, taxa and organisms "
+        "excluded); 5,126 from v1.3 files, the rest imported from WordNet"
+    ),
 }
 
 #: The rank lists under ``data/core/``, in precedence order: an entry is assigned the
@@ -110,6 +136,7 @@ TIER_FILES: tuple[tuple[str, str], ...] = (
     (TIER_TIER2, "tier2_50k.tsv"),
     (TIER_TIER3, "tier3_final.tsv"),
     (TIER_TIER4, "tier4.tsv"),
+    (TIER_TIER5, "tier5.tsv"),
 )
 
 #: How much of a provenance ``note`` the flat provenance repo keeps. Long enough for
@@ -173,6 +200,99 @@ _REMOVAL_STEPS: tuple[tuple[str, str, str], ...] = (
 _RELATION_VALUES: tuple[str, ...] = tuple(
     sorted((member.value for member in RelationType), key=len, reverse=True)
 )
+
+#: ``source`` value (on ``lexicon``/``senses`` rows) for content this project generated
+#: or migrated from its own legacy releases — everything that is not WordNet-derived,
+#: v1.3-inherited and v2.0-inherited migrations collapsed onto the one value, since the
+#: column exists to flag WordNet content rather than to distinguish which of this
+#: project's own two migrations touched a field (D-78 part 4, D-80).
+SOURCE_OPENGLOSS = "opengloss-v1.3"
+#: ``source`` value for a tier-5 entry imported directly from Princeton WordNet 3.0.
+SOURCE_WORDNET = "wordnet-3.0"
+
+#: The ``migrate``-stage :class:`~opengloss_generator.schema.Provenance.model` that marks
+#: an inherited field as WordNet-derived (D-78 part 4). Any other ``migrate`` model
+#: (``opengloss-v1.3``, ``opengloss-v2.0``) collapses onto :data:`SOURCE_OPENGLOSS`.
+_WORDNET_MIGRATE_MODEL = "wordnet-3.0"
+
+#: Matches the shared opening every hygiene retirement note writes — ``retired sense
+#: <sid>: <reason>`` (D-73's ``RETIRED_SENSE_NOTE``, D-76's ``RETIRED_PHANTOM_NOTE``,
+#: D-79's ``RETIRED_FOLD_NOTE``/``RETIRED_FRAGMENT_NOTE``) — so one pattern reads every
+#: retirement reason regardless of which pass wrote it. Non-greedy on the sense id so the
+#: split lands on the *first* ``": "`` after it, which is safe because a sense id
+#: (``lexeme_id:pos:index``) never itself contains a colon followed by a space.
+_RETIRED_NOTE_RE = re.compile(r"^retired sense (.+?): (.*)$")
+
+
+def source_of(entry: Lexeme) -> str:
+    """Return whether an entry's content originates in OpenGloss or Princeton WordNet.
+
+    Reads the entry's own ``migrate``-stage provenance record (D-78 part 4): every
+    inherited field of a migrated or imported entry gets one, naming the source in
+    ``model``. An entry with no such record predates D-78 part 4's retrofit of
+    ``migrate.py`` — it was migrated before inherited fields carried their own
+    provenance — and falls back to :data:`SOURCE_OPENGLOSS`, since every migration this
+    project has ever run before WordNet was either the v1.3 or the v2.0 upgrade.
+
+    Args:
+        entry: The entry to classify. Never mutated.
+
+    Returns:
+        :data:`SOURCE_WORDNET` when the entry's ``migrate`` record names the WordNet
+        importer; :data:`SOURCE_OPENGLOSS` otherwise.
+    """
+    for _, record in _provenance_in_key_order(entry):
+        if record.stage is StageName.MIGRATE:
+            return SOURCE_WORDNET if record.model == _WORDNET_MIGRATE_MODEL else SOURCE_OPENGLOSS
+    return SOURCE_OPENGLOSS
+
+
+def _reason_category(reason: str) -> str:
+    """Return the short category a retirement reason opens with.
+
+    Args:
+        reason: The text after a ``retired sense <sid>: `` opening, e.g.
+            ``"inflection_fold: database"``, ``"fragment: leading_determiner"``,
+            ``"phantom_pos: defines the adjective 'blank'"`` or ``"duplicate of
+            ridge:noun:0"``.
+    """
+    category, separator, _ = reason.partition(": ")
+    if separator:
+        return category
+    if reason.startswith("duplicate of "):
+        return "duplicate"
+    return reason
+
+
+def retired_reason_of(entry: Lexeme) -> str | None:
+    """Return why a lexeme with zero live senses has none, or ``None``.
+
+    Every pass that tombstones a sense (D-73's ``distinctness``, D-76's ``phantom_pos``,
+    D-79's ``inflection_fold``/``fragments``) writes a zero-cost provenance record
+    sharing the same ``retired sense <sid>: <reason>`` opening. This entry's own live
+    senses may have been retired by more than one pass across more than one sweep, so
+    the *last* matching record in provenance order is returned — the reason recorded
+    when the entry's last live sense was closed out, which is the one that actually made
+    it a fully retired lexeme.
+
+    Args:
+        entry: The entry to inspect. Never mutated.
+
+    Returns:
+        The reason text (category plus detail, e.g. ``"inflection_fold: database"``), or
+        ``None`` when no provenance record matches — which should not happen for a
+        lexeme this pass has already determined has zero live senses, but is not
+        asserted here so a store this package did not itself retire still exports
+        cleanly.
+    """
+    reason: str | None = None
+    for _, record in _provenance_in_key_order(entry):
+        if record.note is None:
+            continue
+        match = _RETIRED_NOTE_RE.match(record.note)
+        if match is not None:
+            reason = match.group(2)
+    return reason
 
 
 def truncate_note(note: str | None, limit: int = NOTE_MAX_CHARS) -> str | None:
@@ -402,8 +522,20 @@ class Stats:
     """
 
     lexemes: int = 0
+    #: Lexemes with zero live senses (D-76's whole-block phantom-POS retirements plus
+    #: D-79's inflection fold and multiword fragments): never counted in :attr:`lexemes`,
+    #: ``lexemes_by_tier`` or a coverage denominator, and never given a ``senses`` row —
+    #: it is not a lexeme any more, by this release's own count. It still gets a
+    #: ``lexicon`` row (``retired = true``) and its forms still resolve through
+    #: ``inflections``, so nothing a consumer might look up disappears (D-80).
+    retired_lexemes: int = 0
     live_senses: int = 0
     retired_senses: int = 0
+    #: ``source`` value (:func:`source_of`) -> live lexemes with that source.
+    source_histogram: Counter[str] = field(default_factory=Counter)
+    #: Retirement reason category (:func:`_reason_category`) -> retired lexemes with
+    #: that category, e.g. ``inflection_fold``, ``fragment``, ``phantom_pos``.
+    retired_by_reason: Counter[str] = field(default_factory=Counter)
     lexemes_by_tier: Counter[str] = field(default_factory=Counter)
     senses_by_tier: Counter[str] = field(default_factory=Counter)
     pos_histogram: Counter[str] = field(default_factory=Counter)
@@ -515,8 +647,10 @@ class Stats:
         """Return a JSON-able view for the CLI's run summary."""
         return {
             "lexemes": self.lexemes,
+            "retired_lexemes": self.retired_lexemes,
             "live_senses": self.live_senses,
             "retired_senses_skipped": self.retired_senses,
+            "source": dict(sorted(self.source_histogram.items())),
             "lexemes_by_tier": dict(sorted(self.lexemes_by_tier.items())),
             "senses_by_tier": dict(sorted(self.senses_by_tier.items())),
             "relations": self.relations_total,
@@ -577,6 +711,18 @@ class RowBuilder:
     def rows_for_entry(self, entry: Lexeme) -> Iterator[tuple[str, str, dict[str, Any]]]:
         """Yield every store-derived row one entry produces, and fold it into the stats.
 
+        A lexeme every one of whose senses is retired (D-76's whole-block phantom-POS
+        retirements, D-79's inflection fold and multiword fragments) is **not a lexeme**
+        by this release's own count (D-80): it is excluded from :attr:`Stats.lexemes`,
+        its tier's lexeme count and every coverage denominator, and it produces no
+        ``senses`` row, no encyclopedia/explanation/etymology row and no contrast — none
+        of that content is claimed for an entry the release does not count. It still
+        gets a ``lexicon`` row, with ``retired = true`` and a ``retired_reason``, so a
+        consumer can resolve *why* a headword they might expect is missing; its forms
+        still resolve through ``inflections`` and its provenance/tombstone rows are
+        still written, both of which are emitted unconditionally regardless of sense
+        liveness already.
+
         Args:
             entry: The entry to project. Never mutated.
 
@@ -587,30 +733,55 @@ class RowBuilder:
         """
         tier = self._tiers.tier_of(entry.lexeme_id)
         stats = self.stats
-        stats.lexemes += 1
-        stats.lexemes_by_tier[tier] += 1
-        stats.kind_histogram[entry.kind.value] += 1
-        stats.count_owner("lexeme", tier)
-        stats.tier_lookup[entry.lexeme_id] = tier
-        self._headwords[entry.lexeme_id] = entry.headword
+        source = source_of(entry)
 
         all_senses = entry.iter_senses()
         live = [item for item in all_senses if not item[1].retired]
         stats.retired_senses += len(all_senses) - len(live)
+        retired_lexeme = not live
+
+        reason: str | None = None
+        if retired_lexeme:
+            reason = retired_reason_of(entry)
+            stats.retired_lexemes += 1
+            stats.retired_by_reason[_reason_category(reason) if reason else "unknown"] += 1
+        else:
+            stats.lexemes += 1
+            stats.lexemes_by_tier[tier] += 1
+            stats.kind_histogram[entry.kind.value] += 1
+            stats.count_owner("lexeme", tier)
+            stats.source_histogram[source] += 1
+
+        stats.tier_lookup[entry.lexeme_id] = tier
+        self._headwords[entry.lexeme_id] = entry.headword
 
         sense_ids: list[str] = []
         for pos_entry, sense, sense_id in live:
             sense_ids.append(sense_id)
             self._gloss_index[sense_id] = sense.canonical_gloss()
-            yield from self._sense_rows(entry, pos_entry, sense, sense_id, tier)
+            yield from self._sense_rows(entry, pos_entry, sense, sense_id, tier, source=source)
 
-        yield "lexicon", "default", self._lexicon_row(entry, tier, sense_ids, len(all_senses))
-        yield from self._prose_rows(entry, tier)
-        yield from self._etymology_rows(entry, tier)
+        yield (
+            "lexicon",
+            "default",
+            self._lexicon_row(
+                entry,
+                tier,
+                sense_ids,
+                len(all_senses),
+                retired=retired_lexeme,
+                retired_reason=reason,
+                source=source,
+            ),
+        )
+        if not retired_lexeme:
+            yield from self._prose_rows(entry, tier)
+            yield from self._etymology_rows(entry, tier)
         yield from self._inflection_rows(entry, tier)
         yield from self._provenance_rows(entry, tier)
         yield from self._tombstoned_rows(entry, tier)
-        self._buffer_contrasts(entry, tier)
+        if not retired_lexeme:
+            self._buffer_contrasts(entry, tier)
 
     def finish(self) -> Iterator[tuple[str, str, dict[str, Any]]]:
         """Yield the buffered contrast rows, with the far end's headword and gloss filled.
@@ -647,6 +818,8 @@ class RowBuilder:
         sense: Sense,
         sense_id: str,
         tier: str,
+        *,
+        source: str,
     ) -> Iterator[tuple[str, str, dict[str, Any]]]:
         """Yield the nested sense row and every flat row that sense produces."""
         stats = self.stats
@@ -679,6 +852,7 @@ class RowBuilder:
                 "upos": upos_for(entry, pos_entry.pos),
                 "domain_root": root_of(sense.domain) if sense.domain is not None else None,
                 "secondary_domains": [tag.value for tag in sense.secondary_domains],
+                "source": source,
                 "gloss": sense.canonical_gloss(),
                 "gloss_renditions": [_strip(row, _PROSE_KEYS) for row in gloss_rows],
                 "examples": [_strip(row, _EXAMPLE_KEYS) for row in example_rows],
@@ -904,9 +1078,29 @@ class RowBuilder:
     # -- entry-grained rows ------------------------------------------------------------
 
     def _lexicon_row(
-        self, entry: Lexeme, tier: str, sense_ids: list[str], total_senses: int
+        self,
+        entry: Lexeme,
+        tier: str,
+        sense_ids: list[str],
+        total_senses: int,
+        *,
+        retired: bool,
+        retired_reason: str | None,
+        source: str,
     ) -> dict[str, Any]:
-        """Return the nested ``lexicon`` row for one entry."""
+        """Return the nested ``lexicon`` row for one entry.
+
+        Args:
+            entry: The entry to project.
+            tier: The entry's frequency tier.
+            sense_ids: The entry's *live* sense ids, in stored order.
+            total_senses: How many senses (live and retired) the entry has in total.
+            retired: Whether the entry has zero live senses — not a lexeme by this
+                release's own count (D-80).
+            retired_reason: Why, when ``retired`` — the tombstone note's reason
+                (:func:`retired_reason_of`), or ``None`` for a live entry.
+            source: :func:`source_of` — ``opengloss-v1.3`` or ``wordnet-3.0``.
+        """
         models = sorted({record.model for record in entry.provenance.values()})
         cost = sum(record.cost_usd for record in entry.provenance.values())
         return {
@@ -916,6 +1110,9 @@ class RowBuilder:
             "kind": entry.kind.value,
             "status": entry.status.value,
             "tier": tier,
+            "source": source,
+            "retired": retired,
+            "retired_reason": retired_reason,
             "pos_list": [pos_entry.pos.value for pos_entry in entry.pos_entries],
             "sense_ids": sense_ids,
             "n_live_senses": len(sense_ids),

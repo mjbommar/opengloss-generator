@@ -5824,3 +5824,138 @@ not installed — including byte-stability across two builds; 3 in `tests/test_m
 part 4). 1,351 pass, 7 skipped (all pre-existing `data/sample-300` skips, absent from this
 worktree), 1 deselected. `uv run ruff check`/`format --check`, `uv run ty check src`,
 `uv run pytest` clean on `import/wordnet`.
+
+## D-80 (2026-09-07) — v2.2: tier 5, a lexeme that has stopped being one, and `export/hf_cards.py` finally reads the WordNet flag
+
+**Context.** Three things landed since v2.1's export and none of them was reflected in the
+release family yet. First, `data/core/tier5.tsv` (D-78): 43,652 candidate headwords —
+5,177 read straight off v1.3's own files, the rest (38,472, per the source TSV's own
+`source` column) imported from WordNet 3.0 — sitting on disk with nowhere in `TIER_FILES`
+to be picked up. Second, D-76's `phantom_pos` and D-79's `lexeme-hygiene` (`inflection_fold`
+and `fragments`) both tombstone senses, and neither guarantees the lexeme they belong to
+keeps at least one live sense: a plural whose only sense was folded onto its lemma, or a
+compound whose only part-of-speech block was a phantom, is left with an entry and zero
+live senses. `hf_rows.RowBuilder.rows_for_entry` did not ask the question — `stats.lexemes
++= 1` ran unconditionally before `live` was even computed, so an entry like that was
+counted as a lexeme, produced a `lexicon` row with `n_live_senses = 0`, and (correctly,
+since the sense loop is naturally empty) no `senses` row — an inconsistency a consumer
+would have had to notice on their own. Third, D-78 wrote the flag every migrated or
+imported field needs (`Provenance.stage == migrate`, `model` naming the source) and said
+in so many words that `export/hf_cards.py` was not touched — the flag existed, nothing
+read it, and no card said a word about WordNet's own licence.
+
+**Decision, part 1: tier 5 is a fifth tier, same shape as tier 4.** `TIER_TIER5 = "tier5"`,
+appended to `TIERS` and to `TIER_FILES` as `(TIER_TIER5, "tier5.tsv")` — lowest precedence,
+so a word tier 5 shares with an earlier list keeps the earlier tier, exactly D-75's own
+rule for tier 4. The source TSV's own `source` column (`v1.3` vs. `wordnet`) is not
+surfaced as a sixth tier or a new column on the tier index, for the reason D-75 gave for
+tier 4's `group` column: the release's tier granularity is "which frequency pass," not
+"which sub-population of it." `TIER_DESCRIPTIONS["tier5"]` gives the "By tier" section its
+line. `_lexeme_keys()`/`_sense_keys()`'s `tier` field description is pulled out to one
+shared `_TIER_DESCRIPTION` constant (it was drifting: `_LEXICON`'s own inline copy still
+said "`core`, `tier2` or `tier3`", missing tier 4 entirely) and now names all five real
+values plus `unknown`.
+
+**Decision, part 2: a `source` column reads the flag D-78 already wrote.** `hf_rows.source_of`
+walks an entry's provenance in `p<n>` order and returns `SOURCE_WORDNET` for the first
+`migrate`-stage record naming `wordnet-3.0`, `SOURCE_OPENGLOSS` for one naming
+`opengloss-v1.3` or `opengloss-v2.0` — the column exists to flag WordNet content, not to
+distinguish which of this project's own two legacy migrations touched a field, so both
+collapse onto one value — and `SOURCE_OPENGLOSS` again when there is no `migrate` record
+at all, which is an entry migrated before D-78 part 4 retrofitted `migrate.py` to stamp
+one. `source` is added to `lexicon` and `senses` only, not to every flat repo that shares
+`_lexeme_keys()`/`_sense_keys()` — the other eleven were not asked for and a `source`
+column on, say, `provenance` would just repeat what `model` already says.
+
+**Decision, part 3: a lexeme with zero live senses is not a lexeme.** `rows_for_entry` now
+computes `live` before touching any lexeme-grained counter: when `live` is empty, `Stats.lexemes`,
+`lexemes_by_tier`, `kind_histogram`, the lexeme coverage denominator and `source_histogram`
+are all left alone (`Stats.retired_lexemes` counts it instead), and the entry produces no
+`senses`, `encyclopedia`/`explanation` or `etymology` row and buffers no contrast — nothing
+"content-shaped" is claimed for an entry the release does not count as a headword. It still
+gets exactly two things: a `lexicon` row (`retired = true`, `retired_reason` set) so a
+consumer can find out *why* a headword they expected is missing, and its `inflections` rows,
+which were already unconditional on sense liveness (D-75) and are exactly the mechanism a
+form like "databases" needs to keep resolving to "database". `retired_reason_of` reads the
+tombstone note every retiring pass already writes — `RETIRED_SENSE_NOTE`/`RETIRED_PHANTOM_NOTE`
+(sense_hygiene, D-73/D-76) and `RETIRED_FOLD_NOTE`/`RETIRED_FRAGMENT_NOTE` (lexeme_hygiene,
+D-79) all share one `retired sense <sid>: <reason>` opening — and returns the *last* matching
+record's reason, the one written when the entry's last live sense was actually closed out.
+`_reason_category` buckets that into `inflection_fold`, `fragment`, `phantom_pos`, `duplicate`
+or the reason verbatim, folded into `Stats.retired_by_reason`. `entry.status` is deliberately
+*not* consulted for any of this — `EntryStatus.RETIRED` exists in the schema and nothing has
+ever set it (`export/pairs.py` is the only other reader, and it too treats an unset status as
+live); asking the store pass to compute the answer itself, from the senses it already reads,
+is the same free-filter-first instinct as everywhere else in this project rather than a
+second thing to keep in step with a field nothing writes.
+
+**Decision, part 4: "Sources and licences," on every card, WordNet's notice quoted once.**
+`hf_cards._sources_and_licences` reports the release's licence and, from `Stats.source_histogram`,
+how many lexemes in *this* export are `wordnet-3.0`. The WordNet License notice is quoted
+in full only on `lexicon` and `senses` — the two repos that carry `source` — and every other
+card points at those two rather than repeating a licence notice fifteen times. The front
+matter's `license` stays `cc-by-4.0` (the release as a whole) and gains `source_datasets:
+[princeton-wordnet-3.0, opengloss-v1.3]`, following the same list-of-scalars shape the front
+matter already uses for `language`/`tags`/`task_categories`. `_citation()` appends the two
+WordNet citations (Miller 1995; Fellbaum 1998) after OpenGloss's own, and the License section
+cross-links to Sources and licences.
+
+**Decision, part 5: two changelog sections, newest first, and a placeholder that refuses to
+render.** `_changelog` is now a dispatcher: `release == "v2.2"` gets a new "What changed since
+v2.1" section (tier 5's size, the fold's two counts, provenance-on-inherited-fields, the
+`source` column) ahead of the unchanged "What changed since v2.0" section, which every release
+still carries — D-75's reproducibility promise was about repo ids and naming, not about
+deleting history from the card. The v2.1 → v2.2 table needs four numbers no export can compute
+from its own store — pretraining words/tokens and the Opus judge score, exactly the shape D-75's
+own `V21`/`V20` classes already hold as release-time constants — and those four stay `None` in
+`hf_cards.V22` with a `# fill at release` comment apiece. `_require_v22_filled` raises
+`ValueError`, naming every attribute still `None`, the moment a v2.2 card is asked to render;
+`_changelog_v21_v22` calls it before writing a word. This is deliberate: `DEFAULT_RELEASE` moves
+to `v2.2` in this same change, so the very next `export-hf` run with no `--release` flag is a
+v2.2 run, and it fails loudly instead of shipping a card with an invented pretraining-token
+count. The four already-known numbers (`TIER5_CANDIDATES = 43,652`, `INFLECTION_FOLD = 4,377`,
+`FRAGMENTS_RETIRED = 172`, `RETIRED_LEXEMES = 4,549`) are not placeholders — they are measured,
+just not derivable from an arbitrary export's own `Stats` — and are written directly, the same
+way `V21.MULTIWORD` and its siblings already were.
+
+**Verified on `data/sample-300`** (`--release v2.2 --tiers-dir data/core`, `V22`'s four
+placeholders filled by the calling script only, never in `hf_cards.py`): 300 lexemes, 0
+retired (the sample predates D-76/D-79 and is all `core`), 1,041 live senses, all 300
+`source = opengloss-v1.3` (no tier-5/WordNet entries in this sample), 16 repos, 103,102 total
+rows. The `lexicon` card's "What changed since v2.1" section, "Sources and licences" section
+(quoting the WordNet notice and reporting "0" WordNet-derived lexemes for this sample) and
+front matter's `source_datasets` all render as designed.
+
+**Consequence.** Modified: `export/hf_rows.py` (`TIER_TIER5`, `TIER_DESCRIPTIONS["tier5"]`,
+`TIER_FILES` gains `tier5.tsv`; `SOURCE_OPENGLOSS`, `SOURCE_WORDNET`, `source_of`,
+`retired_reason_of`, `_reason_category`, `_RETIRED_NOTE_RE`; `Stats.retired_lexemes`,
+`source_histogram`, `retired_by_reason`; `RowBuilder.rows_for_entry` gates lexeme-counting,
+`senses`/`encyclopedia`/`etymology`/contrast rows on `live`; `_lexicon_row` and the nested
+`senses` row gain `source`, `retired`, `retired_reason`), `export/hf_schemas.py`
+(`DEFAULT_RELEASE = "v2.2"`; shared `_TIER_DESCRIPTION`/`_SOURCE_DESCRIPTION`; `source`,
+`retired`, `retired_reason` fields on `lexicon`; `source` on `senses`), `export/hf_cards.py`
+(`V21.LEXEMES`/`LIVE_SENSES`; new `V22`; `_require_v22_filled`; `_changelog_v20_v21` +
+`_changelog_v21_v22` + dispatcher `_changelog`; `_whats_new` threads `release`;
+`_sources_and_licences`, `SOURCE_DATASETS`, `WORDNET_LICENSE_URL`/`_NOTICE`; front matter gains
+`source_datasets`; `_citation` gains the WordNet references; "Retired lexemes" row in Key
+statistics). `README.md`'s Licences paragraph now says the cards actually carry the notice
+(D-78, D-80) rather than only holding the flag. Tests: **+23** in `tests/test_export_hf.py`
+(tier 5 index and description; `source` for a v1.3-migrated, a `wordnet-3.0`-migrated, a
+`v2.0`-migrated and a pre-D-78 entry; a fully retired lexeme excluded from every count and
+still resolvable via its `lexicon` row and its `inflections` rows; `retired_reason` read from
+each of the three note shapes; `retired_by_reason` categorisation; front matter's
+`source_datasets`; the WordNet notice quoted on `lexicon`/`senses` and referenced elsewhere;
+both changelog sections present and ordered on a `v2.2` card, only the v2.0 one on `v2.1`; the
+placeholder guard raising). All existing tests that build the default release needed one
+addition, not a rewrite: an autouse fixture fills `V22`'s four placeholders for the test
+process only, since `DEFAULT_RELEASE` now triggers the guard on every call that does not pass
+`release=` explicitly. 1,371 pass (was 1,351), 7 skipped, 0 deselected. `uv run ruff
+check`/`format --check`, `uv run ty check src`, `uv run pytest` clean on `release/hf-v2.2`.
+`data/core-store` untouched throughout — every measurement above is either a pure computation
+over `data/sample-300` (a read-only copy) or a number already recorded in D-76/D-78/D-79.
+
+**Left undone.** `hf_cards.V22.PRETRAIN_DOCS`/`PRETRAIN_WORDS`/`PRETRAIN_TOKENS`/`JUDGE` stay
+`None` in the shipped code — filling them requires the finished v2.2 pretraining corpus and a
+fresh Opus judge sample including tier 5, neither of which this decision produces. A real
+`--release v2.2` export against `data/core-store` will raise until a follow-up measures and
+fills those four.

@@ -113,12 +113,15 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 ## Licences
 
 The code is MIT (see `pyproject.toml`). Content is not uniformly ours: an entry whose
-provenance table holds a record with `model = "wordnet-3.0"` was derived from Princeton
-WordNet 3.0 — its glosses, examples, relations and derivationally related forms — and
-carries the Princeton WordNet licence in [`LICENSES/WordNet.txt`](LICENSES/WordNet.txt).
-That provenance record *is* the flag: no separate column, tag or manifest is kept, so a
-consumer of any export can tell WordNet-derived content from generated content by reading
-the entry. Dataset cards cite the licence on that basis (D-78).
+provenance table holds a `migrate`-stage record with `model = "wordnet-3.0"` was derived
+from Princeton WordNet 3.0 — its glosses, examples, relations and derivationally related
+forms — and carries the Princeton WordNet licence in
+[`LICENSES/WordNet.txt`](LICENSES/WordNet.txt). That provenance record is the flag
+(D-78); the v2.2 Hugging Face export additionally surfaces it as a `source` column on
+`lexicon` and `senses` (`opengloss-v1.3` or `wordnet-3.0`), so a consumer of any export
+can tell WordNet-derived content from generated content either by reading the entry or by
+filtering a column. Every dataset card quotes or references the WordNet License notice in
+its "Sources and licences" section on that basis (D-78, D-80).
 
 ## Cost defaults
 

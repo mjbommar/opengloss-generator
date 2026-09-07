@@ -19,7 +19,9 @@ from typing import TYPE_CHECKING, Any
 
 from opengloss_generator.export.hf_rows import (
     COVERAGE_FEATURES,
+    SOURCE_WORDNET,
     TIER_DESCRIPTIONS,
+    TIER_TIER5,
     TIER_UNKNOWN,
 )
 from opengloss_generator.export.hf_schemas import (
@@ -35,7 +37,7 @@ if TYPE_CHECKING:
     from opengloss_generator.export.hf_rows import Stats
     from opengloss_generator.export.hf_schemas import RepoSpec
 
-__all__ = ["V13", "render_card"]
+__all__ = ["V13", "V20", "V21", "V22", "render_card"]
 
 
 # --------------------------------------------------------------------------------------
@@ -76,6 +78,26 @@ SENSES_WITHOUT_RELATIONS = 1_890
 PAPER_URL = "https://arxiv.org/abs/2511.18622"
 LICENSE_ID = "cc-by-4.0"
 LICENSE_NAME = "Creative Commons Attribution 4.0 International (CC-BY 4.0)"
+
+#: Hugging Face ``source_datasets`` front-matter values (D-80): the release's own
+#: content plus the outside lexicon a tier-5 entry may be derived from.
+SOURCE_DATASETS: tuple[str, ...] = ("princeton-wordnet-3.0", "opengloss-v1.3")
+
+#: Where the WordNet 3.0 licence terms live, for the "Sources and licences" section
+#: every card carries (D-78, D-80).
+WORDNET_LICENSE_URL = "https://wordnet.princeton.edu/license-and-commercial-use"
+WORDNET_LICENSE_NOTICE = (
+    "This software and database is being provided to you, the LICENSEE, by Princeton "
+    "University under the following license. By obtaining, using and/or copying this "
+    "software and database, you agree that you have read, understood, and will comply "
+    "with these terms and conditions. Permission to use, copy, modify and distribute "
+    "this software and database and its documentation for any purpose and without fee "
+    "or royalty is hereby granted, provided that you agree to comply with the following "
+    "copyright notice and statements, including the disclaimer, and that the same "
+    "appear on ALL copies of the software, database and documentation, including "
+    'modifications that you make for internal use or for distribution. "WordNet 3.0 '
+    'Copyright 2006 by Princeton University. All rights reserved."'
+)
 
 #: Tags every card carries, before the repo's own.
 SHARED_TAGS: tuple[str, ...] = ("opengloss", "synthetic", "lexicography", "english")
@@ -238,6 +260,8 @@ def _front_matter(spec: RepoSpec, stats: Stats) -> str:
         f"license: {LICENSE_ID}",
         "language:",
         "- en",
+        "source_datasets:",
+        *(f"- {value}" for value in SOURCE_DATASETS),
         "size_categories:",
         f"- {_size_category(stats.rows_for(spec.slug))}",
     ]
@@ -276,8 +300,15 @@ class V20:
 
 
 class V21:
-    """Measured once at release time; not derivable from the export alone."""
+    """Measured once at release time; not derivable from the export alone.
 
+    ``LEXEMES``/``LIVE_SENSES`` are the full-store figures from the run that actually
+    produced this release (D-77's post-fix measurement: "109,633 lexemes and 250,003
+    live senses"), not a sample — the same run ``PRETRAIN_DOCS`` below is measured from.
+    """
+
+    LEXEMES = 109_633
+    LIVE_SENSES = 250_003
     MULTIWORD = 36_366  # compound 33,959 + phrasal verb 875 + idiom 331 + affix/other
     PROPER_NOUNS = 17_073
     FUNCTION_WORDS = 462
@@ -287,7 +318,79 @@ class V21:
     JUDGE = "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4)"
 
 
-def _changelog(stats: Stats) -> str:
+class V22:
+    """v2.2's own release-time facts (D-80).
+
+    ``TIER5_CANDIDATES``, ``INFLECTION_FOLDED``, ``FRAGMENTS_RETIRED`` and
+    ``RETIRED_LEXEMES`` are already measured (the tier-5 candidate list on disk, and the
+    whole-store `lexeme-hygiene` sweep D-79 shipped but had not yet run against
+    production). ``PRETRAIN_DOCS``/``PRETRAIN_WORDS``/``PRETRAIN_TOKENS``/``JUDGE`` are
+    not derivable before the finished pretraining corpus exists and the Opus judge has
+    scored a fresh tier-5 sample, so they stay ``None`` here — **never fill them by
+    guessing**; :func:`_changelog_v21_v22` refuses to render v2.2's changelog while any
+    of them still is, exactly so a `v2.2` export cannot ship with an invented number.
+    """
+
+    #: `data/core/tier5.tsv` row count (D-78): the WordNet 3.0 gap the earlier tiers
+    #: lacked, before slugification and matching against the store.
+    TIER5_CANDIDATES = 43_652
+    #: `lexeme-hygiene`'s whole-store sweep (D-79): inflected-form headwords folded onto
+    #: their lemma, and multiword fragments retired for beginning or ending on a
+    #: function word.
+    INFLECTION_FOLDED = 4_377
+    FRAGMENTS_RETIRED = 172
+    #: Lexemes left with zero live senses store-wide after D-76's phantom-POS whole-block
+    #: retirements and D-79's fold (this export's own figure is `stats.retired_lexemes`;
+    #: this is the whole-store count at the time of the sweep).
+    RETIRED_LEXEMES = 4_549
+
+    PRETRAIN_DOCS: int | None = None  # fill at release
+    PRETRAIN_WORDS: int | None = None  # fill at release
+    PRETRAIN_TOKENS: int | None = None  # fill at release, cl100k_base
+    JUDGE: str | None = None  # fill at release
+
+
+#: :class:`V22` attributes that must be measured against the finished release before a
+#: `v2.2` card can render (D-80) — see :class:`V22`'s own docstring for why.
+_V22_PLACEHOLDERS: tuple[str, ...] = (
+    "PRETRAIN_DOCS",
+    "PRETRAIN_WORDS",
+    "PRETRAIN_TOKENS",
+    "JUDGE",
+)
+
+
+def _require_v22_filled() -> tuple[int, int, int, str]:
+    """Return :class:`V22`'s four release-time facts, once every one of them is filled.
+
+    Args:
+        None.
+
+    Returns:
+        ``(pretrain_docs, pretrain_words, pretrain_tokens, judge)``, typed without the
+        ``| None`` their class attributes carry, once the check below has passed.
+
+    Raises:
+        ValueError: Naming every :class:`V22` attribute that is still ``None`` — its
+            ``# fill at release`` comment says what each one needs.
+    """
+    docs, words, tokens = V22.PRETRAIN_DOCS, V22.PRETRAIN_WORDS, V22.PRETRAIN_TOKENS
+    judge = V22.JUDGE
+    values = (docs, words, tokens, judge)
+    missing = [name for name, value in zip(_V22_PLACEHOLDERS, values, strict=True) if value is None]
+    if missing:
+        raise ValueError(
+            "hf_cards.V22 is not filled in: "
+            + ", ".join(missing)
+            + " must be measured against the finished v2.2 release before its cards can "
+            "render (see each attribute's '# fill at release' comment)."
+        )
+    if docs is None or words is None or tokens is None or judge is None:  # pragma: no cover
+        raise ValueError("unreachable: already checked above")
+    return docs, words, tokens, judge
+
+
+def _changelog_v20_v21(stats: Stats) -> str:
     """Return the "what changed since v2.0" section: size, entry types, tokens, schema.
 
     Args:
@@ -350,11 +453,89 @@ now tombstoned rather than live. Treat vX as a new release, not a delta.
 """
 
 
-def _whats_new(stats: Stats) -> str:
+def _changelog_v21_v22(stats: Stats) -> str:
+    """Return the "what changed since v2.1" section: tier 5, the fold, provenance, source.
+
+    Raises before rendering anything while :class:`V22` still carries an unfilled
+    placeholder (D-80) — see :func:`_require_v22_filled`.
+
+    Args:
+        stats: The export's statistics (the current release's live counts).
+    """
+    pretrain_docs, pretrain_words, pretrain_tokens, judge = _require_v22_filled()
+    tier5_lexemes = stats.lexemes_by_tier.get(TIER_TIER5, 0)
+    wordnet_imported = V22.TIER5_CANDIDATES - 5_126
+    size = _table(
+        ("", "v2.1 (2026-09-07)", "v2.2"),
+        [
+            ("Lexemes", _n(V21.LEXEMES), _n(stats.lexemes)),
+            ("Live senses", _n(V21.LIVE_SENSES), _n(stats.live_senses)),
+            ("Tier 5 lexemes (WordNet gap)", "0", _n(tier5_lexemes)),
+            ("Retired lexemes (every sense tombstoned)", "0", _n(stats.retired_lexemes)),
+            ("Pretraining documents", _n(V21.PRETRAIN_DOCS), _n(pretrain_docs)),
+            ("Pretraining words", _n(V21.PRETRAIN_WORDS), _n(pretrain_words)),
+            ("Pretraining tokens (cl100k_base)", _n(V21.PRETRAIN_TOKENS), _n(pretrain_tokens)),
+            ("Judge score, Opus, 40-entry samples", V21.JUDGE, judge),
+        ],
+    )
+    return f"""## What changed since v2.1
+
+v2.1 (2026-09-07) added tier 4 and the `inflections` repo. v2.2 adds **tier 5**:
+{_n(V22.TIER5_CANDIDATES)} WordNet 3.0 candidate lemmas the earlier tiers lacked — common
+compounds and technical nouns, adjectives, adverbs and verbs, instances/taxa/organisms
+excluded — {_n(wordnet_imported)} of them imported outright, the rest matched against
+v1.3's own files. The other three changes are about honesty rather than coverage:
+
+- **The lemma fold.** `lexeme-hygiene` (D-79) folded {_n(V22.INFLECTION_FOLDED)}
+  inflected-form headwords onto the lemma that already carried their meaning
+  ("databases" onto "database", through the store's own recorded morphology) and
+  retired {_n(V22.FRAGMENTS_RETIRED)} multiword fragments that began or ended on a
+  function word ("is not", "on top of"). Together with D-76's phantom part-of-speech
+  retirements, {_n(V22.RETIRED_LEXEMES)} lexemes store-wide now have every sense
+  tombstoned. A lexeme like that is **not counted as a lexeme** anywhere in this card or
+  in `Stats` any more — it has no live sense, so it is not a lexeme by this release's own
+  count — but it is not gone: its surface form still resolves through
+  `opengloss-v2.2-inflections`, and its `lexicon` row carries `retired = true` with a
+  `retired_reason` explaining why.
+- **Provenance on inherited fields.** Every field a migration or import wrote, not only
+  what a model wrote from scratch, now carries a `migrate`-stage provenance record
+  naming where it came from, so "where did this text come from" is answerable by
+  `grep` rather than by trusting the pipeline that happened to run.
+- **A `source` column** on `lexicon` and `senses`: `opengloss-v1.3` for content this
+  project generated or migrated from its own legacy releases, `wordnet-3.0` for the
+  tier-5 entries imported directly from Princeton WordNet 3.0.
+
+{size}
+
+**Schema.** No column was removed or retyped. `lexicon` gains `source`, `retired` and
+`retired_reason`; `senses` gains `source`; `tier` gains the value `tier5`.
+
+"""
+
+
+def _changelog(stats: Stats, release: str) -> str:
+    """Return every "what changed" section this release carries, newest first.
+
+    Args:
+        stats: The export's statistics.
+        release: The release label being rendered. Only `v2.2` gets the v2.1 -> v2.2
+            section; every release keeps the v2.0 -> v2.1 section (D-75's own
+            reproducibility promise did not extend to dropping history from the card).
+    """
+    sections = []
+    if release == "v2.2":
+        sections.append(_changelog_v21_v22(stats))
+    sections.append(_changelog_v20_v21(stats))
+    return "".join(sections)
+
+
+def _whats_new(stats: Stats, release: str) -> str:
     """Return the "what's new in vX" section, with the honest scope note.
 
     Args:
         stats: The export's statistics.
+        release: The release label being rendered (D-80): only `v2.2` gets the
+            v2.1 -> v2.2 changelog section.
     """
     scope = _table(
         ("", "v1.3", "vX"),
@@ -394,7 +575,7 @@ def _whats_new(stats: Stats) -> str:
 6. **Per-field provenance.** Which model wrote a field, how many tokens it took, what it
    cost — published as its own dataset.
 
-{_changelog(stats)}### Scope: fewer headwords, far more per headword
+{_changelog(stats, release)}### Scope: fewer headwords, far more per headword
 
 vX is **not** a superset of v1.3. It covers {_n(stats.lexemes)} of v1.3's {_n(V13.LEXEMES)}
 lexemes — every frequency-ranked single word, plus the compounds and names at Wikipedia
@@ -631,6 +812,57 @@ def _limitations(spec: RepoSpec, stats: Stats, release: str) -> str:
 """
 
 
+#: Repos whose card quotes the WordNet licence notice in full; every other card
+#: references one of these two rather than repeating it (D-80).
+_WORDNET_NOTICE_REPOS: tuple[str, ...] = ("lexicon", "senses")
+
+
+def _sources_and_licences(spec: RepoSpec, stats: Stats, release: str) -> str:
+    """Return the "Sources and licences" section every card carries (D-78, D-80).
+
+    The release is CC-BY 4.0 throughout, but a `source` column on `lexicon` and
+    `senses` flags the entries this project did not write: they are derived from
+    Princeton WordNet 3.0 and carry its own licence. The notice text is quoted in full
+    once, on the two repos that carry `source`, and referenced from every other card
+    rather than repeated fifteen more times.
+
+    Args:
+        spec: The repo this card is for.
+        stats: The export's statistics, for the WordNet-derived entry count.
+        release: The release label, for the cross-link to `lexicon`.
+    """
+    wordnet_entries = stats.source_histogram.get(SOURCE_WORDNET, 0)
+    count_line = (
+        f"Of {_n(stats.lexemes)} lexemes in this release, **{_n(wordnet_entries)}** "
+        f"(the tier-5 entries whose `source` column reads `{SOURCE_WORDNET}`) are "
+        "derived from Princeton WordNet 3.0: their glosses, examples, relations and "
+        "derivationally related forms, plus WordNet's own capitalisation of the "
+        "headword (D-78)."
+    )
+    if spec.slug in _WORDNET_NOTICE_REPOS:
+        notice = f"""> {WORDNET_LICENSE_NOTICE}
+
+The full text is also reproduced in [`LICENSES/WordNet.txt`](\
+https://github.com/mjbommar/opengloss-generator/blob/main/LICENSES/WordNet.txt) in the
+source repository. Everything else in this dataset is original to OpenGloss and
+licensed CC-BY 4.0 like the rest of the release."""
+    else:
+        notice = (
+            f"The [WordNet License]({WORDNET_LICENSE_URL}) notice is quoted in full on "
+            f"the `opengloss-{release}-lexicon` and `opengloss-{release}-senses` cards; "
+            "this repo's WordNet-derived rows are governed by the same terms."
+        )
+    return f"""## Sources and licences
+
+This release is **{LICENSE_NAME}**. {count_line}
+
+The [WordNet License]({WORDNET_LICENSE_URL}) permits use, copying, modification and
+distribution without fee, provided its notice is preserved:
+
+{notice}
+"""
+
+
 def _citation() -> str:
     """Return the citation and license sections."""
     return f"""## Citation
@@ -646,10 +878,32 @@ def _citation() -> str:
 }}
 ```
 
+Tier-5 entries additionally derive from Princeton WordNet 3.0 (D-78):
+
+```bibtex
+@article{{miller1995wordnet,
+  title   = {{WordNet: A Lexical Database for English}},
+  author  = {{Miller, George A.}},
+  journal = {{Communications of the ACM}},
+  volume  = {{38}},
+  number  = {{11}},
+  pages   = {{39--41}},
+  year    = {{1995}}
+}}
+
+@book{{fellbaum1998wordnet,
+  title     = {{WordNet: An Electronic Lexical Database}},
+  editor    = {{Fellbaum, Christiane}},
+  publisher = {{MIT Press}},
+  year      = {{1998}}
+}}
+```
+
 ## License
 
 Released under **{LICENSE_NAME}**. Attribution to the OpenGloss project is required;
-commercial use is permitted.
+commercial use is permitted. See [Sources and licences](#sources-and-licences) above for
+the Princeton WordNet License that additionally covers this release's tier-5 entries.
 """
 
 
@@ -1076,6 +1330,10 @@ def render_card(
         ("", ""),
         [
             ("Lexemes", _n(stats.lexemes)),
+            (
+                "Retired lexemes (every sense tombstoned; not counted above)",
+                _n(stats.retired_lexemes),
+            ),
             ("Live senses", _n(stats.live_senses)),
             ("Rows in this dataset", _n(stats.rows_for(spec.slug))),
             *_repo_stat_rows(spec, stats),
@@ -1094,7 +1352,7 @@ Part of the **OpenGloss {release}** release family — {len(REPOS)} datasets bui
 store of {_n(stats.lexemes)} lexemes and {_n(stats.live_senses)} live senses, all joinable
 on derived ids. See [Related datasets](#related-datasets) for the rest.
 
-{_whats_new(stats)}
+{_whats_new(stats, release)}
 ## Key statistics
 
 {key_stats}
@@ -1128,6 +1386,7 @@ Everything below is built from the same store and joins on `lexeme_id` / `sense_
 {_family_table(spec, owner, release)}
 
 {_limitations(spec, stats, release)}
+{_sources_and_licences(spec, stats, release)}
 {_citation()}"""
     # Every repo's blurb and code sample cross-references a sibling by name using the
     # placeholder release (PLACEHOLDER_RELEASE) rather than a literal, so this one
