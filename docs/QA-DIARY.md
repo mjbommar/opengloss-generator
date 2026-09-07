@@ -943,3 +943,28 @@ in relation lists ("rabbis") and hyponyms filed as synonyms — the validity rem
 and reconcile target those. Action: a `phantom_pos` hygiene step (agent launched,
 D-76) to retire POS entries whose glosses define a component word rather than the
 compound; re-judge after it and the remainders.
+
+## Iteration 19 — tier 4 after the closing passes (2026-09-07 02:21)
+
+Same 40 tier-4 entries, seed 7, forced. $2.54. After: phantom-POS retirement, sense-
+hygiene remainders, repair, catch-up, regen, targeted validity, reconcile.
+
+| | it. 18 (chain end) | **it. 19 (closing)** |
+|---|---|---|
+| mean score | 62.2 | **67.0** |
+| senses judged | 92 | 77 (15 phantom/merged senses gone) |
+| entries 80+ / below 60 | 4 / 14 | 4 / **11** |
+| relations_valid defect | 82% | **65%** |
+| gloss_accurate | 35% | **29%** |
+| examples_fit_sense | 48% | **38%** |
+| examples_natural | 41% | 39% |
+| distinct_from_other_senses | 35% | 36% |
+| domain_fits | 12% | 12% |
+
++4.8 points; tier 4 now sits at tier 3's level (66.7). Relations moved 17 points once
+the never-judged 6% were judged by name and the graph reconciled. Distinctness did not
+move: the judge is now comparing the *remaining* senses of these compounds, and v1.3's
+compound sense inventories are still over-split in ways the distinctness step's
+pairwise merge does not catch (it merges near-duplicates, not "sense 2 is a
+sub-case of sense 1"). That is the next lever for tier 4 and is recorded as an open
+item rather than run tonight.
