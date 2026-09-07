@@ -50,7 +50,7 @@ class V13:
     release this pipeline did not produce and cannot recount.
     """
 
-    LEXEMES = 205_983
+    LEXEMES = 205_988
     SENSES = 565_604
     EDGES = 8_479_875
     URL = "https://huggingface.co/datasets/mjbommar/opengloss-v1.3-definitions"
@@ -66,12 +66,12 @@ JUDGE_SAMPLE_ENTRIES = 40
 
 #: Synonym / antonym reciprocity over the whole 54,724-entry store, closing audit of
 #: 2026-09-05 after tier 3 (``opengloss audit``).
-SYNONYM_RECIPROCITY = 0.980
-ANTONYM_RECIPROCITY = 0.991
+SYNONYM_RECIPROCITY = 0.943
+ANTONYM_RECIPROCITY = 0.953
 
 #: Senses left with no relation at all in that audit (of 137,314 live) — the largest
 #: known gap.
-SENSES_WITHOUT_RELATIONS = 3_709
+SENSES_WITHOUT_RELATIONS = 1_890
 
 PAPER_URL = "https://arxiv.org/abs/2511.18622"
 LICENSE_ID = "cc-by-4.0"
@@ -270,7 +270,7 @@ class V20:
     QUERIES = 1_330_311
     QA_PAIRS = 750_348
     PRETRAIN_DOCS = 617_175
-    PRETRAIN_WORDS = 196_983_949
+    PRETRAIN_WORDS = 196_390_946
     PRETRAIN_TOKENS = 275_659_096  # cl100k_base
     JUDGE = "70.2 (core + tier 2), 66.7 (tier 3)"
 
@@ -282,7 +282,7 @@ class V21:
     PROPER_NOUNS = 17_073
     FUNCTION_WORDS = 462
     PRETRAIN_DOCS = 1_111_044
-    PRETRAIN_WORDS = 332_375_114
+    PRETRAIN_WORDS = 331_888_239
     PRETRAIN_TOKENS = 471_451_693  # cl100k_base
     JUDGE = "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4)"
 
