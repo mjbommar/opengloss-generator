@@ -1596,3 +1596,12 @@ store-wide audit → `export-hf --release v2.1` → push (16 repos, incl. inflec
 (completed under cap); graph-hygiene 13,282 entries; gloss-level remainder 13,152
 calls **$2.60**, 3,176 entries → gloss levels now 100% on tier 4. Example and
 encyclopedia remainders are no-ops (already 100%). Tier-4 spend ≈ $255.
+
+**Follow-up 1 — sense-hygiene remainder (20:54 → 22:41, $12 cap reached):** because
+`main` now carries `phantom_pos` first in the step order, this run applied it store-
+wide: **39,769 calls, $9.27, 11,402 phantom POS blocks retired** (8,652 component,
+2,750 duplicate), 20,047 senses retired, 115,400 relations demoted — completed, not
+capped. `distinctness` then merged 1,481 groups (1,628 senses retired, $1.02) and
+`example_fit` reached the cap after moving 1,283 / removing 4,532 examples and emptying
+1,452 senses ($1.71). The closing script's own `--only phantom_pos` run will be a
+marker no-op. Repair started 22:41. Tier-4 spend ≈ $269.
