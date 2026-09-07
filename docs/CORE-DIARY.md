@@ -1632,3 +1632,14 @@ partly-judged graph and the regenerated edges are not yet reciprocated;
 `gloss_starts_with_headword` 154. Closing script started: example-fit remainder →
 repair → catch-up → phantom_pos (marker no-op) → targeted validity → reconcile →
 tier-4 re-judge → audit → v2.1 export → push.
+
+**2026-09-07 03:01 — v2.1 export OOM-killed.** `export-hf` on the 109,633-entry store
+reached 90 GB RSS (the machine has 91 GB) and the kernel killed it, taking the tmux
+scope — and the Claude session — with it (`journalctl`: "Out of memory: Killed process
+165077 (opengloss) anon-rss:90526668kB"). The store is untouched and final (closing
+audit and re-judge completed at 02:21). The parquet writer already streams shards; the
+resident set is whole-store state the row builders keep for the cross-entry repos
+(negatives, qrels corpus, sense index). Two actions: a per-repo memory probe
+(`lexicon`, `qrels` alone), and a streaming/bounded-memory fix to the exporter before
+the v2.1 export is rerun. Chain gotcha #9: exports scale with the store, and the
+session must not share an OOM scope with a 90 GB job.
