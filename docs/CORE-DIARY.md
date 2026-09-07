@@ -1605,3 +1605,9 @@ capped. `distinctness` then merged 1,481 groups (1,628 senses retired, $1.02) an
 `example_fit` reached the cap after moving 1,283 / removing 4,532 examples and emptying
 1,452 senses ($1.71). The closing script's own `--only phantom_pos` run will be a
 marker no-op. Repair started 22:41. Tier-4 spend ≈ $269.
+
+**Follow-up 1 — relation-regen, whole store (22:46 → 23:08):** 4,696 empty senses
+scanned, **4,120 filled** (88%), 8,151 relations proposed and accepted, **$1.88**,
+completed under its $6 cap. Fewer empty senses than feared: the phantom-POS
+retirements removed most of the senses whose only edges had been demoted. Resolve →
+validity → reconcile next.
