@@ -256,6 +256,100 @@ def _front_matter(spec: RepoSpec, stats: Stats) -> str:
     return "\n".join(lines)
 
 
+class V20:
+    """Frozen statistics of the previous release (v2.0, 2026-09-05), for the changelog."""
+
+    LEXEMES = 54_724
+    LIVE_SENSES = 137_314
+    MULTIWORD = 86  # compounds + phrasal verbs + idioms
+    PROPER_NOUNS = 10_365
+    FUNCTION_WORDS = 114
+    GLOSS_RENDITIONS = 1_129_975
+    EXAMPLES = 1_398_297
+    RELATIONS = 735_318
+    QUERIES = 1_330_311
+    QA_PAIRS = 750_348
+    PRETRAIN_DOCS = 617_175
+    PRETRAIN_WORDS = 196_983_949
+    PRETRAIN_TOKENS = 275_659_096  # cl100k_base
+    JUDGE = "70.2 (core + tier 2), 66.7 (tier 3)"
+
+
+class V21:
+    """Measured once at release time; not derivable from the export alone."""
+
+    MULTIWORD = 36_366  # compound 33,959 + phrasal verb 875 + idiom 331 + affix/other
+    PROPER_NOUNS = 17_073
+    FUNCTION_WORDS = 462
+    PRETRAIN_DOCS = 1_111_044
+    PRETRAIN_WORDS = 332_375_114
+    PRETRAIN_TOKENS = 471_451_693  # cl100k_base
+    JUDGE = "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4)"
+
+
+def _changelog(stats: Stats) -> str:
+    """Return the "what changed since v2.0" section: size, entry types, tokens, schema.
+
+    Args:
+        stats: The export's statistics (the current release's live counts).
+    """
+    size = _table(
+        ("", "v2.0 (2026-09-05)", "vX (2026-09-07)"),
+        [
+            ("Lexemes", _n(V20.LEXEMES), _n(stats.lexemes)),
+            ("Live senses", _n(V20.LIVE_SENSES), _n(stats.live_senses)),
+            (
+                "Multiword entries (compounds, phrasal verbs, idioms)",
+                _n(V20.MULTIWORD),
+                _n(V21.MULTIWORD),
+            ),
+            ("Proper nouns", _n(V20.PROPER_NOUNS), _n(V21.PROPER_NOUNS)),
+            ("Function words", _n(V20.FUNCTION_WORDS), _n(V21.FUNCTION_WORDS)),
+            ("Gloss renditions", _n(V20.GLOSS_RENDITIONS), _n(stats.gloss_renditions)),
+            ("Example sentences", _n(V20.EXAMPLES), _n(stats.example_renditions)),
+            ("Live relations", _n(V20.RELATIONS), _n(stats.relations_total)),
+            ("Synthetic queries", _n(V20.QUERIES), _n(stats.queries)),
+            ("QA pairs", _n(V20.QA_PAIRS), _n(stats.qa_pairs)),
+            ("Pretraining documents", _n(V20.PRETRAIN_DOCS), _n(V21.PRETRAIN_DOCS)),
+            ("Pretraining words", _n(V20.PRETRAIN_WORDS), _n(V21.PRETRAIN_WORDS)),
+            ("Pretraining tokens (cl100k_base)", _n(V20.PRETRAIN_TOKENS), _n(V21.PRETRAIN_TOKENS)),
+            ("Judge score, Opus, 40-entry samples", V20.JUDGE, V21.JUDGE),
+        ],
+    )
+    return f"""## What changed since v2.0
+
+v2.0 (2026-09-05) covered the frequency-ranked single words. vX adds **tier 4**: the
+function words the core ranking had excluded on purpose, and every remaining v1.3 entry
+at Wikipedia frequency ≥ 10 — mostly multiword compounds ("natural selection",
+"catalog number"), plus names and rarer single words. That doubles the lexeme count and
+changes the mix: v2.0 was 99.8% single words; a third of vX is multiword.
+
+{size}
+
+**Schema.** No column was added, removed or retyped in any existing dataset. Three
+things did change:
+
+- `tier` gains the value `tier4` (it was `core`, `tier2` or `tier3`).
+- One new dataset, `opengloss-vX-inflections`: a flat surface-form → lemma lookup
+  (plural, past tense, participles, comparative, superlative, derivations) built from
+  the morphology that the lexicon already carried nested.
+- New provenance note prefixes on tombstones and edges, all reversible and all counted
+  in the store audit: `phantom_pos:` (a v1.3 part-of-speech block whose glosses defined
+  a component word rather than the compound — 11,440 blocks retired), `regen:`
+  (relations regenerated for senses that had lost every edge to judging), and
+  `retyped: contrast` (synonym edges the contrast paragraphs showed to be hypernym or
+  hyponym).
+
+**Not row-compatible with v2.0.** Lexeme, sense, rendition, edge, query and QA ids are
+stable for every entry v2.0 had. The derived training sets (`retrieval-pairs`,
+`retrieval-triples`, `qrels`) re-sample negatives over the larger pool, so their rows
+differ; and the store-wide quality passes run for vX retired ~3,000 senses of the v2.0
+entries (phantom part-of-speech blocks and near-duplicate senses), so those senses are
+now tombstoned rather than live. Treat vX as a new release, not a delta.
+
+"""
+
+
 def _whats_new(stats: Stats) -> str:
     """Return the "what's new in vX" section, with the honest scope note.
 
@@ -300,10 +394,11 @@ def _whats_new(stats: Stats) -> str:
 6. **Per-field provenance.** Which model wrote a field, how many tokens it took, what it
    cost — published as its own dataset.
 
-### Scope: fewer headwords, far more per headword
+{_changelog(stats)}### Scope: fewer headwords, far more per headword
 
-vX is **not** a superset of v1.3. It covers {_n(stats.lexemes)} lexemes — a
-frequency-ranked subset of v1.3's {_n(V13.LEXEMES)} — and spends the difference on depth.
+vX is **not** a superset of v1.3. It covers {_n(stats.lexemes)} of v1.3's {_n(V13.LEXEMES)}
+lexemes — every frequency-ranked single word, plus the compounds and names at Wikipedia
+frequency ≥ 10 — and spends the difference on depth.
 If you need breadth of vocabulary, use
 [v1.3]({V13.URL}); if you need graded renditions, resolved
 relations, spans, or retrieval supervision, use vX.
