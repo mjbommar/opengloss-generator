@@ -118,7 +118,7 @@ class ConfigSpec:
 
 @dataclass(frozen=True, slots=True)
 class RepoSpec:
-    """One dataset repo in the v2.0 family.
+    """One dataset repo in the vX family.
 
     Attributes:
         slug: The short name used by ``--repos`` and as the local output directory's
@@ -419,7 +419,7 @@ _LEXICON = RepoSpec(
     summary="One row per lexeme: kind, morphology, etymology, encyclopedia, contrasts, "
     "sense ids, provenance summary.",
     blurb=(
-        "The entry-level view of OpenGloss v2.0: one row per lexeme, with everything "
+        "The entry-level view of OpenGloss vX: one row per lexeme, with everything "
         "that belongs to the *entry* rather than to one of its meanings — the `kind` "
         "discriminator, per-POS morphology, structured etymology, the lexical "
         "explanation, the encyclopedia article at every reading level it was written "
@@ -448,7 +448,7 @@ print(grade5.head())""",
                     "lexeme_id", _STR, "Entry id: `slugify(headword)`. The family's join key."
                 ),
                 FieldSpec("headword", _STR, "The entry's surface headword."),
-                FieldSpec("language", _STR, "BCP-47-ish language tag; `en` throughout v2.0."),
+                FieldSpec("language", _STR, "BCP-47-ish language tag; `en` throughout vX."),
                 FieldSpec(
                     "kind",
                     _STR,
@@ -518,7 +518,7 @@ _SENSES = RepoSpec(
     summary="One row per live sense: canonical gloss, 8 gloss renditions, examples, "
     "resolved relations, synthetic queries, grounded QA pairs.",
     blurb=(
-        "The sense-level view of OpenGloss v2.0 and the repo most consumers want: one "
+        "The sense-level view of OpenGloss vX and the repo most consumers want: one "
         "row per **live** sense, with its canonical gloss, its eight reading-level and "
         "register renditions, its sense-tagged example sentences with headword character "
         "spans, its typed relations resolved to *sense* ids rather than bare strings, its "
@@ -612,7 +612,7 @@ _DEFINITIONS = RepoSpec(
     blurb=(
         "The flat definition view: one row for every stored rendition of every live "
         "sense's definition, the canonical `(neutral, plain)` gloss included. This is the "
-        "reading-level and register grading of OpenGloss v2.0 laid out one row at a time, "
+        "reading-level and register grading of OpenGloss vX laid out one row at a time, "
         "which is the shape most training and analysis code wants. Join back to "
         "`opengloss-vX-senses` on `sense_id`."
     ),
@@ -671,7 +671,7 @@ _EXAMPLES = RepoSpec(
     summary="One row per example sentence with the headword's character span, its reading "
     "level and register.",
     blurb=(
-        "Every example sentence in OpenGloss v2.0, one row at a time, each tagged to the "
+        "Every example sentence in OpenGloss vX, one row at a time, each tagged to the "
         "*sense* it illustrates and carrying the `[span_start, span_end)` character "
         "offsets of the headword occurrence inside it. That combination — a sentence, the "
         "sense it uses, and where the word is — is what a word-in-context or "
@@ -735,7 +735,7 @@ _ENCYCLOPEDIA = RepoSpec(
     summary="One row per encyclopedia article rendition, plus an `explanation` config "
     'for the "why this word" prose.',
     blurb=(
-        "The long-form entry-level prose of OpenGloss v2.0, one row per rendition. The "
+        "The long-form entry-level prose of OpenGloss vX, one row per rendition. The "
         "`encyclopedia` config holds the 300–500-word article about each headword, "
         "written at up to five reading levels; the `explanation` config holds the shorter "
         '"why this word" lexical explanation. Both are **entry-level**: they are about '
@@ -771,7 +771,7 @@ _ETYMOLOGY = RepoSpec(
     summary="One row per entry with an etymology: prose summary, ordered language trail, "
     "cognates, references.",
     blurb=(
-        "Structured word histories for OpenGloss v2.0: one row per entry that has an "
+        "Structured word histories for OpenGloss vX: one row per entry that has an "
         "etymology, with a prose summary and the ordered trail of source languages, each "
         "segment carrying its language, ISO 639-3 code where one applies, attested form, "
         "meaning and era, plus cognates and reference URLs. It is a separate repo rather "
@@ -874,7 +874,7 @@ _RELATIONS = RepoSpec(
     summary="One row per semantic edge, resolved to target sense ids; a `tombstoned` "
     "config recovers the edges the reconcile pass removed.",
     blurb=(
-        "The OpenGloss v2.0 semantic graph as an edge list. The `relations` config holds "
+        "The OpenGloss vX semantic graph as an edge list. The `relations` config holds "
         "every live typed edge — fourteen relation types — with the target resolved to a "
         "*sense* id wherever the target's entry exists in the release, which is what makes "
         "this a sense graph rather than a word graph. The `tombstoned` config recovers the "
@@ -1156,7 +1156,7 @@ _PROVENANCE = RepoSpec(
     summary="One row per recorded generation call: stage, model, tokens, cost, run id — "
     "the audit trail.",
     blurb=(
-        "The audit trail for OpenGloss v2.0: one row per recorded unit of work, saying "
+        "The audit trail for OpenGloss vX: one row per recorded unit of work, saying "
         "which stage ran, which model answered, how many prompt and completion tokens it "
         "used, how much of the prompt hit the provider's cache, and what it cost. Nothing "
         "in this release was written without a row here. It is what makes the cost claims "
