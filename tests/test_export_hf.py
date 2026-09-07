@@ -379,6 +379,30 @@ def test_the_contrast_row_carries_both_ends(tmp_path):
     assert row["verdict"] == "related_as_typed"
 
 
+def test_contrasts_with_retired_or_missing_sense_endpoints_are_not_exported(tmp_path):
+    entry = _rich_entry()
+    entry.contrasts.extend(
+        [
+            SchemaContrast(
+                edge_id=edge_id("ridge:noun:1", "synonym", "crest"),
+                target_sense_id="crest:noun:0",
+                text=Renditions[str](root=[canonical_rendition("Stale source.")]),
+                verdict=ContrastVerdict.RELATED_AS_TYPED,
+            ),
+            SchemaContrast(
+                edge_id=edge_id("ridge:noun:0", "synonym", "ghost"),
+                target_sense_id="ghost:noun:0",
+                text=Renditions[str](root=[canonical_rendition("Stale target.")]),
+                verdict=ContrastVerdict.RELATED_AS_TYPED,
+            ),
+        ]
+    )
+    result = _export(tmp_path, [entry, _target_entry()])
+    rows = _read(result, "contrasts")
+    assert [row["edge_id"] for row in rows] == ["ridge:noun:0-synonym->crest"]
+    assert result.stats.contrasts == 1
+
+
 def test_the_encyclopedia_and_explanation_configs_are_separate(tmp_path):
     result = _export(tmp_path, [_rich_entry()])
     encyclopedia = _read(result, "encyclopedia", "encyclopedia")

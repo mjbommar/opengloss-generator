@@ -624,12 +624,17 @@ class RowBuilder:
             row = pending.row
             target_sense = pending.target_sense_id
             target_lexeme = pending.target_lexeme_id
-            row["target_gloss"] = (
-                self._gloss_index.get(target_sense) if target_sense is not None else None
-            )
+            target_gloss = self._gloss_index.get(target_sense) if target_sense is not None else None
+            # Contrasts can outlive an endpoint when closing QA retires a sense.
+            # Only live senses belong in the release-wide training graph.
+            if row["source_gloss"] is None or target_gloss is None:
+                continue
+            row["target_gloss"] = target_gloss
             row["target_headword"] = (
                 self._headwords.get(target_lexeme) if target_lexeme is not None else None
             )
+            self.stats.contrasts += 1
+            self.stats.contrast_verdicts[str(row["verdict"])] += 1
             yield "contrasts", "default", row
         self._pending_contrasts.clear()
 
@@ -1120,13 +1125,10 @@ class RowBuilder:
 
     def _buffer_contrasts(self, entry: Lexeme, tier: str) -> None:
         """Buffer one row per contrast rendition, for :meth:`finish` to complete."""
-        stats = self.stats
         for contrast in entry.contrasts:
             source_sense_id, relation_type, target_lexeme_id = relation_type_of_edge(
                 contrast.edge_id
             )
-            stats.contrasts += 1
-            stats.contrast_verdicts[contrast.verdict.value] += 1
             for rendition in contrast.text:
                 self._pending_contrasts.append(
                     _PendingContrast(
