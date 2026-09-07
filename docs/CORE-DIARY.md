@@ -1718,3 +1718,19 @@ candidates → 5,501 verdicts; 666 fragment candidates → 286 verdicts; ≈ $1.
 store-wide (cap $4) with reconcile + graph-hygiene behind it. Known limits: keeps err
 ~14% towards keeping ("fungi"); "produce energy" / "machine based" style fragments
 have content words at both ends and are not caught.
+
+**~12:00 — WordNet importer merged (D-78) and the tier-5 chain launched.**
+`import-wordnet`: one entry per lemma, one POS entry per WordNet POS, one sense per
+synset in WordNet order (synset definition as canonical gloss, examples, 2.85
+relations per sense as unresolved targets), lexname → taxonomy leaf for 14 of 45
+lexnames, `migrate` provenance with `model="wordnet-3.0"` and the licence sentence on
+every inherited field (and, in the same branch, the v1.3/v2.0 migrations now write
+`migrate` records too — the inherited-provenance gap the paper review found).
+`LICENSES/WordNet.txt` added. Pilot on 300: $0.0166 through tag_domain, 0 hygiene
+changes, 0 cycles. Chain (`tier5_chain.sh`): import (free) → classify/hygiene/
+tag_domain/repair/spans → resolve → **section filling** (etymology, encyclopedia,
+lexical explanation for the 38,472 WordNet-sourced entries, which arrive with none;
+cap $200 — a cost class the $214 recipe-A estimate did not include; expected
+$150–230) → gloss/example/encyclopedia levels → hygiene block with 6-hour stage
+timeouts (gotcha #8) → reconcile → judge → audit. Caps sum $513; expected ≈ $400.
+Runs concurrently with the store-wide fold pass (both nano at first; per-entry locks).
