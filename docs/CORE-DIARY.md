@@ -1611,3 +1611,15 @@ scanned, **4,120 filled** (88%), 8,151 relations proposed and accepted, **$1.88*
 completed under its $6 cap. Fewer empty senses than feared: the phantom-POS
 retirements removed most of the senses whose only edges had been demoted. Resolve →
 validity → reconcile next.
+
+**Follow-up 1 — resolve $1.16 (15,863 calls); validity (23:41 → 00:37) stopped on its
+$14 cap** after 25,127 calls, 31,429 entries changed. **Design finding:** the validity
+marker is a digest of the sense's relation set, and `relation-reconcile` edits that set
+(tombstoning demoted edges, capping), so every entry reconcile touches looks
+"changed" to the next validity sweep and is re-judged — a store-wide validity pass
+after reconcile burns its cap on re-judges before reaching never-judged entries. Fix
+for now: the closing script gets a census of tier-4 entries with resolved edges and
+*no* validity marker, and a `--from-list` validity pass over exactly those (cap $12)
+before the reconcile/re-judge. Longer-term (open item): key the validity marker on the
+set of *typed* edges the judge actually saw, excluding `see_also`, so reconcile's
+tombstoning does not invalidate it. Tier-4 spend ≈ $290.
