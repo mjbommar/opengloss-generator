@@ -1643,3 +1643,13 @@ resident set is whole-store state the row builders keep for the cross-entry repo
 (`lexicon`, `qrels` alone), and a streaming/bounded-memory fix to the exporter before
 the v2.1 export is rerun. Chain gotcha #9: exports scale with the store, and the
 session must not share an OOM scope with a 90 GB job.
+
+**07:15 — v2.1 export relaunched, one repo per process.** Probe: `lexicon` alone
+exports in 2 min at 0.63 GB peak; `qrels` alone in 4 min at 3.7 GB. The 90 GB came
+from the single-process `all` path holding the three derived training sets at once.
+Per-repo export gives identical shards and complete cards (store-wide stats and the
+family table are computed per run), so the release runs as 16 sequential
+`--repos <name>` processes, each inside `systemd-run --scope -p MemoryMax=40G` so an
+OOM can only kill that repo's process. Cards fixed first: 8 prose literals still said
+"v2.0" after the `--release` change; they now use the release label. A streaming
+rewrite of the derived-set builders (D-77) is in progress separately.
