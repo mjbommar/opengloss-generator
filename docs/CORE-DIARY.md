@@ -1653,3 +1653,13 @@ family table are computed per run), so the release runs as 16 sequential
 OOM can only kill that repo's process. Cards fixed first: 8 prose literals still said
 "v2.0" after the `--release` change; they now use the release label. A streaming
 rewrite of the derived-set builders (D-77) is in progress separately.
+
+**07:45 — streaming exporter merged (D-77).** The 90 GB was not mainly the derived
+sets: it was `list(store.iter_entries())` — every parsed `Lexeme` at once (~295 kB
+each as Pydantic objects, 82 kB on disk), built by both the pairs and the pretrain
+exporters, plus two JSONL round-trips through the 16 GB tmpfs `/tmp`. Four generators
+now feed the shard writer directly with one shared corpus. Peak RSS on the full store:
+**90.5 GB → 2.18 GB** (12 min); byte-identical output on the sample and a 20K slice;
+21 equality tests. The per-repo export was stopped after 11 store-derived repos (their
+output is unaffected by the change) and resumed on the merged code for inflections,
+retrieval-pairs, retrieval-triples, qrels and pretrain; preflight and push follow.
