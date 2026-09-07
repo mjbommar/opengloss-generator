@@ -1690,3 +1690,11 @@ the schema delta (no column changes; `tier4` value; new `inflections` dataset; t
 new provenance note prefixes; derived training sets not row-compatible). Template in
 `hf_cards.py` (`V20`/`V21` constants, `_changelog`), live cards patched and re-uploaded.
 The Scope sentence no longer calls v2.1 "a frequency-ranked subset".
+
+**2026-09-07 ~10:30 — card constants reconciled (paper review A).** Three
+inconsistencies a reviewer found between the cards and the store: v1.3 lexeme count
+(205,983 → **205,988**, the v1.3 dictionary's row count); the reciprocity/empty-sense
+limitation bullet still carried the v2.0 audit (98.0% / 99.1% / 3,709) → closing audit
+**94.3% / 95.3% / 1,890**; the changelog's pretraining word count used a whitespace
+split (332,375,114) where the pretrain card uses the exporter's counter
+(**331,888,239**; v2.0 likewise 196,390,946). Template and all 16 live cards updated.
