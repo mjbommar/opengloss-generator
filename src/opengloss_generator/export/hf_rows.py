@@ -1028,6 +1028,7 @@ class RowBuilder:
         stats = self.stats
         for pos_entry in entry.pos_entries:
             morphology = pos_entry.morphology
+            seen: set[tuple[str, str]] = set()
             keys = {
                 "lexeme_id": entry.lexeme_id,
                 "headword": entry.headword,
@@ -1035,6 +1036,10 @@ class RowBuilder:
                 "tier": tier,
             }
             for form, relation in self._forms_of(entry.headword, morphology):
+                identity = form.lower(), relation
+                if identity in seen:
+                    continue
+                seen.add(identity)
                 stats.inflection_forms += 1
                 stats.inflection_relations[relation] += 1
                 yield (

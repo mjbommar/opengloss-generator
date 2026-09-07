@@ -513,6 +513,21 @@ def test_inflection_form_normalized_is_lower_cased(tmp_path):
     assert comparative["form_normalized"] == "more recorded"
 
 
+def test_inflection_rows_deduplicate_repeated_derivations_per_pos(tmp_path):
+    entry = _entry(
+        "heat energy",
+        [_sense(0, "Energy transferred because of a temperature difference.")],
+    )
+    entry.pos_entries[0].morphology.derivations = ["heating", "heating", "HEATING"]
+    result = _export(tmp_path, [entry])
+    rows = _read(result, "inflections")
+    assert [(row["form_normalized"], row["relation"]) for row in rows] == [
+        ("heat energy", "lemma"),
+        ("heating", "derivation"),
+    ]
+    assert result.stats.inflection_forms == 2
+
+
 def test_provenance_rows_carry_the_cost_and_a_truncated_note(tmp_path):
     entry = _rich_entry()
     entry.add_provenance(
