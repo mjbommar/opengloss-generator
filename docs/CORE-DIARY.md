@@ -1623,3 +1623,12 @@ for now: the closing script gets a census of tier-4 entries with resolved edges 
 before the reconcile/re-judge. Longer-term (open item): key the validity marker on the
 set of *typed* edges the judge actually saw, excluding `see_also`, so reconcile's
 tombstoning does not invalidate it. Tier-4 spend ≈ $290.
+
+**Follow-up 1 complete (`DONE-TIER4-FOLLOWUP1` 00:49, 2026-09-07).** Store-wide audit,
+109,633 lexemes: 0 hypernym cycles; synonym edges 312,320 (reciprocity 94.3%), antonym
+115,330 (95.3%) — lower than the tier-2 closing values because tier 4 adds a large,
+partly-judged graph and the regenerated edges are not yet reciprocated;
+`senses_zero_relations` 3,709 → **1,518** after regen; headword-initial 0.24%;
+`gloss_starts_with_headword` 154. Closing script started: example-fit remainder →
+repair → catch-up → phantom_pos (marker no-op) → targeted validity → reconcile →
+tier-4 re-judge → audit → v2.1 export → push.
