@@ -1698,3 +1698,23 @@ limitation bullet still carried the v2.0 audit (98.0% / 99.1% / 3,709) → closi
 **94.3% / 95.3% / 1,890**; the changelog's pretraining word count used a whitespace
 split (332,375,114) where the pretrain card uses the exporter's counter
 (**331,888,239**; v2.0 likewise 196,390,946). Template and all 16 live cards updated.
+
+## Goal 5 — tier 5 (WordNet gap) + inflection fold — 2026-09-07
+
+**10:21 — tier-5 v1.3-sourced subset migrated (free):** 5,177 staged, 5,126 migrated,
+51 slug-variant skips, 0 failures; store 114,759. The 38,472 WordNet-sourced rows
+wait for the importer (D-78, in progress).
+
+**~11:00 — `lexeme-hygiene` merged (D-79)** — the first pass that reads *other*
+entries, hence its own module: `inflection_fold` (a headword that is a plural / past /
+participle / comparative of another live lexeme is retired unless WordNet lists the
+form as a lemma with synsets of its own, or a nano verdict finds a distinct sense;
+never the lemma of other forms, never across POS) and `fragments` (multiword headwords
+opening/closing with an auxiliary, article or preposition; phrasal verbs, idioms and
+WordNet lemmas kept; verdict for the residue). Pilot on 600: 99 folds / 38 fragments
+retired, 20 of 20 folds read correct, all five must-keeps (glasses, arms, customs,
+goods, manners) kept, $0.00008 per candidate. Production dry-run: 13,047 fold
+candidates → 5,501 verdicts; 666 fragment candidates → 286 verdicts; ≈ $1.5. Launched
+store-wide (cap $4) with reconcile + graph-hygiene behind it. Known limits: keeps err
+~14% towards keeping ("fungi"); "produce energy" / "machine based" style fragments
+have content words at both ends and are not caught.
