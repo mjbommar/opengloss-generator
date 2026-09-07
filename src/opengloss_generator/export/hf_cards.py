@@ -257,13 +257,13 @@ def _front_matter(spec: RepoSpec, stats: Stats) -> str:
 
 
 def _whats_new(stats: Stats) -> str:
-    """Return the "what's new in v2.0" section, with the honest scope note.
+    """Return the "what's new in vX" section, with the honest scope note.
 
     Args:
         stats: The export's statistics.
     """
     scope = _table(
-        ("", "v1.3", "v2.0"),
+        ("", "v1.3", "vX"),
         [
             ("Lexemes", _n(V13.LEXEMES), _n(stats.lexemes)),
             ("Senses", _n(V13.SENSES), _n(stats.live_senses)),
@@ -277,7 +277,7 @@ def _whats_new(stats: Stats) -> str:
             ("Per-field provenance", "no", "model, tokens and cost per call"),
         ],
     )
-    return f"""## What's new in v2.0 vs v1.3
+    return f"""## What's new in vX vs v1.3
 
 1. **Schema v3.** Every lexeme carries a `kind` discriminator (simplex, compound, phrasal
    verb, idiom, proper noun, abbreviation, affix, function word); every sense carries a
@@ -294,7 +294,7 @@ def _whats_new(stats: Stats) -> str:
    graph-derived hard negatives, and graded TREC qrels — all derivable from, and
    consistent with, the same entries.
 5. **Derivable identifiers everywhere.** v1.3 published a positional id for lexemes and
-   senses (`3d_model_noun_0`) and nothing below that. v2.0 gives every rendition, edge,
+   senses (`3d_model_noun_0`) and nothing below that. vX gives every rendition, edge,
    query, QA pair and provenance record an id computable from the row alone, and never
    renumbers: a retired sense is tombstoned, so the ids after it keep their meaning.
 6. **Per-field provenance.** Which model wrote a field, how many tokens it took, what it
@@ -302,11 +302,11 @@ def _whats_new(stats: Stats) -> str:
 
 ### Scope: fewer headwords, far more per headword
 
-v2.0 is **not** a superset of v1.3. It covers {_n(stats.lexemes)} lexemes — a
+vX is **not** a superset of v1.3. It covers {_n(stats.lexemes)} lexemes — a
 frequency-ranked subset of v1.3's {_n(V13.LEXEMES)} — and spends the difference on depth.
 If you need breadth of vocabulary, use
 [v1.3]({V13.URL}); if you need graded renditions, resolved
-relations, spans, or retrieval supervision, use v2.0.
+relations, spans, or retrieval supervision, use vX.
 
 {scope}
 """
@@ -971,7 +971,7 @@ def render_card(
             cross-links in the family table and the loading snippets.
         release: The release label this export was built for (D-75). Every repo id, in
             the front matter, the family table and the loading snippets, is named for
-            this rather than a literal, so ``--release v2.0`` reproduces the older
+            this rather than a literal, so ``--release vX`` reproduces the older
             release's naming exactly.
 
     Returns:
@@ -1036,6 +1036,7 @@ Everything below is built from the same store and joins on `lexeme_id` / `sense_
 {_citation()}"""
     # Every repo's blurb and code sample cross-references a sibling by name using the
     # placeholder release (PLACEHOLDER_RELEASE) rather than a literal, so this one
-    # substitution is what makes ``--release v2.0`` reproduce the old repo names
+    # substitution is what makes ``--release vX`` reproduce the old repo names
     # everywhere they are mentioned in prose or in a code sample (D-75).
-    return card.replace(f"opengloss-{PLACEHOLDER_RELEASE}-", f"opengloss-{release}-")
+    card = card.replace(f"opengloss-{PLACEHOLDER_RELEASE}-", f"opengloss-{release}-")
+    return card.replace(PLACEHOLDER_RELEASE, release)
