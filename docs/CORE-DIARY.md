@@ -1743,3 +1743,13 @@ tombstoned, 51,706 relations demoted. `fragments` 662 candidates → **172 retir
 (leading determiner 72, preposition 39, article/auxiliary 28, trailing 33), 236 kept.
 Net: 4,549 headwords retired as tombstones, all resolvable through `inflections`.
 Reconcile + graph-hygiene running behind it.
+
+**~12:30 — v2.2 exporter prep merged (D-80):** `tier5` with a `source` column
+(`opengloss-v1.3` | `wordnet-3.0`, from the `migrate` provenance record); fully-
+retired lexemes no longer count as lexemes or produce sense rows but keep a `lexicon`
+row with `retired` / `retired_reason` and their `inflections` rows; a "Sources and
+licences" section with the WordNet notice and citations on every card; a second
+changelog ("What changed since v2.1"); `V22` placeholders (pretraining docs/words/
+tokens, judge) that make a v2.2 render fail until filled at release time. Store census
+before tier 5's hygiene: 152,859 entry files, **148,292 live lexemes**, 4,567 fully
+retired (fold 4,377 + fragments 172 + 18 other), 290,220 live senses.
