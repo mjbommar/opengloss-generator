@@ -14,6 +14,9 @@ import pytest
 from pydantic import ValidationError
 
 from opengloss_generator.migrate import (
+    MIGRATE_PROVENANCE_FIELDS,
+    V2_MODEL,
+    V13_MODEL,
     classify_kind_deterministic,
     detect_version,
     from_v2,
@@ -29,6 +32,7 @@ from opengloss_generator.schema import (
     ReadingLevel,
     Register,
     RelationType,
+    StageName,
 )
 from opengloss_generator.taxonomy import DomainTag
 
@@ -397,11 +401,47 @@ def test_from_v2_folds_variants_into_the_gloss_rendition_set():
 
 def test_from_v2_moves_provenance_into_the_keyed_table():
     entry = from_v2(V2_ABSEIL)
-    assert sorted(entry.provenance) == ["p1", "p2"]
+    # The payload's own two records keep p1/p2, ahead of the `migrate` records D-78 adds.
+    assert [record.stage for record in entry.provenance_in_order()][:2] == [
+        StageName.SENSES,
+        StageName.RENDITIONS,
+    ]
     grade_1 = entry.pos_entries[0].senses[0].gloss.get(ReadingLevel.GRADE_1, Register.PLAIN)
     assert grade_1 is not None
     assert grade_1.provenance_id == "p2"
     assert entry.provenance["p2"].model == "gpt-5.6-luna"
+
+
+def test_migration_records_where_each_inherited_field_came_from():
+    """D-78: an inherited definition used to look exactly like a generated one."""
+    entry = from_v13(V13_ALLUDING)
+    records = [r for r in entry.provenance_in_order() if r.stage is StageName.MIGRATE]
+    assert [r.note for r in records] == [
+        f"{field}: inherited from {V13_MODEL}" for field in MIGRATE_PROVENANCE_FIELDS
+    ]
+    assert all(r.model == V13_MODEL and r.cost_usd == 0.0 and r.attempts == 0 for r in records)
+    by_field = {r.note.split(":", 1)[0]: key for key, r in entry.provenance.items()}
+    sense = entry.pos_entries[0].senses[0]
+    assert {r.provenance_id for r in sense.gloss} == {by_field["gloss"]}
+    assert {r.provenance_id for r in sense.examples} == {by_field["examples"]}
+    assert {r.provenance_id for r in sense.relations} == {by_field["relations"]}
+
+
+def test_migration_never_overwrites_provenance_the_source_supplied():
+    """A v2 variant that names the model which wrote it keeps that, not "migrated"."""
+    entry = from_v2(V2_ABSEIL)
+    grade_1 = entry.pos_entries[0].senses[0].gloss.get(ReadingLevel.GRADE_1, Register.PLAIN)
+    assert grade_1 is not None
+    assert entry.provenance[grade_1.provenance_id].model == "gpt-5.6-luna"
+    canonical = entry.pos_entries[0].senses[0].gloss.canonical()
+    assert canonical is not None
+    assert entry.provenance[canonical.provenance_id].model == V2_MODEL
+
+
+def test_migration_writes_no_classify_kind_marker():
+    """So the `classify_kind` retrofit still revisits every migrated entry."""
+    entry = from_v13(V13_ALLUDING)
+    assert not [r for r in entry.provenance.values() if r.stage is StageName.CLASSIFY_KIND]
 
 
 def test_from_v2_flattens_the_six_relation_lists_in_order():

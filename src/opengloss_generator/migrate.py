@@ -16,6 +16,9 @@ Both directions share three rules:
 3. **Nothing is invented.** A legacy free-text domain that is not in the taxonomy's
    legacy map lands in ``domain_hint`` for the ``tag_domain`` stage to resolve, rather
    than being guessed at.
+4. **Every inherited field says where it came from.** One zero-cost ``migrate``
+   provenance record per field, naming the source schema (D-78); content that arrived
+   with provenance of its own keeps it.
 """
 
 from __future__ import annotations
@@ -55,6 +58,9 @@ from opengloss_generator.taxonomy import ROOTS, DomainTag, legacy_domain
 
 __all__ = [
     "FUNCTION_WORDS",
+    "MIGRATE_PROVENANCE_FIELDS",
+    "V2_MODEL",
+    "V13_MODEL",
     "SchemaVersion",
     "classify_kind_deterministic",
     "detect_version",
@@ -132,6 +138,94 @@ _V13_FREQUENCY_CORPUS = "wikimedia/wikipedia:20231101.en"
 
 #: v2 stage names that v3 renamed. Provenance is history, so it must keep validating.
 _LEGACY_STAGES: dict[str, str] = {"variants": StageName.RENDITIONS.value}
+
+#: ``Provenance.model`` naming the schema a migrated field was inherited from. A migrated
+#: entry used to carry provenance for the *variants* the v2 payload happened to record and
+#: for nothing else, so the fields that make up almost all of an entry — its definitions,
+#: its examples, its graph — read as though this package had written them (D-78).
+V13_MODEL = "opengloss-v1.3"
+V2_MODEL = "opengloss-v2.0"
+
+#: ``Provenance.prompt_version`` on a record that answers for no prompt: a migration reads
+#: a document rather than calling a model.
+MIGRATE_PROMPT_VERSION = "migrate-1"
+
+#: The inherited fields that get a ``migrate`` provenance record, in the order the records
+#: are added. A field the source did not carry gets no record. The first five are the same
+#: five ``wordnet.PROVENANCE_FIELDS`` uses, so the three importers describe themselves the
+#: same way; the last three are sections WordNet has no counterpart for.
+MIGRATE_PROVENANCE_FIELDS: tuple[str, ...] = (
+    "gloss",
+    "examples",
+    "relations",
+    "morphology",
+    "domain",
+    "etymology",
+    "encyclopedia",
+    "lexical_explanation",
+)
+
+
+def _source_note(model: str, field: str) -> str:
+    """Return the note that names which inherited field a ``migrate`` record answers for."""
+    return f"{field}: inherited from {model}"
+
+
+def _stamp_source(entry: Lexeme, model: str) -> None:
+    """Add one ``migrate`` provenance record per inherited field, and point content at it.
+
+    Only content that has no provenance of its own is stamped: a v2 rendition that arrived
+    with its own record keeps it, because that record names the model that actually wrote
+    the text and is strictly better information than "this was migrated" (D-78).
+
+    Args:
+        entry: The freshly built entry, mutated in place.
+        model: :data:`V13_MODEL` or :data:`V2_MODEL`.
+    """
+    senses = [sense for _, sense, _ in entry.iter_senses()]
+    present = {
+        "gloss": bool(senses),
+        "examples": any(len(sense.examples) for sense in senses),
+        "relations": any(sense.relations for sense in senses),
+        "morphology": any(
+            pos.morphology.model_dump(exclude_defaults=True) for pos in entry.pos_entries
+        ),
+        "domain": any(
+            sense.domain is not None or sense.secondary_domains or sense.domain_hint
+            for sense in senses
+        ),
+        "etymology": entry.etymology is not None,
+        "encyclopedia": bool(len(entry.encyclopedia)),
+        "lexical_explanation": bool(len(entry.lexical_explanation)),
+    }
+    ids = {
+        field: entry.add_provenance(
+            Provenance(
+                stage=StageName.MIGRATE,
+                model=model,
+                prompt_version=MIGRATE_PROMPT_VERSION,
+                cost_usd=0.0,
+                attempts=0,
+                note=_source_note(model, field),
+            )
+        )
+        for field in MIGRATE_PROVENANCE_FIELDS
+        if present[field]
+    }
+    for sense in senses:
+        _fill_provenance(sense.gloss, ids.get("gloss"))
+        _fill_provenance(sense.examples, ids.get("examples"))
+        for relation in sense.relations:
+            relation.provenance_id = relation.provenance_id or ids.get("relations")
+    _fill_provenance(entry.encyclopedia, ids.get("encyclopedia"))
+    _fill_provenance(entry.lexical_explanation, ids.get("lexical_explanation"))
+
+
+def _fill_provenance[T](renditions: Renditions[T], provenance_id: str | None) -> None:
+    """Set ``provenance_id`` on every rendition of a set that does not already have one."""
+    for rendition in renditions:
+        if rendition.provenance_id is None:
+            rendition.provenance_id = provenance_id
 
 
 def detect_version(payload: dict[str, Any]) -> SchemaVersion:
@@ -576,6 +670,7 @@ def from_v2(payload: dict[str, Any]) -> Lexeme:
     explanation = payload.get("lexical_explanation")
     if isinstance(explanation, str) and explanation.strip():
         entry.lexical_explanation.add(canonical_rendition(explanation))
+    _stamp_source(entry, V2_MODEL)
     return Lexeme.model_validate(entry.model_dump(mode="json"))
 
 
@@ -717,6 +812,7 @@ def from_v13(payload: dict[str, Any]) -> Lexeme:
     explanation = payload.get("lexical_explanation")
     if isinstance(explanation, str) and explanation.strip():
         entry.lexical_explanation.add(canonical_rendition(explanation))
+    _stamp_source(entry, V13_MODEL)
     return Lexeme.model_validate(entry.model_dump(mode="json"))
 
 

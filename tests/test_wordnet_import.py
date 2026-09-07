@@ -22,6 +22,7 @@ from opengloss_generator import cli
 from opengloss_generator.config import StoreConfig
 from opengloss_generator.errors import WordNetUnavailableError
 from opengloss_generator.identity import sense_id
+from opengloss_generator.migrate import V2_MODEL, V13_MODEL
 from opengloss_generator.runner import RunSession
 from opengloss_generator.schema import (
     EntryStatus,
@@ -567,6 +568,13 @@ def test_content_points_at_its_provenance_record(corpus):
         assert {r.provenance_id for r in sense.gloss} == {by_field["gloss"]}
         assert {r.provenance_id for r in sense.examples} <= {by_field["examples"]}
         assert {r.provenance_id for r in sense.relations} <= {by_field["relations"]}
+
+
+def test_wordnet_records_are_distinguishable_from_the_two_migrations(corpus):
+    """All three importers use stage `migrate`; `model` is what tells them apart (D-78)."""
+    models = {record.model for record in entry_for("dog", corpus=corpus).provenance.values()}
+    assert models == {WORDNET_MODEL}
+    assert WORDNET_MODEL not in {V13_MODEL, V2_MODEL}
 
 
 def test_no_record_is_written_for_a_field_wordnet_did_not_supply(corpus):
