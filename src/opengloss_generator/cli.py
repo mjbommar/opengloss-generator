@@ -83,6 +83,11 @@ from opengloss_generator.workflows.example_hygiene import run_example_hygiene
 from opengloss_generator.workflows.examples import plan_examples, run_examples
 from opengloss_generator.workflows.generate import EntrySpec, generate_entry
 from opengloss_generator.workflows.graph_hygiene import run_graph_hygiene
+from opengloss_generator.workflows.lexeme_hygiene import (
+    LexemeHygieneStep,
+    plan_lexeme_hygiene,
+    run_lexeme_hygiene,
+)
 from opengloss_generator.workflows.qa import QAOutcome, run_qa, stratified_sample
 from opengloss_generator.workflows.qa_pairs import QACallRecord, plan_qa_pairs, run_qa_pairs
 from opengloss_generator.workflows.queries import DEFAULT_PER_SENSE as QUERIES_DEFAULT_PER_SENSE
@@ -275,6 +280,14 @@ _DRY_RUN_CONTRASTS_OUTPUT_TOKEN_ESTIMATE = 200
 #: rate measured **0.0%** — this pass brings its own instructions rather than the sense
 #: stage's, and at ~600 tokens they sit under the provider's 1,024-token cache floor, so
 #: every call is priced uncached here, unlike every other stage's dry-run estimate above.
+#: Token estimates for one ``lexeme-hygiene`` call, measured off D-79's pilot rather than
+#: guessed: 197 ``inflection_fold`` calls billed 1,540 input and 209 output tokens each on
+#: average, against instructions that are a little over 1,100 tokens on their own. Both steps
+#: share the estimate — the two prompt bodies are within a few dozen tokens of each other, and
+#: a dry run is a plan rather than an invoice.
+_DRY_RUN_LEXEME_HYGIENE_INPUT_TOKEN_ESTIMATE = 1540
+_DRY_RUN_LEXEME_HYGIENE_OUTPUT_TOKEN_ESTIMATE = 209
+
 _DRY_RUN_RELATION_REGEN_INPUT_TOKEN_ESTIMATE = 1124
 _DRY_RUN_RELATION_REGEN_OUTPUT_TOKEN_ESTIMATE = 502
 #: Token estimates for one ``relation-reconcile --only retype`` call, measured off D-73's
@@ -1567,6 +1580,109 @@ def relation_regen(
                 lexeme_ids=lexeme_ids,
                 workers=cfg.concurrency.workers,
                 stop_event=session.stop_event,
+            )
+            if outcome.stopped_reason is not None:
+                session.stop_reason = outcome.stopped_reason
+            return session.summary(**outcome.as_dict()).as_dict()
+
+    _echo_summary(_run(_main()))
+
+
+def _lexeme_hygiene_dry_run_estimate(
+    store: LexemeStore,
+    words: Sequence[str],
+    cfg: AppConfig,
+    steps: set[str] | None,
+) -> dict[str, object]:
+    """Price the plan ``lexeme-hygiene`` would follow, without making a call.
+
+    Every free filter runs for real — the cross-entry inflection index, the four fold guards,
+    the kind exemption and both WordNet checks — so the priced number is the calls the sweep
+    would actually buy rather than the candidates it would find, which for this pass differ by
+    more than half.
+
+    Args:
+        store: The store to read entries from. Never written.
+        words: The ids the sweep would visit.
+        cfg: The run configuration, for the reused ``HYGIENE`` policy.
+        steps: The step names selected by ``--only``, or ``None`` for both.
+
+    Returns:
+        Extra summary fields describing the plan and its estimated cost.
+    """
+    plan = plan_lexeme_hygiene(store, words, only=steps)
+    policy = cfg.policy(StageName.HYGIENE)
+    per_call = estimate_cost(
+        policy.model,
+        input_tokens=_DRY_RUN_LEXEME_HYGIENE_INPUT_TOKEN_ESTIMATE,
+        output_tokens=_DRY_RUN_LEXEME_HYGIENE_OUTPUT_TOKEN_ESTIMATE,
+        tier=policy.service_tier,
+    )
+    calls = int(plan["estimated_calls"])  # ty: ignore[invalid-argument-type]
+    return {
+        **plan,
+        "estimated_cost_usd": round(per_call.total_usd * calls, 6),
+        "note": "estimate only; --dry-run makes no model calls",
+    }
+
+
+@app.command("lexeme-hygiene")
+def lexeme_hygiene(
+    only: Annotated[
+        str | None,
+        typer.Option("--only", help="Comma list of steps (inflection_fold, fragments)."),
+    ] = None,
+    from_list: Annotated[
+        Path | None,
+        typer.Option(
+            "--from-list",
+            help="Restrict the sweep to the headwords in this list (default: whole store).",
+        ),
+    ] = None,
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+    budget: _BudgetOpt = None,
+    concurrency: _ConcurrencyOpt = None,
+    dry_run: _DryRunOpt = False,
+) -> None:
+    """Tombstone entries that are inflections of other entries, and sentence fragments (D-79).
+
+    ``inflection_fold`` retires an entry whose headword the store already records as a plural,
+    past tense, participle or comparative of another live lexeme — 13,139 of the v2.1 release's
+    109,633 headwords are one — so that "databases" resolves to "database" through the
+    ``inflections`` dataset instead of holding an entry of its own. It never folds an entry
+    that is itself the lemma of another, never across a part of speech the lemma does not
+    record the form under, and never onto a missing or retired lemma. ``fragments`` retires a
+    multi-word headword bounded by a function word ("some sugar", "is not"), skipping phrasal
+    verbs and idioms whole. Both keep for free whatever WordNet holds as a lemma of its own
+    ("glasses", "arms", "of course") and buy one nano verdict for the rest; both tombstone
+    every sense (never delete, never renumber) and demote its relations to ``see_also``. WordNet
+    is optional: without ``nltk`` the checks are skipped, counted, and reported. Idempotent per
+    entry (D-47); ``--dry-run`` runs every free filter and prices the calls it would have made.
+    """
+    cfg = _build_config(config_path, store, budget, concurrency, dry_run)
+    steps = {s.strip() for s in only.split(",") if s.strip()} if only else None
+    unknown = sorted((steps or set()) - set(LexemeHygieneStep.ALL))
+    if unknown:
+        raise typer.BadParameter(f"unknown step(s): {', '.join(unknown)}", param_hint="--only")
+    lexeme_ids = (
+        [slugify(word) for word in _read_word_list(from_list)] if from_list is not None else None
+    )
+
+    async def _main() -> dict[str, object]:
+        async with RunSession(cfg, install_signal_handler=True) as session:
+            words = lexeme_ids if lexeme_ids is not None else sorted(session.store.iter_ids())
+            if cfg.dry_run:
+                session.stop_reason = "dry_run"
+                extra = _lexeme_hygiene_dry_run_estimate(session.store, words, cfg, steps)
+                return session.summary(**extra).as_dict()
+            outcome = await run_lexeme_hygiene(
+                session.store,
+                session.stages,
+                workers=cfg.concurrency.workers,
+                stop_event=session.stop_event,
+                only=steps,
+                lexeme_ids=lexeme_ids,
             )
             if outcome.stopped_reason is not None:
                 session.stop_reason = outcome.stopped_reason

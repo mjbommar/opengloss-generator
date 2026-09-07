@@ -5432,3 +5432,191 @@ byte for byte with what the materialising path writes). 1,253 pass, 1 deselected
 `uv run ruff check`/`format --check`, `uv run ty check src`, `uv run pytest` clean on
 `release/hf-bounded-memory`. `data/core-store` was read only — the slice is a copy and the
 measurement export was written to a scratch directory outside the repo.
+
+## D-79 (2026-09-07) — `lexeme-hygiene`: a pass for entries that are not lexemes
+
+**Context.** The v2.1 release's own headword list has two defects that no pass in the project
+could see, both measured against NLTK's WordNet 3.0 in
+`opengloss-paper/docs/v2.0/review/F-wordnet-diff.md` (2026-09-07):
+
+| defect | count | examples |
+|---|---|---|
+| headword is a plural / past tense / participle / comparative of another lexeme in the same store | **13,139** of 109,633 | databases, lunches, capillaries, staged, weirdest, monopolists, hand signals |
+| multiword headword begins or ends with a function or auxiliary word | 306 | is not, some sugar, produce energy, machine based, on top of |
+
+The first is a v1.3 inheritance with a precise scope. D-75's inflection fold was applied when
+the tier-3 and tier-4 *word lists* were selected, so those two tiers are clean; the core and
+tier 2 were seeded from OpenGloss v1.3, which stored surface strings rather than lemmas, and no
+fold was ever run over them. Nothing is actually lost by folding them: D-75 also built the
+`inflections` repo from each `POSEntry.morphology`, so "databases" is already a `plural` row
+pointing at *database* and a reader who looks the string up still reaches the entry.
+
+**Decision, part 1: a new pass, not two more `sense_hygiene` steps.** `sense_hygiene`'s module
+docstring states its own contract — "No step reads any *other* entry at all: all three
+questions are answered entirely from within one entry" — and `inflection_fold` is the project's
+first question that *cannot* be answered that way: whether "databases" deserves an entry is a
+fact about *database*'s morphology. Adding it there would make that sentence false for every
+later reader of the module. So `workflows/lexeme_hygiene.py` is its own pass, and the thing
+that distinguishes it is stated positively: both of its steps ask whether the **headword**
+should have an entry at all, where every other hygiene pass asks what is wrong *inside* one.
+Both end where `phantom_pos` ends — senses tombstoned (`Sense.retired`), never deleted, never
+renumbered (D-1); relations demoted to `see_also` rather than dropped; the reason on the
+entry's provenance table (`retired sense <sid>: inflection_fold: <lemma_id>`, `retired sense
+<sid>: fragment: <reason>`), sharing `sense_hygiene.RETIRED_SENSE_NOTE`'s opening so one grep
+finds every retirement the project makes. Neither step has `phantom_pos`'s
+last-live-part-of-speech guard, and that is the point rather than an omission: `phantom_pos`
+removes one part of speech from a lexeme that still exists, while these two conclude the
+headword should not have had an entry, and leaving one sense alive to keep it non-empty would
+leave exactly the defect the step was run to remove.
+
+**Decision, part 2: WordNet is an optional signal, and `None` is not `False`.** Every free
+filter this project has is computed from the store; this is the first computed from an outside
+lexicon, so it is the first that can be *absent*. `wordnet.py` therefore answers `None` for "I
+could not look this up", `availability()` says which of the two it is once per run, and the
+pass counts `wordnet_unavailable` and reports it in its summary rather than quietly turning a
+missing corpus into a fold. `nltk` is an optional extra (`opengloss-generator[wordnet]`) and
+the corpus a further download.
+
+The lookup that matters is narrower than it looks. NLTK's `wn.synsets()` runs `morphy`
+internally, so `wn.synsets("databases")` is **not** empty — it returns *database*'s synset, and
+asking that question would keep every plural in the store. `wordnet.lemma_synsets` filters
+`wn.synsets()` down to the synsets that name the form among their **own** lemmas, and
+`distinct_from_lemma` then subtracts the base word's: "arms" is a lemma of `weaponry.n.01` and
+`coat_of_arms.n.01` and "arm" is a lemma of neither, so it is kept for free; "customs" is a
+lemma only of synsets "custom" is also a lemma of, so WordNet offers nothing and the verdict is
+bought. WordNet's multiword coverage is partial in the same asymmetric way — "of course",
+"out of stock", "by chance" and "inside out" are lemmas; "on top of", "in front of" and "as
+well as" are not — which is why a `False` from this check keeps nothing and retires nothing on
+its own.
+
+**Decision, part 3: four free guards, each counted separately, before anything is bought.**
+Each is a distinct way the fold could destroy something (D-8, free filters first):
+
+* `skipped_is_lemma` — the candidate is itself the lemma of another live entry. "copies" is the
+  plural of *copy* and the entry that records "copied"; folding the middle of a chain would
+  leave the far end resolving to a tombstone. This is much the largest of the four — 106 of the
+  pilot's 168 free skips — and the four together refuse **7,194 of the 13,047 production
+  candidates**, which is why the pass buys 5,501 calls rather than 13,047.
+* `skipped_pos_mismatch` — some live part of speech of the candidate is not one the form is
+  recorded under. A noun plural folds onto a noun lemma; a candidate that is *also* a verb is
+  not wholly accounted for by the noun lemma's morphology.
+* `skipped_lemma_absent` — the lemma is gone or has no live sense. There is nothing to fold onto.
+* `skipped_form_missing` — the lemma's morphology does not carry the form after all. True by
+  construction (the index was built from that morphology), so it is the assertion that the
+  store did not change under the sweep, and it is counted rather than raised: the tombstoned
+  string only stays resolvable because the `inflections` dataset is built from that field, so a
+  fold whose lemma does not carry the form would delete the string from the release rather than
+  redirect it.
+
+Derivations are excluded from the index entirely: `INFLECTION_RELATIONS` is `hf_rows`'
+`relation` tuple minus `lemma` and `derivation`, because "validly" and "shoelace" are different
+words and folding one would be the worst error this pass could make. `fragments`' equivalent
+free keeps are the kind exemption (a phrasal verb ends in a preposition because that is what a
+phrasal verb is; an idiom is a unit whatever its tokens look like — **256 of 666** production
+candidates) and WordNet-as-lemma (**124**). The gate finds **666** production candidates
+against the paper's 306: the review's count and this one are different rules over the same
+store — this one names its function-word classes explicitly (`LEADING_FUNCTION_WORDS`,
+`TRAILING_FUNCTION_WORDS`) and the reason recorded on each retirement says which class matched.
+It also does not catch two of the review's five examples: "produce energy" and "machine based"
+begin and end with content words, and no first-and-last-token rule reaches them. They are left
+for a later step rather than papered over by widening the classes until they happen to fall in.
+
+**Decision, part 4: `--dry-run` runs every free filter for real.** `plan_lexeme_hygiene` builds
+the index, applies the four guards, the kind exemption, both WordNet checks and D-47's marker,
+so the number it prices is the calls the sweep would *buy*, not the candidates it would find —
+which for this pass differ by more than half. Measured over the production store, read-only:
+**13,047 fold candidates → 7,194 free skips → 352 WordNet keeps → 5,501 calls**, and **666
+fragment candidates → 256 kind skips → 124 WordNet keeps → 286 calls**; 5,787 calls, priced at
+$1.65 by the estimate and ≈ $1.16 at the pilot's measured per-call rate.
+
+**Idempotence (D-47).** `inflection_fold` keys its sentinel on the form's live canonical gloss
+digests **plus the lemma id** — the question is what these definitions say and which lemma they
+were compared against, so a rewritten gloss or a re-pointed candidate earns a fresh verdict and
+nothing else does. `fragments` keys on the gloss digests plus the matched reason. As in
+`relation_hygiene` and `sense_hygiene` the digest is over the set *as the answer leaves it*, so
+a folded entry — which has no live gloss at all — is never billed again at any price, and a kept
+one is free on every later sweep.
+
+**Locking (D-31).** The candidate is read, decided and written under its own lock. The **lemma**
+is read without one, which is this pass's one deliberate departure and is stated in the module
+docstring: the lemma is never mutated, only read for liveness, morphology and glosses, and
+taking two entry locks at once is how a pass whose two entries can each be the other's lemma
+deadlocks. A stale lemma read can therefore cost a verdict, where `sense_hygiene`'s equivalent
+(`_signalled_first`) could only cost an ordering.
+
+**Pilot** — `data/sample-fold` (gitignored), built by `scripts/build_sample_fold.py` from a
+read-only copy of `data/core-store`: 600 visited entries (300 headwords that appear as a
+non-`lemma` inflection row of another lexeme, 150 fragment candidates, 150 plain controls) plus
+629 *supporting* entries, which is what this pass needed and `build_sample_phantom.py` did not
+— a candidate whose lemma is not in the sample store measures nothing, and neither does one
+whose own inflections are missing, so both are copied in and neither is visited. `--budget 1.00`,
+`gpt-5.4-nano` on the `HYGIENE` policy, 2026-09-07:
+
+| | `inflection_fold` | `fragments` |
+|---|---|---|
+| candidates | 302 | 150 |
+| free guards / kind skips | 168 (106 is-lemma, 62 POS mismatch) | 52 |
+| WordNet keeps (free) | 10 | 38 |
+| verdict keeps | 25 | 22 |
+| **retired** | **99** | **38** |
+| senses tombstoned | 175 | 70 |
+| relations demoted | 1,135 | 457 |
+| calls | 124 | 60 |
+| cost | $0.024867 | $0.008827 |
+| **cost per candidate** | **$0.000082** | **$0.000059** |
+
+$0.0337 for the whole sweep, 137 entries changed. `retired_by_reason` for the fold: 94 plural,
+2 superlative, 1 comparative, 1 past tense, 1 third-person singular — the defect is
+overwhelmingly a plural one, as the paper's examples suggested. For `fragments`: 14 leading
+determiner, 6 leading auxiliary, 5 leading article, 5 leading preposition, 4 trailing
+auxiliary, 4 trailing preposition.
+
+**The 30-decision read, and the false-fold risk.** The failure to avoid is folding a plural
+that carries a meaning its singular does not. All five of the words that shape are forced into
+the sample and **all five survived**: "glasses" and "manners" free on WordNet evidence,
+"customs" and "goods" on the verdict (WordNet lists both only under synsets their singular is
+also under), and "arms" never reached a verdict at all — it is the lemma of "armed" and
+"arming", so `skipped_is_lemma` refused it. Twenty folds read in full against their lemma's
+entry (seed 79: catboats, club members, corpses, curdles, cutups, dashikis, depths, ducats,
+expeditions, external forces, ghanians, hardwoods, injuries, lenders, nationalities, natures,
+safety rules, surest, thermals, thicker): **20 correct, 0 false folds** — in every one the
+lemma's entry already carries every sense the form's does, usually more ("thermals" is the
+clearest test and *thermal* holds both the rising-air and the underwear sense). Ten keeps read:
+"calisthenics", "ceramics", "subtropics", "oldies", "strung", "their", "customs", "goods",
+"glasses", "manners" are all correct keeps.
+
+Two things the read found and the numbers do not:
+
+1. **The pass errs towards keeping, by roughly 14%.** Of the 35 keeps, about 16 ("fungi",
+   "shelves", "acids", "clerks", "butterflies", "twos" among them) look like pure inflections
+   the verdict declined to fold — "fungi"'s own first definition is "the plural form of
+   fungus". That is the conservative direction the instructions ask for and it is left alone.
+2. **A fold can drop a sense the lemma's entry never wrote.** The two entries were generated
+   independently, so a form occasionally carries a sense its lemma's entry lacks — "coverings"
+   has a topology sense that *covering*'s entry does not. One case in the 29 read. The sense is
+   a tombstone rather than a deletion and its relations are demoted rather than dropped, so
+   nothing is unrecoverable, but the released dataset does lose it. A free gloss-overlap rule
+   was considered as a guard and rejected on measurement: because the two entries are written
+   independently, wording overlap is low almost everywhere (98 of the 99 folds have a sense
+   under 34% content-word overlap with the lemma's), so it measures wording rather than
+   meaning — which is precisely why the verdict is bought rather than computed.
+
+**Consequence.** New: `src/opengloss_generator/wordnet.py` (optional WordNet access;
+`availability`, `lemma_synsets`, `as_lemma`, `distinct_from_lemma`, `evidence_line`),
+`src/opengloss_generator/workflows/lexeme_hygiene.py` (`InflectionIndex`, `FoldPlan`,
+`plan_lexeme_hygiene`, `run_lexeme_hygiene`, both step instructions and contracts module-private
+for D-49's and D-50's reason), `scripts/build_sample_fold.py`, `tests/test_lexeme_hygiene.py`.
+Modified: `cli.py` (`lexeme-hygiene` with `--only`, `--from-list`, `--budget`, `--dry-run`;
+`_lexeme_hygiene_dry_run_estimate`), `pyproject.toml` (`wordnet` optional extra),
+`tests/conftest.py` (two scripted payloads — the fold one deliberately *computes* its answer
+from the `Base definitions:` and `Form definitions:` lines rather than keying on a planted
+marker, so a prompt builder that stopped sending either would fail the must-keep tests instead
+of quietly passing them), `README.md` (one row). Tests: **+44** (fold mechanics including the
+lemma-carries-the-form assertion and relation demotion; each of the four guards; derivations
+never a candidate; both keeps; marker idempotence both ways; the five must-keep words with
+WordNet switched off so the verdict has to carry them; the real corpus consulted where it is
+installed and skipped where it is not; the function-word gate; the fragments kind and WordNet
+keeps; the plan; and the CLI's four flags). `uv run ruff check src tests`, `ruff format
+--check src tests`, `ty check src`, `pytest` clean on `hygiene/inflection-fold`.
+`data/core-store` was read only: the sample is a copy and the production measurement was a
+`--dry-run`, which makes no call and writes nothing.

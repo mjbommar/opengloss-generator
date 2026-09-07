@@ -30,6 +30,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 
 from opengloss_generator.config import AppConfig, ConcurrencyConfig, StoreConfig
+from opengloss_generator.hygiene import content_words
 from opengloss_generator.runner import RunSession
 from opengloss_generator.schema import (
     Example,
@@ -1723,3 +1724,53 @@ def _phantom_pos_payload(prompt: str) -> dict[str, Any]:
 
 
 _PAYLOADS.update({"_draftposverdicts": _phantom_pos_payload})
+
+
+# --------------------------------------------------------------------------------------
+# workflows/lexeme_hygiene.py: inflection_fold and fragments (D-79)
+# --------------------------------------------------------------------------------------
+#
+# Appended and registered with ``_PAYLOADS.update`` for the reason every block above gives.
+#
+# ``inflection_fold``'s scripted answer is deliberately **not** keyed on a marker string. The
+# defect this step must never commit is folding a plural that carries a meaning of its own
+# ("glasses", "goods"), and a test that planted "answer distinct_lexeme here" in the gloss would
+# assert nothing about whether the prompt carries the two definition sets at all. So the
+# scripted model implements a plausible reading of the real instruction instead: it parses the
+# ``Base definitions:`` and ``Form definitions:`` lines out of the prompt and answers
+# ``distinct_lexeme`` when they share no content word — which is what a keep looks like — and
+# ``pure_inflection`` otherwise. A prompt builder that stopped sending either line would fail
+# the fold tests rather than quietly keep passing them.
+#
+# ``fragments`` keeps the marker convention (``FRAGMENT_MARKER``): what makes a phrase a
+# fragment is a judgement about the phrase, not a relation between two texts, so there is
+# nothing for the scripted model to compute.
+
+FRAGMENT_MARKER = "a piece of a sentence"
+
+
+def _definition_words(prompt: str, label: str) -> set[str]:
+    """Return the content words of one ``<label>: ...`` line of a fold prompt."""
+    return content_words(_field(prompt, label) or "")
+
+
+def _inflection_fold_payload(prompt: str) -> dict[str, Any]:
+    """Keep a form whose definitions share no content word with the base word's."""
+    base = _definition_words(prompt, "Base definitions")
+    form = _definition_words(prompt, "Form definitions")
+    distinct = bool(form) and not (base & form)
+    return {"verdict": "distinct_lexeme" if distinct else "pure_inflection"}
+
+
+def _fragment_payload(prompt: str) -> dict[str, Any]:
+    """Call a headword a fragment when its definitions carry :data:`FRAGMENT_MARKER`."""
+    definitions = (_field(prompt, "Definitions") or "").lower()
+    return {"verdict": "fragment" if FRAGMENT_MARKER in definitions else "lexical_unit"}
+
+
+_PAYLOADS.update(
+    {
+        "_draftfoldverdict": _inflection_fold_payload,
+        "_draftfragmentverdict": _fragment_payload,
+    }
+)

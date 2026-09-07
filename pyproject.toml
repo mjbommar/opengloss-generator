@@ -23,6 +23,10 @@ dependencies = [
 batch = ["openai>=3.7.0"]
 # Only the `export-hf --push` path imports this; the export itself is offline.
 hf = ["huggingface-hub>=1.2.0"]
+# `wordnet.py`'s free signal for `lexeme-hygiene` (D-79). Optional on purpose: the pass runs
+# without it, counts the checks it could not make and says so in its summary. The corpus
+# itself is a further download (`python -m nltk.downloader wordnet`).
+wordnet = ["nltk>=3.9.2"]
 
 [project.scripts]
 opengloss = "opengloss_generator.cli:app"
