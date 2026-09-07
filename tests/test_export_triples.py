@@ -22,8 +22,11 @@ from opengloss_generator.export.triples import (
     _queries_for,
     build_triples,
     classify,
+    easy_negative_count,
+    easy_negative_pool,
     load_corpus,
     positive_options,
+    select_easy_negative,
     select_hard_negative,
     write_triples,
 )
@@ -324,6 +327,19 @@ def test_synonym_edges_are_symmetric_even_when_stored_one_directional(world: Lex
     # Only bank -> lender is stored, never lender -> bank, yet both directions resolve.
     assert "lender:noun:0" in corpus.synonyms["bank:noun:0"]
     assert "bank:noun:0" in corpus.synonyms["lender:noun:0"]
+
+
+def test_constant_memory_easy_negative_selection_matches_materialised_pool(
+    world: LexemeStore,
+) -> None:
+    corpus = load_corpus(world)
+    for lexeme_id in sorted(corpus.senses_by_lexeme):
+        expected = easy_negative_pool(corpus, lexeme_id, {})
+        assert easy_negative_count(corpus, lexeme_id) == len(expected)
+        assert (
+            tuple(select_easy_negative(corpus, lexeme_id, rank) for rank in range(len(expected)))
+            == expected
+        )
 
 
 # --------------------------------------------------------------------------------------

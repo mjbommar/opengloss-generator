@@ -52,9 +52,10 @@ import orjson
 from opengloss_generator.export.triples import (
     HARD_NEGATIVE_PRIORITY,
     classify,
-    easy_negative_pool,
+    easy_negative_count,
     is_monosemous,
     load_corpus,
+    select_easy_negative,
 )
 from opengloss_generator.export.triples import (
     _rng as _seeded_rng,
@@ -140,7 +141,9 @@ def _grade_0_candidates(
     info: SenseGraphInfo,
     sense_id: str,
     seed: int,
-    easy_pool: tuple[str, ...],
+    *,
+    corpus: Corpus,
+    easy_lexeme_id: str,
     already_graded: set[str],
 ) -> list[str]:
     """Return up to :data:`MAX_GRADE_0` grade-0 (unrelated) candidates for one sense.
@@ -159,7 +162,8 @@ def _grade_0_candidates(
         info: The sense's tiered candidates.
         sense_id: The sense being graded.
         seed: The run's ``--seed``.
-        easy_pool: This sense's lexeme-excluded easy-negative pool.
+        corpus: Loaded corpus used for constant-memory easy-negative selection.
+        easy_lexeme_id: Lexeme whose own senses easy negatives must exclude.
         already_graded: Every sense id this query has already assigned a grade to.
 
     Returns:
@@ -174,8 +178,10 @@ def _grade_0_candidates(
             picks.append(_seeded_rng(seed, sense_id, kind).choice(candidates))
 
     attempts = 0
-    while len(picks) < MAX_GRADE_0 and easy_pool and attempts < _MAX_EASY_PAD_ATTEMPTS:
-        target = _seeded_rng(seed, sense_id, "easy", str(attempts)).choice(easy_pool)
+    pool_size = easy_negative_count(corpus, easy_lexeme_id)
+    while len(picks) < MAX_GRADE_0 and pool_size and attempts < _MAX_EASY_PAD_ATTEMPTS:
+        rank = _seeded_rng(seed, sense_id, "easy", str(attempts)).choice(range(pool_size))
+        target = select_easy_negative(corpus, easy_lexeme_id, rank)
         if target not in picks and target not in already_graded:
             picks.append(target)
         attempts += 1
@@ -220,7 +226,7 @@ def _graded_candidates(
     corpus: Corpus,
     sense_id: str,
     seed: int,
-    easy_pool: tuple[str, ...],
+    easy_lexeme_id: str,
 ) -> list[GradedCandidate]:
     """Return the full graded candidate list for one sense's queries.
 
@@ -229,7 +235,7 @@ def _graded_candidates(
         corpus: The loaded corpus, for document text and the encyclopedia doc (D-71).
         sense_id: The sense the candidates are graded relative to.
         seed: The run's ``--seed``.
-        easy_pool: This sense's lexeme-excluded easy-negative pool.
+        easy_lexeme_id: Lexeme whose own senses easy negatives must exclude.
 
     Returns:
         One :class:`GradedCandidate` per document, own sense first, the encyclopedia doc
@@ -248,7 +254,14 @@ def _graded_candidates(
     already_graded = {candidate.doc_id for candidate in graded}
     graded += [
         GradedCandidate(target, corpus.gloss[target], GRADE_UNRELATED)
-        for target in _grade_0_candidates(info, sense_id, seed, easy_pool, already_graded)
+        for target in _grade_0_candidates(
+            info,
+            sense_id,
+            seed,
+            corpus=corpus,
+            easy_lexeme_id=easy_lexeme_id,
+            already_graded=already_graded,
+        )
     ]
     encyclopedia_candidate = _encyclopedia_candidate(corpus, sense_id)
     if encyclopedia_candidate is not None:
@@ -331,15 +344,13 @@ def build_qrels(store: LexemeStore, *, seed: int = 0, limit: int | None = None) 
     docs: dict[str, str] = {}
     listwise: list[ListwiseQuery] = []
     histogram: dict[int, int] = {}
-    easy_pool_cache: dict[str, tuple[str, ...]] = {}
     senses_considered = 0
     queries_considered = 0
 
     for sense_id in sorted(corpus.gloss):
         senses_considered += 1
         info = classify(corpus, sense_id)
-        pool = easy_negative_pool(corpus, corpus.lexeme_of[sense_id], easy_pool_cache)
-        graded = _graded_candidates(info, corpus, sense_id, seed, pool)
+        graded = _graded_candidates(info, corpus, sense_id, seed, corpus.lexeme_of[sense_id])
         for candidate in graded:
             docs.setdefault(candidate.doc_id, candidate.text)
 

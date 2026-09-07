@@ -62,6 +62,7 @@ cheaper and easier to reason about than one repeated per sense.
 from __future__ import annotations
 
 import random
+from bisect import bisect_left
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING
 
@@ -497,6 +498,46 @@ def easy_negative_pool(
     return pool
 
 
+def easy_negative_count(corpus: Corpus, lexeme_id: str) -> int:
+    """Return the number of live senses outside ``lexeme_id`` without building a pool."""
+    return len(corpus.all_live_sense_ids) - len(corpus.senses_by_lexeme.get(lexeme_id, ()))
+
+
+def select_easy_negative(corpus: Corpus, lexeme_id: str, rank: int) -> str:
+    """Select one outside-lexeme sense by filtered rank without materialising the filter.
+
+    This is equivalent to indexing the tuple returned by :func:`easy_negative_pool`, but
+    uses only the one global sorted sense tuple plus the usually tiny set of senses owned
+    by the current lexeme.  Full-release exports must not cache a near-global tuple once
+    per lexeme: that is quadratic memory growth.
+
+    Args:
+        corpus: The loaded corpus with globally sorted live sense ids.
+        lexeme_id: Lexeme whose own senses are excluded.
+        rank: Zero-based index in the conceptual filtered tuple.
+
+    Returns:
+        The sense id at ``rank`` in that conceptual tuple.
+
+    Raises:
+        IndexError: When ``rank`` is outside the filtered tuple.
+    """
+    count = easy_negative_count(corpus, lexeme_id)
+    if rank < 0 or rank >= count:
+        raise IndexError(rank)
+
+    all_ids = corpus.all_live_sense_ids
+    excluded = sorted(
+        bisect_left(all_ids, sense_id) for sense_id in corpus.senses_by_lexeme.get(lexeme_id, ())
+    )
+    index = rank
+    for excluded_index in excluded:
+        if excluded_index > index:
+            break
+        index += 1
+    return all_ids[index]
+
+
 def select_hard_negative(info: SenseGraphInfo, seed: int, sense_id: str) -> tuple[str, str] | None:
     """Return ``(kind, target_sense_id)`` for the first non-empty tier, in priority order.
 
@@ -570,7 +611,7 @@ def _triples_for_query(
     seed: int,
     sense_id: str,
     easy_negatives: int,
-    easy_pool: tuple[str, ...],
+    easy_lexeme_id: str,
     live_senses: int,
 ) -> Iterator[Triple]:
     """Yield the hard-negative triple (if any) and the easy-negative triples for one query.
@@ -583,7 +624,7 @@ def _triples_for_query(
         seed: The run's ``--seed``.
         sense_id: The query's own sense id.
         easy_negatives: How many easy-negative triples to emit for this query.
-        easy_pool: This sense's lexeme-excluded easy-negative pool.
+        easy_lexeme_id: Lexeme whose own senses easy negatives must exclude.
         live_senses: The query's own lexeme's live sense count (see :class:`Triple`).
 
     Yields:
@@ -605,9 +646,11 @@ def _triples_for_query(
         )
 
     for attempt in range(easy_negatives):
-        if not easy_pool:
+        pool_size = easy_negative_count(corpus, easy_lexeme_id)
+        if pool_size == 0:
             break
-        target = _rng(seed, sense_id, "easy", str(attempt)).choice(easy_pool)
+        rank = _rng(seed, sense_id, "easy", str(attempt)).choice(range(pool_size))
+        target = select_easy_negative(corpus, easy_lexeme_id, rank)
         yield Triple(
             query=query.text,
             positive=positive.text,
@@ -644,7 +687,6 @@ def build_triples(
     corpus = load_corpus(store, limit=limit)
     triples: list[Triple] = []
     by_kind: dict[str, int] = {}
-    easy_pool_cache: dict[str, tuple[str, ...]] = {}
     senses_considered = 0
     queries_considered = 0
 
@@ -654,7 +696,6 @@ def build_triples(
         options = positive_options(corpus, sense_id)
         positive = _rng(seed, sense_id, "positive").choice(options)
         lexeme_id = corpus.lexeme_of[sense_id]
-        pool = easy_negative_pool(corpus, lexeme_id, easy_pool_cache)
         senses_in_lexeme = live_sense_count(corpus, lexeme_id)
 
         for query in corpus.queries.get(sense_id, ()):
@@ -667,7 +708,7 @@ def build_triples(
                 seed=seed,
                 sense_id=sense_id,
                 easy_negatives=easy_negatives,
-                easy_pool=pool,
+                easy_lexeme_id=lexeme_id,
                 live_senses=senses_in_lexeme,
             ):
                 triples.append(triple)
