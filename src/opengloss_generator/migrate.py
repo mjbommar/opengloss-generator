@@ -62,6 +62,7 @@ __all__ = [
     "from_v2",
     "from_v13",
     "migrate",
+    "relations_from_lists",
 ]
 
 SchemaVersion = Literal["1.3", "2.0", "3.0"]
@@ -434,8 +435,12 @@ def _example_renditions(texts: list[str], headword: str, forms: list[str]) -> Re
     return renditions
 
 
-def _relations_from_lists(buckets: list[tuple[RelationType, list[str]]]) -> list[Relation]:
-    """Flatten v1.x/v2 parallel relation lists into one typed relation list.
+def relations_from_lists(buckets: list[tuple[RelationType, list[str]]]) -> list[Relation]:
+    """Flatten parallel per-type term lists into one typed relation list.
+
+    Shared by the two migrations here and by ``wordnet.py``: all three read a source that
+    keeps its relations in per-type buckets, and all three want the same de-duplication
+    and the same "a term that cannot be slugged is not an edge" rule.
 
     Targets are unresolved: ``sense_id`` and ``confidence`` stay ``None`` until the
     ``resolve`` stage runs.
@@ -612,7 +617,7 @@ def _v2_sense(
         index=int(raw["index"]),
         gloss=gloss,
         examples=_example_renditions(list(raw.get("examples") or []), headword, forms),
-        relations=_relations_from_lists(
+        relations=relations_from_lists(
             [(kind, list(raw.get(field) or [])) for kind, field in _V2_RELATION_FIELDS]
         ),
         domain=domain,
@@ -788,7 +793,7 @@ def _v13_pos_entry(
                 examples=_example_renditions(
                     list(raw_sense.get("examples") or []), headword, forms
                 ),
-                relations=_relations_from_lists(
+                relations=relations_from_lists(
                     [
                         (kind, list(raw_sense.get(field) or []))
                         for kind, field in _V13_RELATION_FIELDS

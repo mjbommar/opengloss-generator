@@ -13,6 +13,7 @@ __all__ = [
     "OpenGlossError",
     "StageFailedError",
     "StoreError",
+    "WordNetUnavailableError",
 ]
 
 
@@ -60,3 +61,12 @@ class StoreError(OpenGlossError):
 
 class LockTimeoutError(StoreError):
     """An entry lock could not be acquired within the configured timeout."""
+
+
+class WordNetUnavailableError(OpenGlossError):
+    """The WordNet importer could not reach a usable WordNet 3.0 corpus.
+
+    Raised when the optional ``nltk`` dependency is not installed, when its ``wordnet``
+    corpus has not been downloaded, or when the installed corpus is a release other than
+    the one ``wordnet.WORDNET_VERSION`` pins.
+    """

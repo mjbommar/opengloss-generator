@@ -56,6 +56,7 @@ from opengloss_generator.qc.filler import (
 )
 from opengloss_generator.runner import RunSession, run_pool
 from opengloss_generator.schema import (
+    MODEL_FREE_STAGES,
     LexemeKind,
     ReadingLevel,
     Register,
@@ -64,6 +65,14 @@ from opengloss_generator.schema import (
 )
 from opengloss_generator.store import LexemeStore
 from opengloss_generator.taxonomy import TAXONOMY_VERSION
+from opengloss_generator.wordnet_import import (
+    WORDNET_SOURCE,
+    load_wordnet,
+    read_candidates,
+)
+from opengloss_generator.wordnet_import import (
+    entry_for as wordnet_entry_for,
+)
 from opengloss_generator.workflows.content_hygiene import run_content_hygiene
 from opengloss_generator.workflows.contrasts import (
     DEFAULT_KINDS as CONTRAST_KINDS,
@@ -1223,6 +1232,93 @@ def migrate_cmd(
     _echo_summary(_run(_main()))
 
 
+@app.command(name="import-wordnet")
+def import_wordnet(
+    from_list: Annotated[
+        Path,
+        typer.Option("--from-list", help="Candidate TSV; its `word` column is imported."),
+    ],
+    source: Annotated[
+        str,
+        typer.Option(
+            "--source",
+            help=(
+                "Keep only rows whose `source` column is this. Pass an empty string for a "
+                "plain word list with no `source` column."
+            ),
+        ),
+    ] = WORDNET_SOURCE,
+    limit: Annotated[int | None, typer.Option("--limit", help="Import at most N words.")] = None,
+    offset: Annotated[int, typer.Option("--offset", help="Skip the first N words.")] = 0,
+    force: Annotated[
+        bool, typer.Option("--force", help="Overwrite an entry already in the store.")
+    ] = False,
+    config_path: _ConfigOpt = None,
+    store: _StoreOpt = None,
+) -> None:
+    """Import WordNet 3.0 senses into the v3 store. Makes no model calls.
+
+    A sibling of `migrate` rather than a `--version` of it: `migrate` upgrades payloads it
+    is handed, while this reads a corpus from a word list, so the two share no input shape
+    (D-78). Needs the optional `wordnet` extra (`uv sync --extra wordnet`) and NLTK's
+    `wordnet` corpus. Entries land unresolved, span-less and `partial`; the normal
+    enrichment chain (`retrofit`, `resolve`, the hygiene passes) runs over them unchanged.
+    """
+    if not from_list.exists():
+        raise typer.BadParameter(f"--from-list path does not exist: {from_list}")
+    try:
+        corpus = load_wordnet()
+        words = read_candidates(from_list, source=source or None)
+    except (OpenGlossError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    if offset:
+        words = words[offset:]
+    if limit is not None:
+        words = words[:limit]
+    cfg = _build_config(config_path, store, None, None)
+
+    async def _main() -> dict[str, object]:
+        async with RunSession(cfg, install_signal_handler=True) as session:
+            counts = dict.fromkeys(
+                ("imported", "skipped", "absent", "failed", "pos_entries", "senses", "relations"), 0
+            )
+            domains = 0
+            absent: list[str] = []
+            failures: list[str] = []
+            for word in words:
+                try:
+                    entry = wordnet_entry_for(word, corpus=corpus)
+                except Exception as exc:  # one bad word must not abort the whole sweep
+                    counts["failed"] += 1
+                    failures.append(f"{word}: {exc}")
+                    continue
+                if entry is None:
+                    counts["absent"] += 1
+                    absent.append(word)
+                    continue
+                async with session.store.locked(entry.lexeme_id):
+                    if session.store.exists(entry.lexeme_id) and not force:
+                        counts["skipped"] += 1
+                        continue
+                    session.store.write(entry)
+                counts["imported"] += 1
+                counts["pos_entries"] += len(entry.pos_entries)
+                for _, sense, _ in entry.iter_senses():
+                    counts["senses"] += 1
+                    counts["relations"] += len(sense.relations)
+                    domains += sense.domain is not None
+                await session.emit(session.record_for("migrate", entry.lexeme_id, "ok"))
+            return session.summary(
+                words=len(words),
+                **counts,
+                domains_from_lexname=domains,
+                absent_sample=absent[:5],
+                failures=failures[:5],
+            ).as_dict()
+
+    _echo_summary(_run(_main()))
+
+
 @app.command("graph-hygiene")
 def graph_hygiene(
     config_path: _ConfigOpt = None,
@@ -2275,7 +2371,7 @@ def price(
 ) -> None:
     """Show the price table and the per-stage model policy."""
     cfg = _build_config(config_path, None, None, None)
-    stages = [StageName(stage)] if stage else list(StageName)
+    stages = [StageName(stage)] if stage else [s for s in StageName if s not in MODEL_FREE_STAGES]
     policies = {
         s.value: {
             "model": cfg.policy(s).model,

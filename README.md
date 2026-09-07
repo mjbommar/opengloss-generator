@@ -48,7 +48,7 @@ Regenerate with `uv run opengloss export-hf --store data/core-store --out data/h
 
 ```bash
 uv sync --all-extras                 # Python ≥ 3.14, pydantic-ai 2.37
-uv run python -m nltk.downloader wordnet   # optional: `lexeme-hygiene`'s free signal
+uv run python -m nltk.downloader wordnet   # `lexeme-hygiene`'s free signal; `import-wordnet` needs it
 export OPENAI_API_KEY=...            # generation
 export ANTHROPIC_API_KEY=...         # QA/judge stage only
 
@@ -71,6 +71,8 @@ uv run opengloss stats
 uv run opengloss resolve --headword abseil            # fill in relation target sense ids
 uv run opengloss retrofit --only classify_kind        # bring a migrated store to v3 parity
 uv run opengloss migrate --from /path/to/v13/store    # v1.3 or v2.0 payloads -> schema v3
+# WordNet 3.0 -> schema v3 (needs `uv sync --extra wordnet` and NLTK's wordnet corpus)
+uv run opengloss import-wordnet --from-list data/core/tier5_candidates.tsv --limit 300
 
 # build the v2.0 HuggingFace release family locally (free, offline, uploads nothing)
 uv run opengloss export-hf --store data/core-store --out data/hf --tiers-dir data/core
@@ -91,6 +93,7 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Retrofit | `retrofit` | Run `classify_kind`, `tag_domain`, and/or `spans` over an existing store; idempotent, `--only` selects one pass. |
 | QA pairs | `qa-pairs` | One call per live sense buys seven question/answer pairs — one of each question type, at mixed difficulty — answered only from that sense's own stored text (gloss, examples, encyclopedia, etymology), each source labelled with an id the answer must cite. Uncited, mis-cited, ungrounded and duplicate pairs are dropped and counted. Not `qa`, which is the Opus judge. |
 | Migrate | `migrate` | Upgrade a v1.3 or v2.0 payload to schema v3 via `migrate.from_v13` / `migrate.from_v2`; never renumbers a sense. |
+| Import WordNet | `import-wordnet` | Free, offline, no model call: read a candidate word list's `word` column (filtered by its `source` column) and write one schema-v3 entry per lemma — one POS entry per WordNet part of speech, one sense per synset in WordNet's own sense order, the synset definition as the canonical gloss, the synset examples as span-less neutral examples, and eight relation types off the synset and lemma pointers. WordNet's own capitalisation decides the headword and (with instance hypernyms) `proper_noun`; a lexname maps to a taxonomy leaf only where it is specific and unambiguous, otherwise it becomes a `domain_hint` for `tag_domain`. Entries land `partial` and unresolved, so the normal chain (`retrofit`, `resolve`, the hygiene passes) runs over them unchanged. Every inherited field carries a `migrate` provenance record with `model="wordnet-3.0"`; those entries inherit the Princeton WordNet licence in [`LICENSES/WordNet.txt`](LICENSES/WordNet.txt). Needs the optional `wordnet` extra. Idempotent: an entry already in the store is skipped without `--force` (D-78). |
 | Export retrieval pairs | `export-pairs` | Free: mine WiC-style positive/hard-negative pairs from a sense's own example renditions, plus example→gloss and (monosemous entries only, D-71) example→encyclopedia positives; `--easy-negatives N` adds sampled cross-headword, same-domain negatives. See `docs/RETRIEVAL-DATA.md`. |
 | Filler QC | `qc filler` | Count 4-grams and sentence openers across the renditions `--fields` selects (default `examples`; `encyclopedia`/`all` also count encyclopedia text); report what recurs more than chance, with a per-entry uniqueness / information-density score. No model call. `--flag` sets `OG_FILLER` on the offenders; `--unflag` reverses it (D-60, D-66). |
 | Filler QC calibration | `qc filler-calibrate` | Read-only: measure the `qc filler` flag rate at several threshold combinations in one pass, with each point's top findings by sentence count. Free, no model call. Used to pick `qc filler`'s own defaults against a production store (D-66). |
@@ -106,6 +109,16 @@ Structured logs and an append-only ledger land in `runs/<run_id>.*`.
 | Lexeme hygiene | `lexeme-hygiene` | Two nano steps over the *headword list* rather than over one entry's contents, `--only` selects either. `inflection_fold` retires an entry whose headword the store already records as a plural, past tense, participle or comparative of **another** live lexeme — 13,139 of the v2.1 release's 109,633 headwords are one, a v1.3 inheritance on the core and tier 2 (D-75 folded the tier-3/4 word lists only) — so "databases" resolves to "database" through the `inflections` dataset instead of holding an entry of its own. Four free guards refuse it first (it is itself the lemma of another entry; a live POS the lemma does not record the form under; the lemma missing or retired; the lemma not carrying the form after all), derivations are never candidates, WordNet keeps for free any form it lists as a lemma of a synset the base word is not in ("arms", "glasses"), and only the residue buys a `pure_inflection`/`distinct_lexeme` verdict. `fragments` does the same for a multi-word headword bounded by a function word ("some sugar", "is not"), skipping phrasal verbs and idioms whole and keeping whatever WordNet holds as a phrase. Both tombstone every sense (never delete, never renumber) and demote its relations to `see_also`. WordNet is **optional**: without `nltk` the checks are skipped, counted and reported. Pilot: 99 of 302 fold candidates retired at $0.000082 each, 38 of 150 fragments at $0.000059, and all five of "glasses"/"arms"/"customs"/"goods"/"manners" kept. Idempotent per entry (D-47); `--from-list`, `--budget`, and `--dry-run` runs every free filter and prices the calls it would have made (D-79). |
 | Reconcile relations | `relation-reconcile` | One nano call per edge a `contrasts` verdict called `related_differently`, asking what the two words really are to each other — hypernym, hyponym, co-hyponym, antonym, synonym or nothing — and filing the edge under that type, reverse edge inverted with it (55% of judged edges are rescued this way instead of deleted). Then five free steps: demote every edge a verdict says is not what it claims and the retype could not type (both sides of a symmetric pair), apply the stricter of two disagreeing directional verdicts, take every demoted `see_also` out of the sense's relation list (recorded to provenance, so nothing is lost), drop exact duplicates and cap each sense's per-type runs. This is what shortens the list the QA judge is shown; reciprocity goes up, not down. Idempotent; takes `--budget`; `--dry-run` computes every free edit, writes nothing and prices the calls it would have made (D-65, D-68, D-73). |
 | Export the release | `export-hf` | Free: build the v2.0 Hugging Face release family — fifteen dataset repos (two nested canonical ones, nine flat one-row-per-item views, four derived training sets) as ≤300 MB parquet shards, each with a `README.md` dataset card whose every statistic, fields table and example row is generated from the rows the run actually wrote. `--repos` selects a subset; `--push` (never the default) uploads with `HfApi.upload_large_folder`. See D-72. |
+
+## Licences
+
+The code is MIT (see `pyproject.toml`). Content is not uniformly ours: an entry whose
+provenance table holds a record with `model = "wordnet-3.0"` was derived from Princeton
+WordNet 3.0 — its glosses, examples, relations and derivationally related forms — and
+carries the Princeton WordNet licence in [`LICENSES/WordNet.txt`](LICENSES/WordNet.txt).
+That provenance record *is* the flag: no separate column, tag or manifest is kept, so a
+consumer of any export can tell WordNet-derived content from generated content by reading
+the entry. Dataset cards cite the licence on that basis (D-78).
 
 ## Cost defaults
 

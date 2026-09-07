@@ -47,6 +47,7 @@ __all__ = [
     "FK_BANDS",
     "FORMALITY_ORDER",
     "LEXINFO_MAP",
+    "MODEL_FREE_STAGES",
     "ONTONOTES_MAP",
     "READING_LEVEL_CROSSWALK",
     "RECONSTRUCTED_LANGUAGE_CODES",
@@ -518,6 +519,18 @@ class StageName(StrEnum):
     QUERIES = "queries"
     CONTRASTS = "contrasts"
     QA_PAIRS = "qa_pairs"
+    # Import of content this package did not write: the v1.3/v2.0 upgrades in
+    # `migrate.py` and the WordNet 3.0 import in `wordnet.py`. It never calls a model,
+    # which is why it is in `MODEL_FREE_STAGES` and has no entry in the policy table
+    # (D-78).
+    MIGRATE = "migrate"
+
+
+#: Stages that never call a model, and so never need a routing policy or a price row.
+#: `AppConfig` exempts these from "every stage has a policy" and `opengloss price` skips
+#: them, because a fabricated policy for a stage that makes no call would price work that
+#: cannot happen (D-78).
+MODEL_FREE_STAGES: frozenset[StageName] = frozenset({StageName.MIGRATE})
 
 
 class EntryStatus(StrEnum):

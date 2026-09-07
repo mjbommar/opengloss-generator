@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from opengloss_generator.pricing import ServiceTier, known_models
-from opengloss_generator.schema import ReadingLevel, Register, StageName
+from opengloss_generator.schema import MODEL_FREE_STAGES, ReadingLevel, Register, StageName
 
 __all__ = [
     "DEFAULT_ENCYCLOPEDIA_TARGETS",
@@ -574,8 +574,14 @@ class AppConfig(BaseSettings):
 
     @model_validator(mode="after")
     def _every_stage_has_a_policy(self) -> Self:
-        """Require a policy for every stage, so no stage silently falls back."""
-        missing = sorted(s.value for s in StageName if s not in self.policies)
+        """Require a policy for every stage that calls a model, so none falls back silently.
+
+        The stages in :data:`~opengloss_generator.schema.MODEL_FREE_STAGES` are exempt:
+        they make no call, so a policy for one would price work that cannot happen (D-78).
+        """
+        missing = sorted(
+            s.value for s in StageName if s not in self.policies and s not in MODEL_FREE_STAGES
+        )
         if missing:
             raise ValueError(f"no model policy configured for stage(s): {missing}")
         return self

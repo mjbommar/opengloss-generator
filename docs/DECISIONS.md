@@ -5620,3 +5620,207 @@ keeps; the plan; and the CLI's four flags). `uv run ruff check src tests`, `ruff
 --check src tests`, `ty check src`, `pytest` clean on `hygiene/inflection-fold`.
 `data/core-store` was read only: the sample is a copy and the production measurement was a
 `--dry-run`, which makes no call and writes nothing.
+## D-78 (2026-09-07) — `import-wordnet`: WordNet 3.0 as a third source, and the provenance the two migrations never wrote
+
+**Context.** `data/core/tier5_candidates.tsv` holds 43,652 rows, **38,472** of them sourced
+`wordnet` — headwords Princeton WordNet 3.0 has and this store does not. They are not
+payloads to upgrade: there is no JSON document anywhere, only a word list and a corpus, so
+`migrate.py`'s two functions have nothing to read. Generating them from scratch instead
+would pay a model to write definitions that already exist, are already sense-disambiguated,
+and already carry a graph.
+
+A second, unrelated finding landed in the same review: **a migrated entry's inherited
+fields carry no provenance at all.** `from_v13` wrote none, and `from_v2` carried over only
+what the v2 payload happened to record for its *variants* — so a v1.3 definition, its
+examples and its relations sit in the store looking exactly like text this package
+generated. Both are provenance problems about *where content came from*, so both are here.
+
+**Decision, part 1: a sibling command, not a `--version` of `migrate`.** `opengloss
+import-wordnet --from-list <tsv> --store S`, in a new `wordnet.py`. `migrate` takes
+`--from`, a file or directory of legacy JSON, and dispatches on the shape of what it reads;
+a WordNet import takes `--from-list`, a word list, and reads a corpus. Threading a
+`--version wordnet` through `migrate` would have made `--from` and `--from-list` mutually
+exclusive on one command and put a value in `_MIGRATE_VERSIONS` that names no schema. The
+two commands share what actually is shared — `migrate.relations_from_lists` (promoted from
+private; all three importers read per-type relation buckets and want the same
+de-duplication), `FUNCTION_WORDS`, and the store, lock and summary plumbing.
+
+`nltk` is an **optional extra** (`[project.optional-dependencies] wordnet`), imported inside
+`load_wordnet()` and nowhere else, so no other command gains a dependency. `load_wordnet`
+turns "nltk missing", "corpus not downloaded" and "corpus is not release 3.0" into one
+`WordNetUnavailableError` that says which of the three to fix; the version is checked
+because the lexname mapping and the sense ordering below are pinned to 3.0.
+
+**Decision, part 2: the mapping.**
+
+| v3 | from WordNet |
+|---|---|
+| `headword` | the lemma name, `_` → space, **in WordNet's own case** — so the candidate row `a battery` is stored as `A battery` and `11 november` as `11 November`. The candidate list is lower-cased; WordNet is not, and its capital is a statement about the word rather than about a sentence position |
+| `lexeme_id` | `slugify(headword)` (D-1). WordNet's synset offsets and sense keys are dropped |
+| `pos_entries` | one per WordNet part of speech the lemma has, in `n, v, a, r` order → noun, verb, adjective, adverb. `a` covers head adjectives *and* satellites (`s`): WordNet's own `index.adj` lists both under one part of speech in one sense order, so querying `s` separately would duplicate senses and reorder them |
+| `senses` | one per synset, in WordNet's sense order, indexed `0..n-1` in that order — the sense order **is** the id (D-1). A synset whose definition cleans to nothing is dropped, not stored empty |
+| `Sense.gloss` | `synset.definition()`, cleaned (below), as the canonical `(neutral, plain)` rendition |
+| `Sense.examples` | `synset.examples()`, cleaned, as canonical `(neutral, plain)` examples, **span-less** — `retrofit --only spans` finds the form for free and would re-check a guess anyway |
+| `synonym` | the synset's own other lemmas (synonymous by construction), then `similar_tos` |
+| `antonym` | **lemma-level** `antonyms()` of this headword's own lemmas — WordNet records antonymy between word forms, so `good`/`bad` are antonyms and `good`/`evilness` are not |
+| `hypernym` / `hyponym` | `hypernyms` / `hyponyms` + `instance_hyponyms` |
+| `instance_of` | `instance_hypernyms` — that member exists for exactly this pointer and `schema.WN_RELATION_MAP` already exports it as WN-LMF `instance_hypernym` |
+| `meronym` / `holonym` | the three `part_`/`member_`/`substance_` pointers on each side, collapsed onto one type each — v3 types the *direction* of a part-whole edge, not the flavour of part-hood, and `WN_RELATION_MAP` says the same thing on the export side |
+| `see_also` | `also_sees` |
+| relation targets | the target synset's **first** lemma name, `_` → space, with **no `sense_id`**: `resolve` fills those in, exactly as for a migrated entry. A target that slugs to the entry's own id is dropped rather than stored as a self-loop |
+| `kind` | function word (a lowercase member of `FUNCTION_WORDS`, whatever WordNet files it under — "a" is the angstrom there) → proper noun (WordNet capitalises the lemma, or a synset has an instance hypernym) → phrasal verb (spaced, verb, not also a noun) → compound (spaced or internally hyphenated) → simplex |
+| `Morphology.derivations` | `derivationally_related_forms()`, minus the headword itself (WordNet relates *dog* the noun to *dog* the verb; true, and not a derived form). **Nothing else**: plurals and tenses stay unset for the existing morphology and `hygiene` passes, because WordNet's exception lists cover irregulars only and the rest would be guessed |
+| `status` | `partial`, honestly: no etymology, no encyclopedia, no usage note, no levelled rendition |
+| not carried | `concept_id` (NLTK ships no Global WordNet ILI map, and D-1 forbids inventing one), `frequency` (every `wordnet` candidate row's `wiki_frequency` is 0 — "not measured", not "measured as zero"), `entailments`/`causes` (v3 has both types and could carry them; this first import ships the reviewed list only) and `verb_groups` (a sense-grouping device, not an assertion about meaning) |
+
+*Cleaning the definition.* NLTK splits a synset's gloss into `definition()` and `examples()`
+on the source file's quoting, and for **20 of WordNet 3.0's 117,659 synsets** that quoting is
+broken, so an example fragment stays in the definition: `compound.a.01` reads *"composed of
+more than one part; compound flower heads""*, `flimsy.s.02` reads *"lacking substance or
+significance; ; ; ; a fragile claim to fame""*. Both shapes are recognisable without touching
+a correct definition — a leaked fragment is introduced either by an **empty**
+semicolon-separated segment (the one whose quoted text went to `examples()`) or by a stray
+double quote — so the definition is kept up to, not including, the first segment that is
+empty or quoted. A well-formed definition's semicolons all separate real clauses and it comes
+back unchanged. All eight distinct broken shapes are pinned in the tests.
+
+*Determinism, and why it needed fixing.* NLTK holds a synset's and a lemma's pointers in a
+`set` and returns them in that set's iteration order, which depends on `PYTHONHASHSEED` —
+two imports of "dog" in two processes produced the same relations in **different orders**.
+Relation order is stored, exported and diffed, so every pointer is read through
+`_pointed_at`, which sorts by WordNet's own name for the target (`pooch.n.01`) — a real
+WordNet ordering, not an alphabetisation of surface forms. Two builds of an entry now agree
+on every byte but the timestamps, and that is asserted against the real corpus.
+
+**Decision, part 3: a lexname maps only where it is *specific* and *whole*.** WordNet's 45
+lexnames are supersenses, and D-44 exists because 84% of v1.3 ended up in one general bucket.
+So `LEXNAME_DOMAIN_MAP` obeys two rules: **never map onto a root's `.general` catch-all**
+(sweeping `noun.artifact`'s 11,587 synsets into `everyday_life.general` would recreate D-44's
+failure for free, and an unmapped lexname instead costs one `tag_domain` call and gets a real
+answer), and **only map where the whole supersense fits the leaf** — `noun.person` holds
+chemists and quarterbacks, `noun.substance` holds chemicals and cheeses, `noun.communication`
+is far wider than "conversation", and all three go to `tag_domain`, which sees the gloss.
+Fourteen lexnames survive both rules:
+
+| lexname | leaf | | lexname | leaf |
+|---|---|---|---|---|
+| `noun.animal` | `nature.animals` | | `noun.time` | `everyday_life.quantity_time` |
+| `noun.plant` | `nature.plants` | | `noun.quantity` | `everyday_life.quantity_time` |
+| `noun.body` | `health.anatomy` | | `verb.emotion` | `people_society.emotion_attitude` |
+| `noun.food` | `everyday_life.food` | | `verb.weather` | `nature.weather` |
+| `noun.feeling` | `people_society.emotion_attitude` | | `verb.motion` | `everyday_life.actions_routines` |
+| `noun.shape` | `mathematics.geometry` | | `verb.consumption` | `everyday_life.food` |
+| `noun.location` | `nature.landforms` | | `verb.communication` | `language.communication` |
+
+`noun.location` → `nature.landforms` follows the precedent already in
+`taxonomy.LEGACY_DOMAIN_MAP`, where v1.3's free-text "geography" resolves to the same leaf.
+Across all of WordNet 3.0 the table covers **30,032 of 117,659 synsets (25.5%)**.
+
+A mapped lexname sets `domain` and leaves `domain_hint` **`None`**; an unmapped one sets
+`domain_hint` to the raw lexname and leaves `domain` `None`. That is not cosmetic: the
+hygiene pass's `_clear_weak_domains` treats "domain set *and* `domain_hint` set *and* no
+`tag_domain` record" as a legacy-mapped tag and clears it, so writing both would have thrown
+the mapping away on the first retrofit. Measured below: hygiene cleared **0** domains.
+
+**Decision, part 4: every inherited field says where it came from.** One zero-cost
+`Provenance` per inherited field, `stage=migrate`, `attempts=0`, `cost_usd=0.0`, with the
+field named in the note ahead of the sentence a licence audit greps for — e.g. `gloss:
+imported from WordNet 3.0 (Princeton WordNet License)`. Records are added in a fixed field
+order and **only for a field the entry actually carries**, so no record claims examples
+WordNet did not supply, and glosses, examples and relations each carry a `provenance_id`
+back to theirs. `model` is what distinguishes the three importers: `wordnet-3.0`,
+`opengloss-v1.3`, `opengloss-v2.0`.
+
+`StageName` gains `MIGRATE`. It calls no model, so it is the first member of a new
+`MODEL_FREE_STAGES`, which `AppConfig`'s "every stage has a policy" validator and `opengloss
+price` both skip — a fabricated policy would price work that cannot happen. Migration still
+writes **no `classify_kind` marker**, so that retrofit revisits every entry all three
+importers write.
+
+**The same treatment for `migrate.py` (separate commit).** `from_v13` and `from_v2` now call
+`_stamp_source`, which writes the same records over eight fields (the five above plus
+`etymology`, `encyclopedia`, `lexical_explanation`) with `model="opengloss-v1.3"` /
+`"opengloss-v2.0"`. Content that arrived **with provenance of its own keeps it** — a v2
+rendition naming `gpt-5.6-luna` is strictly better information than "this was migrated" — so
+only a `provenance_id` that is `None` is filled. Nothing is renumbered: the payload's own
+records keep `p1`, `p2`, and the migrate records follow.
+
+**Pilot.** The first 300 `wordnet`-sourced rows of `data/core/tier5_candidates.tsv`, into
+`data/sample-wordnet` (`data/core-store` was not touched, and is not the store any command
+below names). The slice is the alphabetical head of the list, so it is numerals, ordinals and
+`a `-initial phrases — a *hard* sample for a lexname map and an easy one for a definition
+cleaner, and worth reading as such.
+
+| | |
+|---|---|
+| words read (source `wordnet`) | 300 |
+| entries written / absent from WordNet / failed | **300** / 0 / 0 |
+| POS entries | **346** (adjective 223, noun 115, adverb 8) |
+| senses | **352** |
+| relations | **1,004** — **2.85 per sense** |
+| — by type | synonym 845, hypernym 120, hyponym 17, holonym 9, meronym 8, antonym 3, see_also 2 |
+| example renditions | 32, on 21 senses (**6.0%** — WordNet examples are thin for numerals) |
+| domains filled by the lexname map | **83 senses (23.6%)** |
+| import cost / wall clock | **$0** / 1.1 s |
+| re-import (idempotence) | 0 imported, **300 skipped**, $0 |
+
+Then the normal chain, `gpt-5.6-luna`, `--budget 0.50`:
+
+| pass | scanned | calls | changed | cost | wall clock |
+|---|---|---|---|---|---|
+| `retrofit --only classify_kind` | 300 | 1 | 8 entries | $0.000357 | 21 s |
+| `retrofit --only hygiene` | 300 | **0** | 0 | **$0** | 2 s |
+| `retrofit --only tag_domain` | 300 | 260 | **269 senses** | $0.016235 | 8 m 28 s |
+| | | | | **$0.016592 total** | |
+
+`classify_kind` settled **267 of 300 (89%)** for free and bought one batched call for the
+33-entry residue, which moved 8 entries (5 idiom, 1 abbreviation, and the rest); the final
+inventory is simplex 244, compound 46, idiom 5, proper_noun 4, abbreviation 1. `hygiene`
+found **nothing to do** — no markdown, no artifact relations, no headword-initial gloss, and,
+as designed, **no domain to clear**. `tag_domain` answered the 269 senses the lexname map
+left, at a **97.0% prompt-cache hit rate**; 6 of the 352 tags are a `.general` leaf.
+
+`opengloss audit` on the result: `kind_classified` **300/300 (100%)**, `senses_with_domain`
+**352/352 (100%)**, artifact relations **0/1,004**, hypernym cycles **0**, hypernym
+self-loops **0**, duplicate canonical glosses **0**, senses with zero relations 3,
+headword-initial glosses 1. Relations are **0% resolved**, correctly: `resolve` was not run,
+and only 14 of the 1,004 targets exist inside a 300-entry store — which is the argument for
+importing the whole 38,472-row list before resolving, not a defect of the import.
+
+**A note on the two WordNet modules.** D-79's `wordnet.py` landed in parallel with this and
+asks WordNet *yes/no questions about the store* — "is this plural a lemma in its own
+right?" — answering `None` when the corpus is missing, because a free signal may legitimately
+be absent. This one reads WordNet *into* the store, so a missing corpus is a command that
+cannot run rather than a check that is skipped, and `load_wordnet` raises. They are therefore
+separate modules — `wordnet.py` and `wordnet_import.py` — sharing the two things worth
+sharing: `normalise`, the single place a project string becomes a WordNet lemma key, and
+`availability()`, the single place the corpus is probed for. `load_wordnet` adds only what an
+importer needs on top of that probe: an exception instead of a `None`, an instruction per
+cause, and the 3.0 version pin the mapping above depends on.
+
+**Consequence.** New: `src/opengloss_generator/wordnet_import.py` (`load_wordnet`,
+`read_candidates`, `clean_definition`, `clean_examples`, `lexname_domain`, `wordnet_kind`,
+`entry_for`, `iter_entries`, `_pointed_at`, `_relations_for`, `_derivations`, `_sense_for`,
+`_stamp_provenance`; `LEXNAME_DOMAIN_MAP`, `SYNSET_RELATIONS`, `POS_LETTERS`,
+`PROVENANCE_FIELDS`, `WORDNET_MODEL`/`_NOTE`/`_VERSION`/`_LICENSE`), `LICENSES/WordNet.txt`,
+`tests/test_wordnet_import.py`. Modified: `schema.py` (`StageName.MIGRATE`, `MODEL_FREE_STAGES`),
+`config.py` (the policy validator exempts them), `cli.py` (`import-wordnet`; `price` skips
+model-free stages), `migrate.py` (`relations_from_lists` promoted to public; `_stamp_source`,
+`V13_MODEL`, `V2_MODEL`, `MIGRATE_PROVENANCE_FIELDS`), `pyproject.toml` (the `wordnet`
+extra; its comment now names both users), `README.md` (the `import-wordnet` row, a Licences
+section, the `migrate` row, the `nltk.downloader` line).
+`export/hf_cards.py` is **not** touched: `provenance.model == "wordnet-3.0"` is the whole
+flag a card needs. Tests: **+61** (58 in `tests/test_wordnet_import.py` — every relation type, the
+`instance_of` split, pointer sorting, sense order as id order, a multi-POS lemma, adjective
+head and satellite in one block, a morphological near-miss that is not this headword,
+WordNet casing beating the candidate list, proper nouns by capital and by instance hypernym,
+seven `wordnet_kind` cases, all eight broken-definition shapes, examples split from
+definitions and span-less, a sense with no usable definition dropped, domain from lexname and
+hint when unmapped, the "never `.general`" rule, derivations-only morphology, one provenance
+record per inherited field and none for an absent one, no `classify_kind` marker, the
+candidate reader's source filter and its two missing-column errors, five CLI tests including
+idempotence and an unavailable corpus, and three against the real corpus — skipped when it is
+not installed — including byte-stability across two builds; 3 in `tests/test_migrate.py` for
+part 4). 1,351 pass, 7 skipped (all pre-existing `data/sample-300` skips, absent from this
+worktree), 1 deselected. `uv run ruff check`/`format --check`, `uv run ty check src`,
+`uv run pytest` clean on `import/wordnet`.
