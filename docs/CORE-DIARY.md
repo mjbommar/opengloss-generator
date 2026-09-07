@@ -1680,3 +1680,13 @@ changing` (tier 4, unranked-pool compound) carries verb morphology whose past te
 is "evolved" — v1.3 attached a synonym's inflections to a phrase. The `phantom_pos`
 step judges glosses, not morphology; a morphology sanity check (every inflected form
 must share the headword's stem) would be a cheap free filter.
+
+**08:40 — cards: "What changed since v2.0" added.** The release cards compared v2.1
+only with v1.3; they now carry a v2.0 → v2.1 section on every card: size (lexemes,
+senses, multiword/proper-noun/function-word counts, renditions, examples, relations,
+queries, QA), the pretraining corpus in documents / words / cl100k tokens (measured:
+617,175 / 197.0M / 275.7M → 1,111,044 / 332.4M / 471.5M), judge scores per tier, and
+the schema delta (no column changes; `tier4` value; new `inflections` dataset; three
+new provenance note prefixes; derived training sets not row-compatible). Template in
+`hf_cards.py` (`V20`/`V21` constants, `_changelog`), live cards patched and re-uploaded.
+The Scope sentence no longer calls v2.1 "a frequency-ranked subset".
