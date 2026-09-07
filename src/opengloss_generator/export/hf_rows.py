@@ -1036,7 +1036,7 @@ class RowBuilder:
                 "tier": tier,
             }
             for form, relation in self._forms_of(entry.headword, morphology):
-                identity = form.lower(), relation
+                identity = form, relation
                 if identity in seen:
                     continue
                 seen.add(identity)

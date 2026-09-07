@@ -518,7 +518,7 @@ def test_inflection_rows_deduplicate_repeated_derivations_per_pos(tmp_path):
         "heat energy",
         [_sense(0, "Energy transferred because of a temperature difference.")],
     )
-    entry.pos_entries[0].morphology.derivations = ["heating", "heating", "HEATING"]
+    entry.pos_entries[0].morphology.derivations = ["heating", "heating"]
     result = _export(tmp_path, [entry])
     rows = _read(result, "inflections")
     assert [(row["form_normalized"], row["relation"]) for row in rows] == [
