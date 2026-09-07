@@ -156,3 +156,12 @@ rare words and proper nouns ("reliquary", "estuarine", "cultivars", "kielce"); t
 process ≤ 48 workers), plus the follow-up pattern for capped hygiene passes. After it:
 the lexicon reaches ~110K lexemes, covering ~131K v1.3 headwords with inflections.
 Migration (free) started 01:55; chain launches on its completion marker.
+
+**Tier 4 execution log.** 2026-09-05 07:08 migration (54,909 new entries) → 2026-09-06
+19:26 `DONE-TIER4` ($250.01) → follow-ups 0/1 and the closing passes (phantom-POS
+retirement, regen, targeted validity, example-fit remainder) → 2026-09-07 02:21 closing
+audit and re-judge. **Tier-4 spend ≈ $305** against $345 + $70 of caps. Judge on the
+tier: 62.2 at chain end → **67.0** after the closing passes (QA-DIARY it. 18–19).
+Store: 109,633 lexemes, 250,003 live senses. Released as **OpenGloss v2.1** (16 HF
+datasets) 2026-09-07 07:50 after an OOM on the first export attempt (D-77 fixed it:
+90 GB → 2.2 GB).

@@ -1663,3 +1663,20 @@ now feed the shard writer directly with one shared corpus. Peak RSS on the full 
 21 equality tests. The per-repo export was stopped after 11 store-derived repos (their
 output is unaffected by the change) and resumed on the merged code for inflections,
 retrieval-pairs, retrieval-triples, qrels and pretrain; preflight and push follow.
+
+## OpenGloss v2.1 published — 2026-09-07 07:50
+
+16 datasets under `mjbommar/opengloss-v2.1-*` (public, CC-BY 4.0), 3.1 GB, 79 parquet
+shards, verified via the Hub API (16/16 public with README + parquet). New in the
+family: `inflections` (form → lemma lookup; `load_dataset` smoke test: "evolved" →
+evolve / verb / past_tense). Cards render tier 4 in the coverage table and the release
+label throughout (two rounds of literal fixes: 8 in the card prose, 10 in the repo
+blurbs; 8 already-rendered cards patched and re-uploaded). The 15 v2.0 cards now carry a
+"superseded by v2.1" pointer; the v1.3 cards a "see also v2.1" pointer. Goal 4
+complete. Total enrichment spend across all goals ≈ $900.
+
+Observation from the smoke test, for the next QA iteration: the entry `gradually
+changing` (tier 4, unranked-pool compound) carries verb morphology whose past tense
+is "evolved" — v1.3 attached a synonym's inflections to a phrase. The `phantom_pos`
+step judges glosses, not morphology; a morphology sanity check (every inflected form
+must share the headword's stem) would be a cheap free filter.
