@@ -32,6 +32,7 @@ import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from opengloss_generator.errors import StoreError
 from opengloss_generator.readability import word_count
 from opengloss_generator.schema import (
     CANONICAL_KEY,
@@ -45,7 +46,7 @@ from opengloss_generator.schema import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Sequence
     from pathlib import Path
 
     from opengloss_generator.store import LexemeStore
@@ -56,6 +57,7 @@ __all__ = [
     "PretrainRecord",
     "documents_for_entry",
     "export_pretrain",
+    "iter_pretrain",
 ]
 
 #: The four templates F9 defines, in a fixed order used everywhere selection or
@@ -624,24 +626,89 @@ def export_pretrain(
     Returns:
         Counts of what was written.
     """
-    if lexeme_ids is not None:
-        entries = [
-            entry
-            for lexeme_id in sorted(set(lexeme_ids))
-            if (entry := store.read(lexeme_id)) is not None
-        ]
-    else:
-        entries = sorted(store.iter_entries(), key=lambda e: e.lexeme_id)
-
     summary = ExportSummary()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as handle:
-        for entry in entries:
-            summary.entries_scanned += 1
-            for doc in documents_for_entry(
-                entry, templates=templates, levels=levels, per_entry=per_entry, seed=seed
-            ):
-                handle.write(json.dumps(doc.as_dict(), ensure_ascii=False))
-                handle.write("\n")
-                summary.record(doc)
+        for doc in iter_pretrain(
+            store,
+            templates=templates,
+            levels=levels,
+            per_entry=per_entry,
+            seed=seed,
+            lexeme_ids=lexeme_ids,
+            summary=summary,
+        ):
+            handle.write(json.dumps(doc.as_dict(), ensure_ascii=False))
+            handle.write("\n")
     return summary
+
+
+def _entries_in_id_order(store: LexemeStore, lexeme_ids: Sequence[str] | None) -> Iterator[Lexeme]:
+    """Yield the entries to render, in lexeme-id order, one at a time.
+
+    The whole-store path walks ids rather than entry bodies, so only the entry being
+    rendered is resident (D-77): a list of every parsed :class:`Lexeme` is tens of
+    gigabytes on a full release store and was what made ``export-hf`` unrunnable there.
+    A body that no longer parses is skipped, exactly as
+    :meth:`~opengloss_generator.store.LexemeStore.iter_entries` skips it.
+
+    Args:
+        store: The store to read. Never written.
+        lexeme_ids: The requested headwords/ids, or ``None`` for the whole store.
+
+    Yields:
+        One entry at a time; absent ids are silently skipped.
+    """
+    if lexeme_ids is not None:
+        for lexeme_id in sorted(set(lexeme_ids)):
+            entry = store.read(lexeme_id)
+            if entry is not None:
+                yield entry
+        return
+    for lexeme_id in sorted(store.iter_ids()):
+        try:
+            entry = store.read(lexeme_id)
+        except StoreError:  # a corrupt entry must not halt iteration
+            continue
+        if entry is not None:
+            yield entry
+
+
+def iter_pretrain(
+    store: LexemeStore,
+    *,
+    templates: Sequence[str] = TEMPLATES,
+    levels: Sequence[ReadingLevel] = (ReadingLevel.NEUTRAL,),
+    per_entry: int | None = None,
+    seed: int = 0,
+    lexeme_ids: Sequence[str] | None = None,
+    summary: ExportSummary | None = None,
+) -> Iterator[PretrainRecord]:
+    """Yield every pretraining document the store supports, in :func:`export_pretrain` order.
+
+    The streaming half of :func:`export_pretrain`: one entry is read, rendered and
+    released before the next is read, so a consumer that writes each record out as it
+    arrives never holds the corpus (D-77).
+
+    Args:
+        store: The store to read. Never written.
+        templates: Which templates to consider (see :data:`TEMPLATES`).
+        levels: The reading levels to produce documents for.
+        per_entry: Cap on distinct templates per entry; ``None`` for no cap.
+        seed: The mixing seed for ``per_entry`` selection.
+        lexeme_ids: Restrict to these headwords/ids, when given.
+        summary: Filled in as records are yielded, when given. Its counts are complete
+            only once the iterator is exhausted.
+
+    Yields:
+        One :class:`PretrainRecord` per rendered document.
+    """
+    for entry in _entries_in_id_order(store, lexeme_ids):
+        if summary is not None:
+            summary.entries_scanned += 1
+        for doc in documents_for_entry(
+            entry, templates=templates, levels=levels, per_entry=per_entry, seed=seed
+        ):
+            if summary is not None:
+                summary.record(doc)
+            yield doc

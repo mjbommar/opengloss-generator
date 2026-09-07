@@ -52,13 +52,15 @@ from typing import TYPE_CHECKING
 
 import orjson
 
+from opengloss_generator.errors import StoreError
+from opengloss_generator.identity import slugify
 from opengloss_generator.schema import EntryStatus, Example, Rendition, Renditions
 
 if TYPE_CHECKING:
     from opengloss_generator.schema import Lexeme, Sense
     from opengloss_generator.store import LexemeStore
 
-__all__ = ["ExportPairsOutcome", "Pair", "PairKind", "export_pairs"]
+__all__ = ["ExportPairsOutcome", "Pair", "PairKind", "export_pairs", "iter_pairs"]
 
 
 class PairKind(StrEnum):
@@ -282,72 +284,161 @@ def _pairs_for_entry(entry: Lexeme) -> Iterator[Pair]:
     yield from _encyclopedia_pairs(entry, live, live_senses)
 
 
-def _easy_negative_pairs(entries: Sequence[Lexeme], *, n: int, seed: int) -> Iterator[Pair]:
+@dataclass(frozen=True, slots=True)
+class _EasyCandidate:
+    """One live, domain-tagged sense's representative example, flattened for the pool.
+
+    The easy-negative pool has to outlive the entry it came from -- every sense in a
+    domain is a candidate for every other -- so the pool holds these six primitives
+    rather than the :class:`~opengloss_generator.schema.Rendition` (and, through it, the
+    whole parsed entry) they were read off (D-77).
+    """
+
+    headword: str
+    sense_id: str
+    text: str
+    span: tuple[int, int] | None
+    level: str
+    live_senses: int
+
+
+def _collect_easy_candidates(entry: Lexeme, by_domain: dict[str, list[_EasyCandidate]]) -> None:
+    """Fold one entry's domain-tagged live senses into the per-domain candidate pools.
+
+    Args:
+        entry: The entry being scanned.
+        by_domain: ``domain leaf -> candidates``, appended to in scan order.
+    """
+    entry_live = _live_senses(entry)
+    entry_live_senses = len(entry_live)
+    for sense, sid in entry_live:
+        if sense.domain is None:
+            continue
+        rep = _representative_example(sense.examples)
+        if rep is None:
+            continue
+        by_domain.setdefault(sense.domain.value, []).append(
+            _EasyCandidate(
+                headword=entry.headword,
+                sense_id=sid,
+                text=rep.content.text,
+                span=rep.content.span,
+                level=rep.reading_level.value,
+                live_senses=entry_live_senses,
+            )
+        )
+
+
+def _easy_negative_pairs(
+    by_domain: dict[str, list[_EasyCandidate]], *, n: int, seed: int
+) -> Iterator[Pair]:
     """Yield up to ``n`` cross-headword, same-domain easy negatives per live sense.
 
-    Builds one candidate pool per domain leaf from every live sense in ``entries`` that
-    carries a domain tag and has at least one example. For each source sense, the
-    candidates from *other* headwords in the same pool are sampled with a fresh
-    ``random.Random`` seeded from ``(seed, domain, source_sense_id)``, so the draw for
-    one sense never depends on how many other senses were visited before it, or in what
-    order ``entries`` was given.
+    ``by_domain`` holds one candidate pool per domain leaf, gathered by
+    :func:`_collect_easy_candidates` from every live sense that carries a domain tag and
+    has at least one example. For each source sense, the candidates from *other*
+    headwords in the same pool are sampled with a fresh ``random.Random`` seeded from
+    ``(seed, domain, source_sense_id)``, so the draw for one sense never depends on how
+    many other senses were visited before it, or in what order the store was read.
     """
     if n <= 0:
         return
-    by_domain: dict[str, list[tuple[str, str, Rendition[Example], int]]] = {}
-    for entry in entries:
-        entry_live = _live_senses(entry)
-        entry_live_senses = len(entry_live)
-        for sense, sid in entry_live:
-            if sense.domain is None:
-                continue
-            rep = _representative_example(sense.examples)
-            if rep is None:
-                continue
-            by_domain.setdefault(sense.domain.value, []).append(
-                (entry.headword, sid, rep, entry_live_senses)
-            )
-
     for domain, pool in sorted(by_domain.items()):
-        ordered_pool = sorted(pool, key=lambda item: item[1])
-        for headword, sid, rep, live_senses in ordered_pool:
-            candidates = [c for c in ordered_pool if c[0] != headword]
+        ordered_pool = sorted(pool, key=lambda item: item.sense_id)
+        for source in ordered_pool:
+            candidates = [c for c in ordered_pool if c.headword != source.headword]
             if not candidates:
                 continue
-            rng = random.Random(f"{seed}:{domain}:{sid}")  # noqa: S311 - sampling, not crypto
+            rng = random.Random(  # noqa: S311 - sampling, not crypto
+                f"{seed}:{domain}:{source.sense_id}"
+            )
             chosen = rng.sample(candidates, min(n, len(candidates)))
-            for other_headword, other_sid, other_rep, _other_live_senses in chosen:
+            for other in chosen:
                 yield Pair(
-                    headword=headword,
-                    headword_b=other_headword,
-                    sense_a=sid,
-                    sense_b=other_sid,
-                    text_a=rep.content.text,
-                    text_b=other_rep.content.text,
-                    span_a=rep.content.span,
-                    span_b=other_rep.content.span,
+                    headword=source.headword,
+                    headword_b=other.headword,
+                    sense_a=source.sense_id,
+                    sense_b=other.sense_id,
+                    text_a=source.text,
+                    text_b=other.text,
+                    span_a=source.span,
+                    span_b=other.span,
                     label=0,
-                    level_a=rep.reading_level.value,
-                    level_b=other_rep.reading_level.value,
+                    level_a=source.level,
+                    level_b=other.level,
                     kind=PairKind.WIC_EASY_NEGATIVE.value,
-                    live_senses=live_senses,
+                    live_senses=source.live_senses,
                 )
 
 
-def _load_entries(store: LexemeStore, lexeme_ids: Sequence[str] | None) -> list[Lexeme]:
-    """Return the entries to export, sorted by lexeme id for a deterministic run.
+def _entry_ids(store: LexemeStore, lexeme_ids: Sequence[str] | None) -> list[str]:
+    """Return the entry ids to visit, in the lexeme-id order the output is defined by.
 
     Args:
-        store: The store to read from.
+        store: The store, read only for its id list when no selection is given.
         lexeme_ids: When given, restrict to these headwords/ids (absent ones are
             silently skipped, as other batch commands do); ``None`` reads the whole
             store.
     """
     if lexeme_ids is not None:
-        entries = [entry for lid in lexeme_ids if (entry := store.read(lid)) is not None]
-    else:
-        entries = list(store.iter_entries())
-    return sorted(entries, key=lambda entry: entry.lexeme_id)
+        return sorted(slugify(word) for word in lexeme_ids)
+    return sorted(store.iter_ids())
+
+
+def iter_pairs(
+    store: LexemeStore,
+    *,
+    lexeme_ids: Sequence[str] | None = None,
+    easy_negatives: int = 0,
+    seed: int = 0,
+    outcome: ExportPairsOutcome | None = None,
+) -> Iterator[Pair]:
+    """Yield every mined pair in deterministic order, one entry resident at a time.
+
+    The streaming half of :func:`export_pairs`. Entries are visited in lexeme-id order
+    and released as soon as their own pairs are yielded; the only thing that outlives an
+    entry is its contribution to the easy-negative pools, and that is six primitives per
+    domain-tagged sense rather than the parsed entry (D-77). The output order is
+    unchanged: every within-entry pair first, in entry order, then the easy negatives
+    grouped by domain leaf.
+
+    Args:
+        store: The store to read. Never written.
+        lexeme_ids: When given, restrict to these headwords/ids.
+        easy_negatives: Sampled easy negatives per live domain-tagged sense; 0 disables
+            them, and then no pool is gathered at all.
+        seed: Seed for easy-negative sampling. Ignored when ``easy_negatives`` is 0.
+        outcome: Filled in as pairs are yielded, when given. Its counts are complete
+            only once the iterator is exhausted.
+
+    Yields:
+        One :class:`Pair` at a time.
+    """
+    by_domain: dict[str, list[_EasyCandidate]] = {}
+    for lexeme_id in _entry_ids(store, lexeme_ids):
+        try:
+            entry = store.read(lexeme_id)
+        except StoreError:  # a corrupt entry must not halt iteration
+            continue
+        if entry is None:
+            continue
+        if outcome is not None:
+            outcome.entries_scanned += 1
+        emitted = False
+        for pair in _pairs_for_entry(entry):
+            emitted = True
+            if outcome is not None:
+                outcome.record(pair)
+            yield pair
+        if emitted and outcome is not None:
+            outcome.entries_with_pairs += 1
+        if easy_negatives > 0:
+            _collect_easy_candidates(entry, by_domain)
+
+    for pair in _easy_negative_pairs(by_domain, n=easy_negatives, seed=seed):
+        if outcome is not None:
+            outcome.record(pair)
+        yield pair
 
 
 def export_pairs(
@@ -371,26 +462,18 @@ def export_pairs(
     Returns:
         Counts of what was written, by label and by pair kind.
     """
-    entries = _load_entries(store, lexeme_ids)
     outcome = ExportPairsOutcome()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     with out_path.open("wb") as handle:
-
-        def emit(pair: Pair) -> None:
+        for pair in iter_pairs(
+            store,
+            lexeme_ids=lexeme_ids,
+            easy_negatives=easy_negatives,
+            seed=seed,
+            outcome=outcome,
+        ):
             handle.write(orjson.dumps(pair))
             handle.write(b"\n")
-            outcome.record(pair)
-
-        for entry in entries:
-            outcome.entries_scanned += 1
-            entry_pairs = list(_pairs_for_entry(entry))
-            if entry_pairs:
-                outcome.entries_with_pairs += 1
-            for pair in entry_pairs:
-                emit(pair)
-
-        for pair in _easy_negative_pairs(entries, n=easy_negatives, seed=seed):
-            emit(pair)
 
     return outcome

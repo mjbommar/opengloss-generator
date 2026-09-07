@@ -18,6 +18,11 @@ How it is put together
   ``pretrain``) are produced by calling the existing free exporters' own functions and
   reshaping their records into parquet. They are not reimplemented here: a second
   implementation of "which negative is hard" would be a second thing to keep true.
+  Each of the four is consumed as a *generator*: one row is reshaped and handed to the
+  shard writer before the next is mined, so a release-sized store costs what its corpus
+  costs and not what its training sets weigh (D-77). ``retrieval-triples`` and ``qrels``
+  are graded from one shared :class:`~opengloss_generator.export.triples.Corpus`, since
+  both derive from exactly the same projection of the store.
 * **Every column has an explicit ``pyarrow`` type.** Rows are projected onto the config's
   column list before writing, so a typo in a row builder raises rather than quietly
   writing a null column, and nothing is inferred from whichever row happened to be first.
@@ -28,8 +33,6 @@ How it is put together
 
 from __future__ import annotations
 
-import json
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -47,16 +50,21 @@ from opengloss_generator.export.hf_schemas import (
     RepoSpec,
     resolve_repos,
 )
-from opengloss_generator.export.pairs import export_pairs
+from opengloss_generator.export.pairs import ExportPairsOutcome, iter_pairs
 from opengloss_generator.export.pretrain import TEMPLATES as PRETRAIN_TEMPLATES
-from opengloss_generator.export.pretrain import export_pretrain
-from opengloss_generator.export.qrels import build_qrels
-from opengloss_generator.export.triples import build_triples
+from opengloss_generator.export.pretrain import ExportSummary, iter_pretrain
+from opengloss_generator.export.qrels import QrelsSummary, iter_listwise
+from opengloss_generator.export.triples import (
+    Corpus,
+    TriplesSummary,
+    iter_triples,
+    load_corpus,
+)
 from opengloss_generator.identity import slugify
 from opengloss_generator.schema import ReadingLevel
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Sequence
 
     from opengloss_generator.store import LexemeStore
 
@@ -401,18 +409,6 @@ def _keep(keep: set[str] | None, lexeme_id: str) -> bool:
     return keep is None or lexeme_id in keep
 
 
-def _read_jsonl(path: Path) -> Iterator[dict[str, Any]]:
-    """Yield the objects of a JSONL file.
-
-    Args:
-        path: The file.
-    """
-    with path.open(encoding="utf-8") as handle:
-        for line in handle:
-            if line.strip():
-                yield json.loads(line)
-
-
 def _span(value: Any) -> tuple[int | None, int | None]:  # noqa: ANN401 - JSON value
     """Split a ``[start, end]`` span (or ``None``) into two nullable columns.
 
@@ -552,8 +548,9 @@ def _export_derived(
 ) -> None:
     """Build the four repos derived from the existing free retrieval exporters.
 
-    Each one calls that exporter's own public function and reshapes its records; none of
-    the mining logic is reimplemented here.
+    Each one consumes that exporter's own generator and reshapes its records as they
+    arrive; none of the mining logic is reimplemented here, and none of the four
+    training sets is ever held whole (D-77).
 
     Args:
         store: The store to read.
@@ -578,14 +575,22 @@ def _export_derived(
             seed=seed,
             easy_negatives=pair_easy_negatives,
         )
-    if writers.wants("retrieval-triples"):
-        _export_retrieval_triples(
-            store, writers=writers, stats=stats, keep=keep, seed=seed, easy=easy_negatives
-        )
-    if writers.wants("qrels"):
-        _export_qrels(
-            store, out_dir, writers=writers, stats=stats, keep=keep, seed=seed, release=release
-        )
+    if writers.wants("retrieval-triples") or writers.wants("qrels"):
+        # One projection of the store, graded twice: F3 and F4 read the same senses, the
+        # same resolved graph and the same easy-negative pool, and loading it twice would
+        # double both the cost and the chance of the two disagreeing.
+        corpus = load_corpus(store)
+        if writers.wants("retrieval-triples"):
+            _export_retrieval_triples(
+                corpus, writers=writers, stats=stats, keep=keep, seed=seed, easy=easy_negatives
+            )
+        if writers.wants("qrels"):
+            _export_qrels(
+                corpus, out_dir, writers=writers, stats=stats, keep=keep, seed=seed, release=release
+            )
+        # Released before the pretraining pass, which runs in this same frame and has no
+        # use for it.
+        del corpus
     if writers.wants("pretrain"):
         _export_pretrain(
             store,
@@ -608,47 +613,48 @@ def _export_retrieval_pairs(
     seed: int,
     easy_negatives: int,
 ) -> None:
-    """Convert the free pairs exporter's JSONL into the ``retrieval-pairs`` repo."""
-    with tempfile.TemporaryDirectory(prefix="opengloss-hf-") as tmp:
-        path = Path(tmp) / "pairs.jsonl"
-        outcome = export_pairs(
-            store, path, lexeme_ids=lexeme_ids, easy_negatives=easy_negatives, seed=seed
+    """Stream the free pairs exporter's records into the ``retrieval-pairs`` repo."""
+    outcome = ExportPairsOutcome()
+    for pair in iter_pairs(
+        store,
+        lexeme_ids=lexeme_ids,
+        easy_negatives=easy_negatives,
+        seed=seed,
+        outcome=outcome,
+    ):
+        lexeme_id = _lexeme_of_sense(pair.sense_a) if pair.sense_a else slugify(str(pair.headword))
+        if not _keep(keep, lexeme_id):
+            continue
+        span_a_start, span_a_end = _span(pair.span_a)
+        span_b_start, span_b_end = _span(pair.span_b)
+        writers.write(
+            "retrieval-pairs",
+            "default",
+            {
+                "headword": pair.headword,
+                "headword_b": pair.headword_b,
+                "lexeme_id": lexeme_id,
+                "sense_a": pair.sense_a,
+                "sense_b": pair.sense_b,
+                "text_a": pair.text_a,
+                "text_b": pair.text_b,
+                "span_a_start": span_a_start,
+                "span_a_end": span_a_end,
+                "span_b_start": span_b_start,
+                "span_b_end": span_b_end,
+                "label": pair.label,
+                "level_a": pair.level_a,
+                "level_b": pair.level_b,
+                "kind": pair.kind,
+                "live_senses": pair.live_senses,
+                "tier": _tier_of(stats, lexeme_id),
+            },
         )
-        stats.derived_summaries["retrieval-pairs"] = dict(outcome.as_dict())
-        for record in _read_jsonl(path):
-            sense_a = record.get("sense_a")
-            lexeme_id = _lexeme_of_sense(sense_a) if sense_a else slugify(str(record["headword"]))
-            if not _keep(keep, lexeme_id):
-                continue
-            span_a_start, span_a_end = _span(record.get("span_a"))
-            span_b_start, span_b_end = _span(record.get("span_b"))
-            writers.write(
-                "retrieval-pairs",
-                "default",
-                {
-                    "headword": record["headword"],
-                    "headword_b": record["headword_b"],
-                    "lexeme_id": lexeme_id,
-                    "sense_a": sense_a,
-                    "sense_b": record.get("sense_b"),
-                    "text_a": record["text_a"],
-                    "text_b": record["text_b"],
-                    "span_a_start": span_a_start,
-                    "span_a_end": span_a_end,
-                    "span_b_start": span_b_start,
-                    "span_b_end": span_b_end,
-                    "label": record["label"],
-                    "level_a": record["level_a"],
-                    "level_b": record["level_b"],
-                    "kind": record["kind"],
-                    "live_senses": record.get("live_senses"),
-                    "tier": _tier_of(stats, lexeme_id),
-                },
-            )
+    stats.derived_summaries["retrieval-pairs"] = dict(outcome.as_dict())
 
 
 def _export_retrieval_triples(
-    store: LexemeStore,
+    corpus: Corpus,
     *,
     writers: _WriterSet,
     stats: Stats,
@@ -656,10 +662,9 @@ def _export_retrieval_triples(
     seed: int,
     easy: int,
 ) -> None:
-    """Convert the free triples exporter's result into the ``retrieval-triples`` repo."""
-    result = build_triples(store, seed=seed, easy_negatives=easy)
-    stats.derived_summaries["retrieval-triples"] = dict(result.as_summary())
-    for triple in result.triples:
+    """Stream the free triples exporter's records into the ``retrieval-triples`` repo."""
+    summary = TriplesSummary()
+    for triple in iter_triples(corpus, seed=seed, easy_negatives=easy, summary=summary):
         sense_id = _sense_of(triple.query_id)
         lexeme_id = _lexeme_of_sense(sense_id)
         if not _keep(keep, lexeme_id):
@@ -682,10 +687,11 @@ def _export_retrieval_triples(
                 "tier": _tier_of(stats, lexeme_id),
             },
         )
+    stats.derived_summaries["retrieval-triples"] = dict(summary.as_summary())
 
 
 def _export_qrels(
-    store: LexemeStore,
+    corpus: Corpus,
     out_dir: Path,
     *,
     writers: _WriterSet,
@@ -694,41 +700,48 @@ def _export_qrels(
     seed: int,
     release: str = DEFAULT_RELEASE,
 ) -> None:
-    """Convert the free qrels exporter's result into the ``qrels`` repo.
+    """Stream the free qrels exporter's records into the ``qrels`` repo.
 
     The listwise queries and the document corpus become parquet configs; the judgements
     are additionally written verbatim as ``qrels.trec`` at the repo root, because that is
-    the file every retrieval evaluation harness already reads.
+    the file every retrieval evaluation harness already reads. Both are written as the
+    queries stream past, so nothing but the document corpus -- which has to be written
+    anyway, and whose texts are the corpus's own strings -- is accumulated (D-77).
     """
-    result = build_qrels(store, seed=seed)
-    stats.derived_summaries["qrels"] = dict(result.as_summary())
+    spec = REPOS_BY_SLUG["qrels"]
+    trec_path = repo_dir(out_dir, spec, release) / "qrels.trec"
+    trec_path.parent.mkdir(parents=True, exist_ok=True)
 
-    kept_query_ids: set[str] = set()
-    for query in result.listwise:
-        sense_id = _sense_of(query.query_id)
-        lexeme_id = _lexeme_of_sense(sense_id)
-        if not _keep(keep, lexeme_id):
-            continue
-        kept_query_ids.add(query.query_id)
-        writers.write(
-            "qrels",
-            "listwise",
-            {
-                "query_id": query.query_id,
-                "query": query.query,
-                "query_source": query.query_source,
-                "sense_id": sense_id,
-                "lexeme_id": lexeme_id,
-                "candidates": [
-                    {"id": candidate.id, "text": candidate.text, "grade": candidate.grade}
-                    for candidate in query.candidates
-                ],
-                "n_candidates": len(query.candidates),
-                "tier": _tier_of(stats, lexeme_id),
-            },
-        )
+    docs: dict[str, str] = {}
+    summary = QrelsSummary()
+    with trec_path.open("w", encoding="utf-8") as handle:
+        for query in iter_listwise(corpus, seed=seed, docs=docs, summary=summary):
+            sense_id = _sense_of(query.query_id)
+            lexeme_id = _lexeme_of_sense(sense_id)
+            if not _keep(keep, lexeme_id):
+                continue
+            writers.write(
+                "qrels",
+                "listwise",
+                {
+                    "query_id": query.query_id,
+                    "query": query.query,
+                    "query_source": query.query_source,
+                    "sense_id": sense_id,
+                    "lexeme_id": lexeme_id,
+                    "candidates": [
+                        {"id": candidate.id, "text": candidate.text, "grade": candidate.grade}
+                        for candidate in query.candidates
+                    ],
+                    "n_candidates": len(query.candidates),
+                    "tier": _tier_of(stats, lexeme_id),
+                },
+            )
+            for candidate in query.candidates:
+                handle.write(f"{query.query_id} 0 {candidate.id} {candidate.grade}\n")
+    stats.derived_summaries["qrels"] = dict(summary.as_summary())
 
-    for doc_id, text in sorted(result.docs.items()):
+    for doc_id, text in sorted(docs.items()):
         lexeme_id = _lexeme_of_doc(doc_id)
         if not _keep(keep, lexeme_id):
             continue
@@ -743,15 +756,6 @@ def _export_qrels(
             },
         )
 
-    spec = REPOS_BY_SLUG["qrels"]
-    trec_path = repo_dir(out_dir, spec, release) / "qrels.trec"
-    trec_path.parent.mkdir(parents=True, exist_ok=True)
-    with trec_path.open("w", encoding="utf-8") as handle:
-        for entry in result.qrels:
-            if keep is not None and entry.query_id not in kept_query_ids:
-                continue
-            handle.write(f"{entry.as_trec_line()}\n")
-
 
 def _export_pretrain(
     store: LexemeStore,
@@ -763,37 +767,35 @@ def _export_pretrain(
     seed: int,
     levels: Sequence[ReadingLevel],
 ) -> None:
-    """Convert the free pretraining exporter's JSONL into the ``pretrain`` repo."""
-    with tempfile.TemporaryDirectory(prefix="opengloss-hf-") as tmp:
-        path = Path(tmp) / "pretrain.jsonl"
-        summary = export_pretrain(
-            store,
-            path,
-            templates=PRETRAIN_TEMPLATES,
-            levels=levels,
-            seed=seed,
-            lexeme_ids=lexeme_ids,
+    """Stream the free pretraining exporter's documents into the ``pretrain`` repo."""
+    summary = ExportSummary()
+    for record in iter_pretrain(
+        store,
+        templates=PRETRAIN_TEMPLATES,
+        levels=levels,
+        seed=seed,
+        lexeme_ids=lexeme_ids,
+        summary=summary,
+    ):
+        lexeme_id = record.id.split("#", 1)[0]
+        if not _keep(keep, lexeme_id):
+            continue
+        writers.write(
+            "pretrain",
+            "default",
+            {
+                "id": record.id,
+                "lexeme_id": lexeme_id,
+                "headword": record.headword,
+                "template": record.template,
+                "level": record.level,
+                "level_used": record.level_used,
+                "text": record.text,
+                "n_words": record.n_words,
+                "tier": _tier_of(stats, lexeme_id),
+            },
         )
-        stats.derived_summaries["pretrain"] = dict(summary.as_dict())
-        for record in _read_jsonl(path):
-            lexeme_id = str(record["id"]).split("#", 1)[0]
-            if not _keep(keep, lexeme_id):
-                continue
-            writers.write(
-                "pretrain",
-                "default",
-                {
-                    "id": record["id"],
-                    "lexeme_id": lexeme_id,
-                    "headword": record["headword"],
-                    "template": record["template"],
-                    "level": record["level"],
-                    "level_used": record["level_used"],
-                    "text": record["text"],
-                    "n_words": record["n_words"],
-                    "tier": _tier_of(stats, lexeme_id),
-                },
-            )
+    stats.derived_summaries["pretrain"] = dict(summary.as_dict())
 
 
 def _tier_of(stats: Stats, lexeme_id: str) -> str:

@@ -82,10 +82,13 @@ __all__ = [
     "Corpus",
     "Triple",
     "TriplesResult",
+    "TriplesSummary",
     "build_triples",
     "is_monosemous",
+    "iter_triples",
     "live_sense_count",
     "load_corpus",
+    "stream_triples",
     "write_triples",
 ]
 
@@ -582,6 +585,39 @@ class Triple:
 
 
 @dataclass(slots=True)
+class TriplesSummary:
+    """The counts one triples pass produced, folded as each triple is yielded.
+
+    Separated from :class:`TriplesResult` so a caller that writes every triple straight
+    out -- the JSONL exporter, the Hugging Face parquet writer -- gets the same run
+    summary without the list of triples ever existing (D-77).
+    """
+
+    entries_scanned: int = 0
+    senses_considered: int = 0
+    queries_considered: int = 0
+    triples_written: int = 0
+    by_negative_kind: dict[str, int] = field(default_factory=dict)
+
+    def record(self, triple: Triple) -> None:
+        """Fold one yielded triple into the counters."""
+        self.triples_written += 1
+        self.by_negative_kind[triple.negative_kind] = (
+            self.by_negative_kind.get(triple.negative_kind, 0) + 1
+        )
+
+    def as_summary(self) -> dict[str, object]:
+        """Return a JSON-able view for the CLI's run summary."""
+        return {
+            "entries_scanned": self.entries_scanned,
+            "senses_considered": self.senses_considered,
+            "queries_considered": self.queries_considered,
+            "triples_written": self.triples_written,
+            "by_negative_kind": dict(sorted(self.by_negative_kind.items())),
+        }
+
+
+@dataclass(slots=True)
 class TriplesResult:
     """What one :func:`build_triples` call produced."""
 
@@ -664,34 +700,39 @@ def _triples_for_query(
         )
 
 
-def build_triples(
-    store: LexemeStore, *, seed: int = 0, easy_negatives: int = 1, limit: int | None = None
-) -> TriplesResult:
-    """Build every ``(query, positive, negative)`` triple the store's live senses support.
+def iter_triples(
+    corpus: Corpus,
+    *,
+    seed: int = 0,
+    easy_negatives: int = 1,
+    summary: TriplesSummary | None = None,
+) -> Iterator[Triple]:
+    """Yield every ``(query, positive, negative)`` triple ``corpus`` supports.
 
-    One hard-negative triple per query (when the sense has any graph-derived candidate
-    at all) plus ``easy_negatives`` random-headword triples per query. A sense with no
-    queries of its own never happens — :func:`_queries_for` always returns at least the
-    gloss pseudo-query — so every live sense contributes at least ``easy_negatives``
-    triples, and one more when it has any graph relation to draw a hard negative from.
+    The streaming half of :func:`build_triples`, and the reason a full-release export no
+    longer holds the training set in memory (D-77): the corpus is bounded by the store's
+    sense count, but the triples are several per sense and each one carries three texts,
+    so the list of them is what has to go, not the corpus.
+
+    Taking an already-loaded :class:`Corpus` rather than a store also lets
+    ``export-hf`` build it once and grade qrels from the same one.
 
     Args:
-        store: The store to read. Never written.
+        corpus: The loaded corpus (see :func:`load_corpus`).
         seed: Seed for every deterministic sampling decision (see :func:`_rng`).
         easy_negatives: Easy-negative triples to emit per query.
-        limit: Cap on entries scanned, for a fast smoke run.
+        summary: Filled in as triples are yielded, when given. Its counts are complete
+            only once the iterator is exhausted.
 
-    Returns:
-        The triples plus the counts the CLI reports.
+    Yields:
+        One :class:`Triple` per negative produced, in sense-id then query order.
     """
-    corpus = load_corpus(store, limit=limit)
-    triples: list[Triple] = []
-    by_kind: dict[str, int] = {}
-    senses_considered = 0
-    queries_considered = 0
+    if summary is not None:
+        summary.entries_scanned = corpus.entries_scanned
 
     for sense_id in sorted(corpus.gloss):
-        senses_considered += 1
+        if summary is not None:
+            summary.senses_considered += 1
         info = classify(corpus, sense_id)
         options = positive_options(corpus, sense_id)
         positive = _rng(seed, sense_id, "positive").choice(options)
@@ -699,7 +740,8 @@ def build_triples(
         senses_in_lexeme = live_sense_count(corpus, lexeme_id)
 
         for query in corpus.queries.get(sense_id, ()):
-            queries_considered += 1
+            if summary is not None:
+                summary.queries_considered += 1
             for triple in _triples_for_query(
                 query,
                 positive,
@@ -711,16 +753,79 @@ def build_triples(
                 easy_lexeme_id=lexeme_id,
                 live_senses=senses_in_lexeme,
             ):
-                triples.append(triple)
-                by_kind[triple.negative_kind] = by_kind.get(triple.negative_kind, 0) + 1
+                if summary is not None:
+                    summary.record(triple)
+                yield triple
 
+
+def build_triples(
+    store: LexemeStore, *, seed: int = 0, easy_negatives: int = 1, limit: int | None = None
+) -> TriplesResult:
+    """Build every ``(query, positive, negative)`` triple the store's live senses support.
+
+    One hard-negative triple per query (when the sense has any graph-derived candidate
+    at all) plus ``easy_negatives`` random-headword triples per query. A sense with no
+    queries of its own never happens -- :func:`_queries_for` always returns at least the
+    gloss pseudo-query -- so every live sense contributes at least ``easy_negatives``
+    triples, and one more when it has any graph relation to draw a hard negative from.
+
+    This materialises the whole training set; :func:`iter_triples` and
+    :func:`stream_triples` produce the same rows without doing so.
+
+    Args:
+        store: The store to read. Never written.
+        seed: Seed for every deterministic sampling decision (see :func:`_rng`).
+        easy_negatives: Easy-negative triples to emit per query.
+        limit: Cap on entries scanned, for a fast smoke run.
+
+    Returns:
+        The triples plus the counts the CLI reports.
+    """
+    corpus = load_corpus(store, limit=limit)
+    summary = TriplesSummary()
+    triples = list(iter_triples(corpus, seed=seed, easy_negatives=easy_negatives, summary=summary))
     return TriplesResult(
         triples=triples,
-        entries_scanned=corpus.entries_scanned,
-        senses_considered=senses_considered,
-        queries_considered=queries_considered,
-        by_negative_kind=by_kind,
+        entries_scanned=summary.entries_scanned,
+        senses_considered=summary.senses_considered,
+        queries_considered=summary.queries_considered,
+        by_negative_kind=summary.by_negative_kind,
     )
+
+
+def stream_triples(
+    store: LexemeStore,
+    out_path: Path,
+    *,
+    seed: int = 0,
+    easy_negatives: int = 1,
+    limit: int | None = None,
+) -> TriplesSummary:
+    """Write every triple to ``out_path`` as JSONL without materialising them.
+
+    Byte-for-byte the file :func:`write_triples` writes for the same inputs; this is the
+    path the CLI takes, so a full-release export is bounded by the corpus rather than by
+    the training set (D-77).
+
+    Args:
+        store: The store to read. Never written.
+        out_path: Destination path; parent directories are created.
+        seed: Seed for every deterministic sampling decision.
+        easy_negatives: Easy-negative triples to emit per query.
+        limit: Cap on entries scanned, for a fast smoke run.
+
+    Returns:
+        The counts the CLI reports.
+    """
+    corpus = load_corpus(store, limit=limit)
+    summary = TriplesSummary()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("wb") as handle:
+        for triple in iter_triples(
+            corpus, seed=seed, easy_negatives=easy_negatives, summary=summary
+        ):
+            handle.write(orjson.dumps(asdict(triple)) + b"\n")
+    return summary
 
 
 def write_triples(result: TriplesResult, out_path: Path) -> None:

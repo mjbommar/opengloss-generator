@@ -63,7 +63,7 @@ from opengloss_generator.export.triples import (
 from opengloss_generator.identity import encyclopedia_owner_id
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
     from pathlib import Path
 
     from opengloss_generator.export.triples import Corpus, SenseGraphInfo
@@ -79,7 +79,10 @@ __all__ = [
     "ListwiseQuery",
     "QrelEntry",
     "QrelsResult",
+    "QrelsSummary",
     "build_qrels",
+    "iter_listwise",
+    "stream_qrels",
     "write_qrels",
 ]
 
@@ -302,6 +305,48 @@ class ListwiseQuery:
 
 
 @dataclass(slots=True)
+class QrelsSummary:
+    """The counts one qrels pass produced, folded as each query is yielded.
+
+    Separated from :class:`QrelsResult` so a caller that writes every judgement and
+    listwise row straight out gets the same run summary without the judgements, the
+    candidate lists, or the queries ever being held together (D-77). ``docs_written``
+    is the size of the document corpus, which the caller keeps -- it is one entry per
+    distinct document id, and its texts are the corpus strings themselves, so it costs
+    ids rather than text.
+    """
+
+    entries_scanned: int = 0
+    senses_considered: int = 0
+    queries_considered: int = 0
+    qrels_written: int = 0
+    docs_written: int = 0
+    listwise_queries_written: int = 0
+    grade_histogram: dict[int, int] = field(default_factory=dict)
+
+    def record(self, query: ListwiseQuery) -> None:
+        """Fold one yielded listwise query and its judgements into the counters."""
+        self.listwise_queries_written += 1
+        for candidate in query.candidates:
+            self.qrels_written += 1
+            self.grade_histogram[candidate.grade] = self.grade_histogram.get(candidate.grade, 0) + 1
+
+    def as_summary(self) -> dict[str, object]:
+        """Return a JSON-able view for the CLI's run summary."""
+        return {
+            "entries_scanned": self.entries_scanned,
+            "senses_considered": self.senses_considered,
+            "queries_considered": self.queries_considered,
+            "qrels_written": self.qrels_written,
+            "docs_written": self.docs_written,
+            "listwise_queries_written": self.listwise_queries_written,
+            "grade_histogram": {
+                str(grade): count for grade, count in sorted(self.grade_histogram.items())
+            },
+        }
+
+
+@dataclass(slots=True)
 class QrelsResult:
     """What one :func:`build_qrels` call produced."""
 
@@ -328,8 +373,71 @@ class QrelsResult:
         }
 
 
+def iter_listwise(
+    corpus: Corpus,
+    *,
+    seed: int = 0,
+    docs: dict[str, str] | None = None,
+    summary: QrelsSummary | None = None,
+) -> Iterator[ListwiseQuery]:
+    """Yield one graded :class:`ListwiseQuery` per query, in :func:`build_qrels` order.
+
+    The streaming half of :func:`build_qrels`. Everything :func:`build_qrels` returns is
+    derivable from this one sequence: a judgement is one ``(query_id, candidate)`` pair,
+    so ``qrels.trec`` is written as the queries go past rather than accumulated first
+    (D-77).
+
+    ``docs`` is the one thing that legitimately has to outlive the pass, and it is cheap:
+    its values are the very ``Corpus`` strings the candidates carry, so it holds one dict
+    entry per distinct document id and no second copy of any text.
+
+    Args:
+        corpus: The loaded corpus (see
+            :func:`~opengloss_generator.export.triples.load_corpus`).
+        seed: Seed for every deterministic sampling decision.
+        docs: Filled in with ``doc_id -> text`` as documents are first seen, when given.
+        summary: Filled in as queries are yielded, when given. Its counts are complete
+            only once the iterator is exhausted.
+
+    Yields:
+        One :class:`ListwiseQuery` at a time, own-sense candidate first.
+    """
+    if summary is not None:
+        summary.entries_scanned = corpus.entries_scanned
+    seen_docs = docs if docs is not None else {}
+
+    for sense_id in sorted(corpus.gloss):
+        if summary is not None:
+            summary.senses_considered += 1
+        info = classify(corpus, sense_id)
+        graded = _graded_candidates(info, corpus, sense_id, seed, corpus.lexeme_of[sense_id])
+        for candidate in graded:
+            seen_docs.setdefault(candidate.doc_id, candidate.text)
+
+        for query in corpus.queries.get(sense_id, ()):
+            if summary is not None:
+                summary.queries_considered += 1
+            listwise_query = ListwiseQuery(
+                query=query.text,
+                query_id=query.query_id,
+                query_source=query.source,
+                candidates=[
+                    ListwiseCandidate(id=c.doc_id, text=c.text, grade=c.grade) for c in graded
+                ],
+            )
+            if summary is not None:
+                summary.record(listwise_query)
+            yield listwise_query
+
+    if summary is not None:
+        summary.docs_written = len(seen_docs)
+
+
 def build_qrels(store: LexemeStore, *, seed: int = 0, limit: int | None = None) -> QrelsResult:
     """Build graded qrels, a docs corpus, and listwise candidate lists for every query.
+
+    This materialises all three; :func:`iter_listwise` and :func:`stream_qrels` produce
+    the same judgements and rows without doing so.
 
     Args:
         store: The store to read. Never written.
@@ -340,48 +448,79 @@ def build_qrels(store: LexemeStore, *, seed: int = 0, limit: int | None = None) 
         The three outputs plus the counts and grade histogram the CLI reports.
     """
     corpus = load_corpus(store, limit=limit)
-    qrels: list[QrelEntry] = []
     docs: dict[str, str] = {}
+    summary = QrelsSummary()
+    qrels: list[QrelEntry] = []
     listwise: list[ListwiseQuery] = []
-    histogram: dict[int, int] = {}
-    senses_considered = 0
-    queries_considered = 0
 
-    for sense_id in sorted(corpus.gloss):
-        senses_considered += 1
-        info = classify(corpus, sense_id)
-        graded = _graded_candidates(info, corpus, sense_id, seed, corpus.lexeme_of[sense_id])
-        for candidate in graded:
-            docs.setdefault(candidate.doc_id, candidate.text)
-
-        for query in corpus.queries.get(sense_id, ()):
-            queries_considered += 1
-            candidates = [
-                ListwiseCandidate(id=c.doc_id, text=c.text, grade=c.grade) for c in graded
-            ]
-            for candidate in candidates:
-                qrels.append(
-                    QrelEntry(query_id=query.query_id, doc_id=candidate.id, grade=candidate.grade)
-                )
-                histogram[candidate.grade] = histogram.get(candidate.grade, 0) + 1
-            listwise.append(
-                ListwiseQuery(
-                    query=query.text,
-                    query_id=query.query_id,
-                    query_source=query.source,
-                    candidates=candidates,
-                )
-            )
+    for query in iter_listwise(corpus, seed=seed, docs=docs, summary=summary):
+        qrels += [
+            QrelEntry(query_id=query.query_id, doc_id=candidate.id, grade=candidate.grade)
+            for candidate in query.candidates
+        ]
+        listwise.append(query)
 
     return QrelsResult(
         qrels=qrels,
         docs=docs,
         listwise=listwise,
-        entries_scanned=corpus.entries_scanned,
-        senses_considered=senses_considered,
-        queries_considered=queries_considered,
-        grade_histogram=histogram,
+        entries_scanned=summary.entries_scanned,
+        senses_considered=summary.senses_considered,
+        queries_considered=summary.queries_considered,
+        grade_histogram=summary.grade_histogram,
     )
+
+
+def stream_qrels(
+    store: LexemeStore, out_dir: Path, *, seed: int = 0, limit: int | None = None
+) -> QrelsSummary:
+    """Write ``qrels.trec``, ``docs.jsonl`` and ``listwise.jsonl`` without materialising them.
+
+    The three files are byte-for-byte what :func:`write_qrels` writes for the same
+    inputs. Only the order in which they are *filled* differs: the judgements and the
+    listwise rows are written as their queries stream past, and the document corpus --
+    the one thing the pass has to accumulate -- is written when it is complete.
+
+    Args:
+        store: The store to read. Never written.
+        out_dir: Destination directory; created if absent.
+        seed: Seed for every deterministic sampling decision.
+        limit: Cap on entries scanned, for a fast smoke run.
+
+    Returns:
+        The counts the CLI reports.
+    """
+    corpus = load_corpus(store, limit=limit)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    docs: dict[str, str] = {}
+    summary = QrelsSummary()
+
+    qrels_path = out_dir / "qrels.trec"
+    listwise_path = out_dir / "listwise.jsonl"
+    with (
+        qrels_path.open("w", encoding="utf-8") as trec,
+        listwise_path.open("wb") as listwise,
+    ):
+        for query in iter_listwise(corpus, seed=seed, docs=docs, summary=summary):
+            for candidate in query.candidates:
+                entry = QrelEntry(
+                    query_id=query.query_id, doc_id=candidate.id, grade=candidate.grade
+                )
+                trec.write(f"{entry.as_trec_line()}\n")
+            payload = {
+                "query": query.query,
+                "query_id": query.query_id,
+                "query_source": query.query_source,
+                "candidates": [asdict(candidate) for candidate in query.candidates],
+            }
+            listwise.write(orjson.dumps(payload) + b"\n")
+
+    docs_path = out_dir / "docs.jsonl"
+    with docs_path.open("wb") as handle:
+        for doc_id, text in sorted(docs.items()):
+            handle.write(orjson.dumps({"id": doc_id, "text": text}) + b"\n")
+
+    return summary
 
 
 def write_qrels(result: QrelsResult, out_dir: Path) -> None:

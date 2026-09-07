@@ -5313,3 +5313,122 @@ signal firing and not firing, `phantom_pos` running before `distinctness`, and t
 2 pre-existing skips, 1 deselected. `uv run ruff check`/`format --check`, `uv run ty check src`,
 `uv run pytest` clean on `hygiene/phantom-pos`. `data/core-store` untouched — the sample is a
 read-only copy.
+
+## D-77 (2026-09-07) — `export-hf` streams its four derived training sets instead of building them
+
+**Context.** The v2.1 release export died. `uv run opengloss export-hf --store data/core-store
+--out data/hf --tiers-dir data/core --release v2.1` on the 109,633-entry store was OOM-killed at
+03:01 on 2026-09-07 having reached 90.5 GB of anonymous memory on a 91 GB machine
+(`journalctl`: `Killed process (opengloss) anon-rss:90526668kB`). The same command on the
+54,724-entry store two days earlier had finished. Nothing about the export had changed; the
+store had doubled.
+
+That is the failure a design owes an explanation for, because the module's own docstring
+already claimed the right shape: "**one streaming pass over the store**", "**shards roll on rows
+and on bytes**". Both were true — of the twelve store-derived repos. `_ShardWriter` batches
+2,048 rows and closes a shard at 300 MB, and `RowBuilder` hands it one entry's rows at a time.
+The four *derived* repos — `retrieval-pairs`, `retrieval-triples`, `qrels`, `pretrain` — did not
+go through that shape at all. Each called its free exporter's public function, which returned
+the finished training set, and only then reshaped it row by row into parquet.
+
+**What actually held the memory.** Measured on a 20,000-entry read-only slice of the release
+store (`scripts/build_sample_20k.py`), reading the RSS *held* after each of the four pre-existing
+aggregations rather than the high-water mark, so each is attributed to itself:
+
+| aggregation | size at 20K entries | RSS held |
+|---|---|---|
+| `list(store.iter_entries())` | 20,000 `Lexeme` objects | **+5.91 GB** |
+| `Corpus` (`load_corpus`) | 45,775 live senses | +0.11 GB |
+| `TriplesResult.triples` | 527,776 triples | +0.17 GB |
+| `QrelsResult` | 272,206 listwise queries, 1,652,274 judgements, 65,772 docs | +0.33 GB |
+
+The whole old export peaked at 6.21 GB on that slice, so **95% of the peak was one list of
+parsed entries**. A `Lexeme` costs about 295 kB as Pydantic objects against 82 kB as JSON on
+disk, and both `export/pairs.py::_load_entries` and `export/pretrain.py::export_pretrain` began
+by materialising every one of them — the first to have `entries` twice, once for the within-entry
+pairs and once for the easy-negative pools, the second only to sort by lexeme id. Extrapolated,
+that is ~32 GB per list on the full store, built twice in one run, on top of the triples and
+qrels structures that themselves grow with the sense count and were the parts the diagnosis
+started from. The suspects named in the OOM's own diary entry were the small half of the answer.
+
+Two further things were wrong in the same place and would have failed the run even at half the
+size. Both derived JSONL round-trips went through `tempfile.TemporaryDirectory()` — `/tmp` here
+is a 16 GB tmpfs, and the pairs corpus alone would not have fit. And `build_triples` and
+`build_qrels` each called `load_corpus` separately, projecting the same store twice for two
+gradings of the same senses.
+
+**Decision: the four builders are generators, and `export-hf` feeds `_ShardWriter` directly.**
+Each exporter grows an `iter_*` that yields one record at a time and folds its own counters into
+a summary object as it goes; the existing `build_*`/`export_*` entry points become thin wrappers
+over it, so every caller and every test that wants the whole thing still gets it, and the
+release path never asks for it.
+
+* `pairs.iter_pairs` visits ids in sorted order and reads one entry at a time. The output order
+  is unchanged — every within-entry pair first, then the easy negatives by domain leaf — which
+  is what forces the one thing that legitimately outlives an entry: the easy-negative pools.
+  Those now hold `_EasyCandidate`, six primitives per domain-tagged sense, instead of the
+  `Rendition` (and through it the parsed entry) they used to keep alive.
+* `pretrain.iter_pretrain` walks the same sorted-id path. Nothing else changes: it was holding
+  every entry only to sort them.
+* `triples.iter_triples` takes an already-loaded `Corpus` and yields `Triple`s. The corpus stays
+  — it is the bounded thing, one projection of the store's senses — and the several-per-sense
+  training rows go.
+* `qrels.iter_listwise` yields one graded `ListwiseQuery` at a time. Everything `build_qrels`
+  returned is derivable from that one sequence: a judgement is one `(query_id, candidate)` pair,
+  so `qrels.trec` is written as the queries stream past rather than accumulated first. The
+  document corpus is the exception and is kept, because it has to be written anyway and it costs
+  ids: its values are the very `Corpus` strings the candidates already carry, so it holds one
+  dict entry per distinct document and no second copy of any text.
+
+`export-hf` consumes all four as generators, drops the two tmpfs round-trips entirely (pairs and
+pretrain records go straight from the miner to the shard writer, with no JSONL in between), and
+builds **one** `Corpus` that `retrieval-triples` and `qrels` are both graded from — the two read
+the same senses, the same resolved graph and the same easy-negative pool, and loading it twice
+was both a cost and a second chance for the two to disagree.
+
+The JSONL exporters keep their own path: `stream_triples` and `stream_qrels` write the same
+files from the same generators, and `export-triples`/`export-qrels` now call those. Only the
+order in which `stream_qrels` *fills* its three files differs from `write_qrels` — judgements and
+listwise rows as the queries go past, the document corpus when it is complete. The files are
+byte-identical.
+
+**Nothing a consumer sees changed.** No parquet schema, no column, no card, no row order, no id.
+That is asserted, not asserted-to: on `data/sample-300`, every one of the 36 files a full
+`export-hf` writes — 19 parquet shards, `qrels.trec` and all sixteen cards — is
+**byte-identical** to the pre-change export, and so are all six files the four JSONL exporters
+write. On the 20,000-entry slice, likewise for the rows: all 25 parquet shards and `qrels.trec`
+byte-identical, and the run summary identical field for field.
+
+**Peak RSS, `/usr/bin/time -v`.**
+
+| | before | after |
+|---|---|---|
+| 20,000-entry slice | 6.21 GB (2:26) | **0.72 GB (1:52)** |
+| 109,633-entry release store | **90.5 GB — OOM-killed** | **2.18 GB (12:10)** |
+
+The full-store run is the same command that died — `--store data/core-store --tiers-dir
+data/core --release v2.1`, all sixteen repos — written to a scratch directory outside the repo
+and then deleted. It finished in 12 minutes at **2.18 GB**, having produced 11,099,076
+retrieval pairs, 2,883,917 triples, 1,445,922 listwise queries over a 359,618-document corpus
+and 1,111,044 pretraining documents from 109,633 lexemes and 250,003 live senses: 79 parquet
+shards, 3.1 GB. That is 41× less memory than the run that was killed, and 11× under the 25 GB
+ceiling this work was given.
+
+**Consequence.** Modified: `src/opengloss_generator/export/pairs.py` (`iter_pairs`,
+`_EasyCandidate`, `_collect_easy_candidates`, `_entry_ids`; `_easy_negative_pairs` takes the
+gathered pools rather than a list of entries; `_load_entries` gone), `export/pretrain.py`
+(`iter_pretrain`, `_entries_in_id_order`), `export/triples.py` (`iter_triples`,
+`TriplesSummary`, `stream_triples`), `export/qrels.py` (`iter_listwise`, `QrelsSummary`,
+`stream_qrels`), `export/hf.py` (the four `_export_*` helpers consume generators; the shared
+`Corpus`; `_read_jsonl` and the two `tempfile` round-trips gone), `cli.py` (`export-triples` and
+`export-qrels` call the streaming writers). No CLI flag changed and no README row needed
+rewriting: this is the same command producing the same bytes. New:
+`scripts/build_sample_20k.py`. Tests: **+21** (`tests/test_export_streaming.py`: each of the
+four generators against a reference implementation of the pre-D-77 aggregation, kept in the test
+as code rather than as a snapshot, over the two hand-built worlds the per-exporter suites
+already maintain *and* over `data/sample-300` when present; a word list that is unsorted,
+duplicated and names an absent entry; an empty store for each; and the JSONL exporters compared
+byte for byte with what the materialising path writes). 1,253 pass, 1 deselected.
+`uv run ruff check`/`format --check`, `uv run ty check src`, `uv run pytest` clean on
+`release/hf-bounded-memory`. `data/core-store` was read only — the slice is a copy and the
+measurement export was written to a scratch directory outside the repo.

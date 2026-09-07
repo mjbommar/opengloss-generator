@@ -34,8 +34,8 @@ from opengloss_generator.export.hf_schemas import (
 from opengloss_generator.export.pairs import export_pairs as _export_pairs
 from opengloss_generator.export.pretrain import TEMPLATES as PRETRAIN_TEMPLATES
 from opengloss_generator.export.pretrain import export_pretrain
-from opengloss_generator.export.qrels import build_qrels, write_qrels
-from opengloss_generator.export.triples import build_triples, write_triples
+from opengloss_generator.export.qrels import stream_qrels
+from opengloss_generator.export.triples import stream_triples
 from opengloss_generator.identity import slugify
 from opengloss_generator.migrate import detect_version
 from opengloss_generator.migrate import from_v2 as migrate_from_v2
@@ -1682,9 +1682,10 @@ def export_triples_cmd(
     """
     cfg = _build_config(config_path, store, None, None)
     lexeme_store = LexemeStore(cfg.store)
-    result = build_triples(lexeme_store, seed=seed, easy_negatives=easy_negatives, limit=limit)
-    write_triples(result, out)
-    _echo_summary({"out": str(out), "seed": seed, **result.as_summary()})
+    summary = stream_triples(
+        lexeme_store, out, seed=seed, easy_negatives=easy_negatives, limit=limit
+    )
+    _echo_summary({"out": str(out), "seed": seed, **summary.as_summary()})
 
 
 @app.command("export-qrels")
@@ -1711,9 +1712,8 @@ def export_qrels_cmd(
     """
     cfg = _build_config(config_path, store, None, None)
     lexeme_store = LexemeStore(cfg.store)
-    result = build_qrels(lexeme_store, seed=seed, limit=limit)
-    write_qrels(result, out_dir)
-    _echo_summary({"out_dir": str(out_dir), "seed": seed, **result.as_summary()})
+    summary = stream_qrels(lexeme_store, out_dir, seed=seed, limit=limit)
+    _echo_summary({"out_dir": str(out_dir), "seed": seed, **summary.as_summary()})
 
 
 @app.command()
