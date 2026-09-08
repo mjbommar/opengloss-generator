@@ -1767,3 +1767,14 @@ unmeasured stage. Gloss levels started 21:43. Tier so far $40.73.
 **$11.22** (2h34m); encyclopedia grade 5 + college 86,452 renditions **$29.52** (6h36m —
 half tier 4's pace, same unit cost). All completed under cap, 0 failures, 0 429s.
 Tier so far **$97.36**. Hygiene block started 09:48 (6-hour stage timeouts).
+
+**`DONE-TIER5` 2026-09-08 13:47.** 43,384 live tier-5 entries. Chain costs: structural
+$11.49, sections $29.24, gloss $15.89, examples $11.22, encyclopedia $29.52, content-
+hygiene $1.45, validity $20.10, sense-hygiene $3.51, repair/catch-up $0.16, readability
+$3.53, rendition $0.01, judge $1.82 → **$127.94** (caps $497; the $214 recipe-A estimate
+was high because WordNet entries average one sense; the sections stage cost $29 against
+a $200 cap). Every stage completed under cap with 0 failures and 0 429s — the first
+tier where nothing hit a cap or a timeout. Audit: 0 cycles, reciprocity 99.9%/99.6%,
+`senses_zero_relations` 2,585, headword-initial 0.01%. Judge **81.0** (QA-DIARY it.
+20). Closing script running: validity census → reconcile → re-judge → store-wide audit
+→ pretraining measurement → V22 fill → v2.2 export → push.
