@@ -1564,3 +1564,70 @@ async def test_a_default_selection_without_a_runner_runs_the_five_free_steps(sto
     assert outcome.calls == 0
     assert outcome.cost_usd == 0.0
     assert outcome.steps[RelationReconcileStep.VERDICTS].demoted == 2
+
+
+# --------------------------------------------------------------------------------------
+# D-81 — alias_of is exempt from every step
+# --------------------------------------------------------------------------------------
+#
+# This pass exists to shorten a relation list a model padded. An alias is not padding: it
+# says two headwords name one thing, it was written from an outside source rather than
+# guessed, and the demotion floor every step here lands on — ``see_also`` — is strictly
+# weaker than what it carries. So the whole module skips it, and the four tests below are
+# one per step that could otherwise reach it. ``tombstone`` needs no guard and gets a test
+# anyway, because "it happens not to match today" is what a later edit breaks silently.
+
+
+def _alias_edge(term: str = "lincoln", *, sense_id: str | None = None) -> Relation:
+    """Build one alias edge, the shape ``lexeme-hygiene``'s alias step writes."""
+    return _relation(RelationType.ALIAS_OF, term, sense_id=sense_id, note="alias: lexeme_hygiene")
+
+
+async def test_cap_never_trims_an_alias_edge(store):
+    # Well past `RelationCaps.default`, which is 4.
+    aliases = [_alias_edge(f"variant_{index}") for index in range(9)]
+    store.write(_entry("abraham_lincoln", relations=aliases))
+
+    outcome = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.CAP})
+
+    assert outcome.steps[RelationReconcileStep.CAP].removed == 0
+    assert len(_relations_of(store.read("abraham_lincoln"))) == 9
+
+
+async def test_dedup_never_removes_a_duplicate_alias_edge(store):
+    store.write(_entry("abraham_lincoln", relations=[_alias_edge(), _alias_edge()]))
+
+    outcome = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.DEDUP})
+
+    assert outcome.steps[RelationReconcileStep.DEDUP].removed == 0
+    assert _terms(store.read("abraham_lincoln")) == ["lincoln", "lincoln"]
+
+
+async def test_a_contrast_verdict_never_demotes_an_alias_edge(store):
+    entry = _entry("abraham_lincoln", relations=[_alias_edge(sense_id="lincoln:noun:0")])
+    entry.contrasts.append(
+        _contrast(
+            "abraham_lincoln:noun:0-alias_of->lincoln",
+            ContrastVerdict.UNRELATED,
+            target_sense_id="lincoln:noun:0",
+        )
+    )
+    store.write(entry)
+    store.write(_entry("lincoln"))
+
+    outcome = await run_relation_reconcile(store, workers=4, only={RelationReconcileStep.VERDICTS})
+
+    assert outcome.steps[RelationReconcileStep.VERDICTS].demoted == 0
+    assert _relations_of(store.read("abraham_lincoln"))[0].type is RelationType.ALIAS_OF
+
+
+async def test_a_full_sweep_leaves_an_alias_edge_exactly_as_it_found_it(store):
+    store.write(_entry("abraham_lincoln", relations=[_alias_edge(sense_id="lincoln:noun:0")]))
+    store.write(_entry("lincoln"))
+
+    await run_relation_reconcile(store, workers=4)
+
+    relations = _relations_of(store.read("abraham_lincoln"))
+    assert len(relations) == 1
+    assert relations[0].type is RelationType.ALIAS_OF
+    assert relations[0].note == "alias: lexeme_hygiene"

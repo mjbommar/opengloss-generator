@@ -204,7 +204,12 @@ from opengloss_generator.filters import normalise_candidate
 from opengloss_generator.log import get_logger
 from opengloss_generator.prompts import PROMPT_VERSION
 from opengloss_generator.runner import run_pool
-from opengloss_generator.schema import Provenance, RelationType, StageName
+from opengloss_generator.schema import (
+    PROTECTED_RELATION_TYPES,
+    Provenance,
+    RelationType,
+    StageName,
+)
 from opengloss_generator.workflows.content_hygiene import (
     PROGRESS_EVERY,
     UNRESOLVED_GLOSS,
@@ -293,19 +298,29 @@ _VALIDITY_PREFIX = "relation_hygiene:validity"
 #: ``content_hygiene`` so every sweep in the project reads the same in a run log.
 _PROGRESS_EVERY = PROGRESS_EVERY
 
+#: Relation types **no** step of this pass demotes, retypes or buys a verdict about
+#: (D-81), imported from the schema so one edit there exempts every pass at once. An
+#: alias says two headwords name one thing; ``validity``'s question — "is this edge the
+#: relation it claims to be?" — is not one an alias can fail, and every demotion here
+#: lands on ``see_also``, which would lose exactly what the alias carries. It is a
+#: member of the two step-level exempt sets below as well, so the free steps skip it
+#: without a second test at their call sites.
+_PROTECTED: frozenset[RelationType] = PROTECTED_RELATION_TYPES
+
 #: Relation types the ``inflections`` step leaves alone. ``see_also`` is the pass's own
 #: floor and re-checking it is what would make the step non-idempotent; ``derivation`` is
 #: about morphology by definition, and demoting one for naming a morphological relative
-#: would delete the information the type exists to carry.
-_INFLECTION_EXEMPT: frozenset[RelationType] = frozenset(
-    {RelationType.SEE_ALSO, RelationType.DERIVATION}
+#: would delete the information the type exists to carry; and :data:`_PROTECTED`.
+_INFLECTION_EXEMPT: frozenset[RelationType] = (
+    frozenset({RelationType.SEE_ALSO, RelationType.DERIVATION}) | _PROTECTED
 )
 
 #: Relation types the ``headword_phrases`` step leaves alone. A collocation or a
 #: ``used_with`` target that contains the headword is not the defect — it is the whole
 #: point of those two types ("a solemn vow", "vow of silence").
-_PHRASE_EXEMPT: frozenset[RelationType] = frozenset(
-    {RelationType.SEE_ALSO, RelationType.COLLOCATION, RelationType.USED_WITH}
+_PHRASE_EXEMPT: frozenset[RelationType] = (
+    frozenset({RelationType.SEE_ALSO, RelationType.COLLOCATION, RelationType.USED_WITH})
+    | _PROTECTED
 )
 
 #: Targets that are labels about words rather than words. The first block mirrors
@@ -1318,7 +1333,7 @@ def _demote_meta_labels(entry: Lexeme) -> tuple[int, list[_FarSideRequest]]:
     editor = _Editor(entry)
     for _, sense, sid in _live_senses(entry):
         for relation in sense.relations:
-            if relation.type is RelationType.SEE_ALSO:
+            if relation.type is RelationType.SEE_ALSO or relation.type in _PROTECTED:
                 continue
             if not is_meta_label(relation.target.term):
                 continue
@@ -1696,7 +1711,7 @@ def _collect_refs(entry: Lexeme, store: LexemeStore, cache: dict[str, str]) -> l
         source_gloss = sense.canonical_gloss()
         sense_key = f"{pos_entry.pos.value} {sense.index}"
         for relation in sense.relations:
-            if relation.type is RelationType.SEE_ALSO:
+            if relation.type is RelationType.SEE_ALSO or relation.type in _PROTECTED:
                 continue
             refs.append(
                 _RelationRef(

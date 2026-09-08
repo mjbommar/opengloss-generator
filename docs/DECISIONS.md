@@ -6120,3 +6120,229 @@ overview call, the seed passed to the senses prompt), `prompts.py`
 7 skipped. `uv run ruff check src tests`, `ruff format --check src tests`,
 `ty check src`, `pytest` all clean. Total pilot spend including the two probe runs and the
 discarded first pilot: **$0.248** against the $0.30 ceiling.
+
+## D-81 (2026-09-08) — Tier 6's schema: two taxonomy leaves, `entity_type` written rather than defaulted, and two shapes for an alias
+
+**Context.** `docs/NAMED-ENTITY-PLAN.md` proposes tier 6 — 15,000 ranked named entities —
+and its § 6 leaves four questions for the author. Its § 4 and § 5 stage 0 name the schema
+work the tier needs before stage 1 can run. This record answers the four questions and
+lands the schema work; stages 1-7 (the import, the seeded `generate`, the enrichment
+chain, the judge sample) are separate changes.
+
+The state this starts from is the plan's own measurement: **all 20,743 proper nouns in
+v2.2 carry `entity_type = other`**, because D-12 (migration), D-18 (`classify_kind`'s
+residue batch) and `wordnet_import.py` each write that placeholder and no pass has ever
+replaced one. Nothing on a stored entry distinguishes a placeholder from a verdict. v3 has
+no alias mechanism at all, and the domain taxonomy has no leaf for a city or a country —
+26% of the tier.
+
+### Decision 1 (§ 4d, question 1) — two leaves under existing roots, not a sixteenth root
+
+`nature.settlements` ("cities towns villages and neighbourhoods") and
+`law_government.polities` ("countries states empires and polities"). `TAXONOMY_VERSION`
+goes `"2"` → `"3"`; `LEAF_COUNT` 160 → 162; `nature` 11 → 12 leaves and `law_government`
+10 → 11, both inside the 8-12 band D-44's raised-cap test still gates.
+
+The alternative the plan offers — accept `people_society.community_life` — was declined
+because that leaf is about *community*, not about Denver, and a quarter of the tier would
+have been filed under a tag that does not describe it. A `geography` root was declined for
+the reason the plan gives: `ROOTS` is a fixed 15 and adding one is a breaking change to
+the enum, to `LCC_MAP`, to `IPTC_MAP` and to every test that pins them. Splitting the pair
+across two roots rather than putting both under one is what makes the distinction a tagger
+can actually act on: the physical place goes beside landforms and water bodies, and the
+*governed* entity goes beside government structure and civics, so *Denver* and *Colorado*
+land in different places for a reason a five-word gloss can carry. Both leaves get
+`GLOSSES` entries, so `TAXONOMY_PROMPT_BLOCK` picks them up with no other edit (D-44's
+convention), and the WordNet importer's `LEXNAME_ENTITY_MAP` and the entity-typing pass
+route settlements and polities toward them.
+
+### Decision 2 (§ 4a-b) — `entity_type` and `wikidata_qid` are written, not defaulted
+
+Two paths, and the order between them is the decision:
+
+1. **The import path stops defaulting.** `wordnet_import.entry_for` takes an
+   `entity_type` and a `wikidata_qid` from the candidate row when one is given, and
+   otherwise reads the **instance hypernym's lexname** — WordNet's own encoding of "this
+   is a named individual" — through the new `LEXNAME_ENTITY_MAP`: `noun.person` → person,
+   `noun.location` → place, `noun.group` → organization, `noun.communication` /
+   `noun.artifact` → work, `noun.act` / `noun.event` → event. `EntityType.OTHER` is
+   written **last**, when neither source says anything, rather than always.
+   `entity_type_for_lexnames` answers `None` rather than `OTHER` when it cannot say, and
+   resolves a multi-hypernym tie by a fixed precedence, because WordNet's pointer order is
+   WordNet's business and the answer must not depend on it.
+2. **A new `retrofit --only entity_type` pass** for the 20,743 already on disk. Free
+   first (D-8): the tier-6 candidate TSV carries an `entity_type` and a `qid` for every
+   name it lists, so any entry it names is typed at zero cost and its QID — which the
+   store has no other way to learn, and which is the join key every later name pass needs
+   — is stored at the same time; the residue that still carries the placeholder goes to
+   the model 40 headwords per call, each with a gloss snippet, answering a strict
+   `EntityType` enum. A proper noun already carrying a type that is **not** the
+   placeholder is left alone: this pass fills a hole, it does not re-judge a verdict.
+
+The pass reuses `StageName.CLASSIFY_KIND`'s policy rather than adding a stage, since it
+asks the same shape of question about the same entries one step further down, and it runs
+straight after `classify_kind` in `RetrofitPass.ALL` because it only has a question to ask
+about an entry whose kind is already settled. D-47's marker keys on the type and QID *as
+the pass leaves them*, so a settled entry is free on every later sweep.
+
+`EntityType`'s docstring now records what nothing in it said: **a fictional or
+mythological character is a `person`**, following OntoNotes, whose PERSON is explicitly
+"people, including fictional" (STANDARDS.md § 4a). The two gaps the plan found — no member
+for a language, a script, a calendar or an ethnic group, and `PRODUCT` unreachable from
+any source this project reads — are documented there rather than fixed, because widening
+the enum is a change to a published column and the residual `other` is honest.
+
+### Decision 3 (§ 4c, question 2) — both shapes, not one
+
+The plan's own question asks whether an alias should be `Lexeme.aliases`,
+`RelationType.ALIAS_OF`, or D-79's retired-lexeme fold. The answer is **both of the first
+two**, because they are not two designs for one situation — they are two situations:
+
+* **`Lexeme.aliases: list[str]`** for a surface form with **no entry of its own**: the
+  leading-article form ("the Netherlands"), a diacritic or transliteration variant, an
+  initialism nothing else holds. These carry no senses, no relations and no ids. Validated
+  non-blank, deduped by slug, and **slug-distinct from the headword** — `slugify` folds
+  case, whitespace and diacritics, so "Curacao" already resolves to *Curaçao* through
+  `lexeme_id` alone and an alias row for it would duplicate the `lemma` row the
+  `inflections` repo already writes. The alias list is for forms a slug lookup *cannot*
+  reach.
+* **`RelationType.ALIAS_OF`** for the case where a separate lexeme exists ("Abraham
+  Lincoln" → "lincoln"). Asymmetric, and the direction is fixed: the edge is written on
+  the entry carrying the **full** form and points at the variant. **The far side is
+  nothing** — an alias points one way, and no pass writes, infers or repairs a reciprocal
+  for it.
+
+D-79's fold was declined for this: a fold *retires* the folded entry, and both halves of an
+alias pair are entries a reader legitimately looks up. "Lincoln" is not a defective entry
+to be tombstoned; it is a word with its own senses, one of which happens to be the same man
+"Abraham Lincoln" names.
+
+**The exemption is the load-bearing half of this decision.** `schema.PROTECTED_RELATION_TYPES`
+(one member today) is imported by `relation_hygiene`, `relation_reconcile` and
+`graph_hygiene`, and **no step of any of them may demote, prune, cap, dedupe or buy a
+verdict about a member**. The reasons are specific, not general caution:
+
+* `relation_hygiene`'s `inflections` and `headword_phrases` steps demote a target that
+  looks like the headword — which is exactly what an alias target *is* ("Lincoln" for
+  "Abraham Lincoln"), so without the exemption the pass would demote every alias it saw.
+* `validity`'s question — "is this edge the relation it claims to be?" — is not one an
+  alias can fail: it claims no semantic relation.
+* `relation-reconcile`'s demotion floor is `see_also`, which is strictly weaker than what
+  an alias carries, and its `cap` and `dedup` steps exist to shorten a list a model padded.
+  An alias was written from an outside source, not guessed.
+* `graph_hygiene` applies the exemption at **projection** time rather than in each of its
+  four steps, which is the stronger place: an edge it cannot see is one it cannot demote,
+  cannot pull into a cycle and cannot infer a reciprocal for.
+
+`ALIAS_OF`'s `namespace` is `"og"`: WN-LMF relates senses and synsets and has no relation
+for "these two entries are two names for one thing" — a wordnet puts both forms in one
+synset instead, which a headword-per-entry model cannot do.
+
+**Resolution, `inflections`-style.** The `lexicon` export gains an `aliases` column and the
+`inflections` dataset gains one row per alias with `relation = alias`, so resolving *any*
+surface string — inflected, derived or renamed — stays the single lookup D-75 built that
+repo for. `ALIAS_OF` exports in the `relations` dataset like any other type.
+
+### Decision 4 — the alias pass: `lexeme-hygiene --only aliases`
+
+The third step of D-79's pass, and it belongs there for D-79's own stated reason: its
+question is about the **headword**, and it cannot be answered from inside one entry. It is
+the only step in that module that adds rather than retires, so it runs last — a retired
+entry has no live sense to hang a relation on, and is not a candidate.
+
+For each `alias_of candidate: store has '<slug>'` note in the candidate TSV whose two
+entries both exist and are live: one nano verdict on the `HYGIENE` policy, strict enum
+`alias_of` | `see_also` | `none`, prompted with both headwords and both entries' canonical
+glosses. `alias_of` writes an `ALIAS_OF` edge, `see_also` writes an **authored**
+`see_also` (no demotion note, so `relation-reconcile`'s tombstone step leaves it), `none`
+writes nothing. Two free skips run first: an entry already asserting any edge toward the
+target is skipped outright — which is what makes a re-run cost nothing before the marker
+is even read — and a target whose own canonical gloss names the long headword verbatim
+(WordNet's *Lincoln* gloss ends "…; Abraham Lincoln") settles `alias_of` for nothing.
+D-47's marker keys on the target id plus the candidate's live gloss digests. The target
+entry is read without a lock and never written, D-79's one deliberate departure from D-31,
+for the reason that module already states.
+
+### Decision 5 (questions 3 and 4) — 15,000, and living public figures stay penalised
+
+**Size: 15,000**, for the plan's own argument — the score floor, not the money. At 10,000
+the cut lands at 59.6 and stops inside the level-4/5 body, losing most US state capitals
+and most of the second rank of American history; at 20,000 it falls to 37.8, where the
+list stops being vital-article-backed. 15,000 lands at 54.5, one coherent band, for ≈ $52
+all-in against caps of ≈ $85. The extra 5,000 stay a defensible second batch.
+
+**Living public figures are penalised, not excluded.** The −10 stability penalty already
+pushes most of the 612 below the cut, and no candidate in the pool is a private individual:
+every one has a Wikipedia article and every source is a curated list of public figures. An
+outright exclusion would drop Barack Obama and Stephen Hawking's living contemporaries from
+a dictionary that teaches contemporary English, which is a worse error than a name whose
+biography will need one update.
+
+### Release plumbing
+
+`TIER_FILES` gains `(TIER_TIER6, "tier6.tsv")` **last**, so D-75's rule holds: a headword
+already on an earlier list keeps the earlier tier. `TIER_DESCRIPTIONS`, `TIERS` and the
+shared `tier` field description follow. `hf_cards.V23` carries `TIER6_CANDIDATES = 15_000`
+(the list on disk) and seven `None` placeholders behind the same guard D-80 put on `V22`:
+`_changelog_v22_v23` refuses to render while any is unmeasured, so a `v2.3` export cannot
+ship an invented number. `DEFAULT_RELEASE` stays `v2.2` until the tier is built.
+
+### Pilot
+
+`data/sample-ner` (gitignored), 333 entries copied read-only from `data/core-store` by
+`scripts/build_sample_ner.py`. **The production tier-6 alias pairs cannot be piloted yet**
+and that is a fact about the tier, not the sample: the long-name half of all 9,475 is
+precisely what the store does not have (`in_store = 0` on 12,718 of the 15,000 rows), so
+stage 1 and stage 2 must run before one pair exists. The store already holds **3,475 pairs
+of the same shape** from the earlier tiers — a multi-word proper noun whose last token is a
+live entry (*Golden Horde* / *horde*, *Royal Society* / *society*) — so the pass is
+measured on 100 of those, with a candidate TSV written in the production file's own column
+shape. `gpt-5.4-nano` on the `HYGIENE` and `CLASSIFY_KIND` policies, 2026-09-08:
+
+| | `retrofit --only entity_type` | `lexeme-hygiene --only aliases` |
+|---|---|---|
+| entries scanned | 259 proper nouns | 100 |
+| free | 26 typed from the candidate list | 33 already linked, 2 target absent |
+| calls | **6** (40 headwords each) | **64** |
+| cost | **$0.0029** ($0.0000112/entry) | **$0.0088** ($0.000138/verdict) |
+| answers | 231 verdicts applied, 180 entries changed | 2 `alias_of`, 42 `see_also`, 20 `none` |
+| second sweep | 257/259 skipped by marker, 1 call; third sweep 0 | 0 calls, 77 already linked |
+
+Extrapolated: the whole store's 20,743 proper nouns cost ≈ **$0.23** to type, and the
+9,475 production alias pairs ≈ **$1.31** — against the plan's ~$5 and ~$1 lines.
+
+**What the alias verdicts read like, and the one finding.** The 42 `see_also` answers are
+right and conservative: *ABO group* → "group", *Acheson process* → "process", *Abney
+level* → "level", *Advent Sunday* → "sunday" — in every one the short entry is the head
+noun of the compound, which is a class the long name belongs to and not another name for
+it. The 20 `none` answers are right for the same reason one step further out (*Allhallows
+Eve* → "eve", *American Federation of Labor* → "labor"). **Both `alias_of` answers are
+wrong**: *Albers-Schonberg disease* → "disease" and *Alpine scurvy* → "scurvy" are a
+hyponym and a misnomer, not two names for one referent. That is a 3% false-positive rate on
+a population the instructions were not written for — this sample's pairs are all
+compound-head pairs, where `see_also` is nearly always right, while tier 6's are
+surname-and-short-form pairs (*Lincoln*, *Washington*, *Einstein*), where `alias_of` is
+genuinely common. Before the production sweep, `ALIASES_INSTRUCTIONS` should name the
+medical/technical head-noun case explicitly the way it already names "city" and "court";
+that is a prompt edit with its own before/after measurement, not a change to this pass.
+
+`export-hf --release v2.3` over the same sample: 333 `lexicon` rows carrying
+`entity_type`, `wikidata_qid` (26 of them) and `aliases`; 726 `senses` rows, 472 with an
+entity type; the two `alias_of` edges in `relations`; the v2.2 → v2.3 changelog rendered
+with `V23`'s placeholders filled in a throwaway script and nowhere else. No `tier6` rows,
+because `data/core/tier6.tsv` does not exist yet — the exporter logs the missing file and
+falls through, which is D-75's own behaviour.
+
+**Consequence.** New: `RetrofitPass.ENTITY_TYPE` and its pass, `LexemeHygieneStep.ALIASES`
+and its step, `Lexeme.aliases`, `RelationType.ALIAS_OF`, `PROTECTED_RELATION_TYPES`,
+`DomainTag.NATURE_SETTLEMENTS`, `DomainTag.LAW_GOVERNMENT_POLITIES`,
+`wordnet_import.CandidateRow` / `read_candidate_rows` / `candidate_index` /
+`LEXNAME_ENTITY_MAP` / `entity_type_for_lexnames`, `hf_rows.TIER_TIER6` /
+`RELATION_ALIAS`, `hf_cards.V23`, `scripts/build_sample_ner.py`, +49 tests.
+Modified: `retrofit --from-list`, `lexeme-hygiene`'s `--from-list` doubling as the alias
+candidate file, `import-wordnet` passing the candidate index through, `TAXONOMY_VERSION`,
+three README rows. **Nothing stored changes on its own**: this is a schema and pass change,
+and no existing `entity_type`, relation or domain value is rewritten until a sweep is run.
+**Left undone:** the `ALIASES_INSTRUCTIONS` edit the pilot's two false positives argue for;
+nothing writes `Lexeme.aliases` yet (the field is validated and exported, and the tier-6
+`generate` path is what will fill it); and stages 1-7 of the plan.

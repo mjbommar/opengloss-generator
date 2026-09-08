@@ -67,6 +67,17 @@ class DomainTag(StrEnum):
     ``everyday_life`` and ``people_society``, the roots with the largest ``.general``
     residue on the 10K core, D-44 — carry 14), one of which is always ``<root>.general``
     for "in this domain but no finer distinction applies".
+
+    Two leaves exist for named entities rather than for a ``.general`` residue (D-81).
+    There is no ``geography`` root and adding one would be a breaking change to
+    :data:`ROOTS`, so a **settlement** (a city, town, village or neighbourhood) is
+    ``nature.settlements`` and a **polity** (a country, state, province, empire or
+    historical polity) is ``law_government.polities``: the physical place goes under the
+    root that already holds landforms and water bodies, and the governed entity goes
+    under the root that already holds government structure and civics. The pair is a
+    distinction a tagger can actually make — *Denver* against *Colorado* — where the
+    alternative, ``people_society.community_life``, is about community rather than about
+    either.
     """
 
     ARTS_GENERAL = "arts.general"
@@ -171,6 +182,7 @@ class DomainTag(StrEnum):
     LAW_GOVERNMENT_CIVICS = "law_government.civics"
     LAW_GOVERNMENT_COURTS_JUSTICE = "law_government.courts_justice"
     LAW_GOVERNMENT_PUBLIC_POLICY = "law_government.public_policy"
+    LAW_GOVERNMENT_POLITIES = "law_government.polities"
 
     MATHEMATICS_GENERAL = "mathematics.general"
     MATHEMATICS_ARITHMETIC = "mathematics.arithmetic"
@@ -194,6 +206,7 @@ class DomainTag(StrEnum):
     NATURE_CONSERVATION = "nature.conservation"
     NATURE_NATURAL_DISASTERS = "nature.natural_disasters"
     NATURE_MINERALS_ROCKS = "nature.minerals_rocks"
+    NATURE_SETTLEMENTS = "nature.settlements"
 
     PEOPLE_SOCIETY_GENERAL = "people_society.general"
     PEOPLE_SOCIETY_FAMILY_RELATIONSHIPS = "people_society.family_relationships"
@@ -251,8 +264,9 @@ class DomainTag(StrEnum):
 #: ``tag_domain`` provenance ``note`` of every sense it tags, so a later hygiene sweep can
 #: tell a stale ``.general`` verdict (tagged under an older, thinner taxonomy) from a
 #: current one (tagged with these leaves already on the menu) and only clear the former.
-#: See D-44.
-TAXONOMY_VERSION: str = "2"
+#: See D-44; bumped to ``"3"`` by D-81, which added ``nature.settlements`` and
+#: ``law_government.polities``.
+TAXONOMY_VERSION: str = "3"
 
 
 LEAF_COUNT: int = len(DomainTag)
@@ -378,6 +392,7 @@ GLOSSES: dict[DomainTag, str] = {
     DomainTag.LAW_GOVERNMENT_CIVICS: "citizenship duties and civic participation",
     DomainTag.LAW_GOVERNMENT_COURTS_JUSTICE: "judges juries and legal proceedings",
     DomainTag.LAW_GOVERNMENT_PUBLIC_POLICY: "regulations legislation and public programs",
+    DomainTag.LAW_GOVERNMENT_POLITIES: "countries states empires and polities",
     DomainTag.MATHEMATICS_GENERAL: "unclassified general mathematics and numbers",
     DomainTag.MATHEMATICS_ARITHMETIC: "addition subtraction multiplication and division",
     DomainTag.MATHEMATICS_ALGEBRA: "equations variables and algebraic expressions",
@@ -399,6 +414,7 @@ GLOSSES: dict[DomainTag, str] = {
     DomainTag.NATURE_CONSERVATION: "wildlife protection and environmental preservation",
     DomainTag.NATURE_NATURAL_DISASTERS: "earthquakes floods and natural hazards",
     DomainTag.NATURE_MINERALS_ROCKS: "rocks minerals gems and crystals",
+    DomainTag.NATURE_SETTLEMENTS: "cities towns villages and neighbourhoods",
     DomainTag.PEOPLE_SOCIETY_GENERAL: "unclassified general social and society",
     DomainTag.PEOPLE_SOCIETY_FAMILY_RELATIONSHIPS: "parents friends and personal relationships",
     DomainTag.PEOPLE_SOCIETY_SOCIAL_ISSUES: "poverty inequality and social problems",

@@ -1774,3 +1774,83 @@ _PAYLOADS.update(
         "_draftfragmentverdict": _fragment_payload,
     }
 )
+
+
+# --------------------------------------------------------------------------------------
+# workflows/retrofit.py: entity_type, and workflows/lexeme_hygiene.py: aliases (D-81)
+# --------------------------------------------------------------------------------------
+#
+# Appended and registered with ``_PAYLOADS.update`` for the reason every block above gives.
+#
+# ``entity_type``'s scripted answer is computed from the gloss snippet the prompt carries,
+# not from a marker: the whole point of that snippet is that it is what separates
+# "einstein" the unit of radiant energy from "Einstein" the physicist, so a builder that
+# stopped sending it should fail these tests rather than keep passing them. Any headword
+# with no snippet at all comes back ``other``, which is the honest answer to a bare name.
+#
+# ``aliases`` keeps the marker convention instead (:data:`ALIAS_SAME_MARKER`,
+# :data:`ALIAS_RELATED_MARKER`), because its free path already *is* the computable rule —
+# the step answers ``alias_of`` for nothing when the short entry's own gloss names the long
+# headword, so a scripted model that computed the same thing would only ever be reached
+# with that answer ruled out. That the prompt really carries both headwords and both
+# definition blocks is asserted directly against
+# ``lexeme_hygiene._build_alias_prompt`` instead, where it can be checked exactly.
+
+#: Gloss words that make the scripted entity typer answer with each type, checked in this
+#: order so "the city of X was founded by person Y" types as a place, not a person.
+_ENTITY_TYPE_WORDS: tuple[tuple[str, str], ...] = (
+    ("city", "place"),
+    ("country", "place"),
+    ("river", "place"),
+    ("president", "person"),
+    ("physicist", "person"),
+    ("agency", "organization"),
+    ("court", "organization"),
+    ("novel", "work"),
+    ("painting", "work"),
+    ("war", "event"),
+    ("battle", "event"),
+)
+
+
+def _entity_type_batch_payload(prompt: str) -> dict[str, Any]:
+    """Type each listed headword from the gloss snippet beside it."""
+    verdicts = []
+    for line in prompt.splitlines()[1:]:
+        headword, _, snippet = line.partition(" — ")
+        lowered = snippet.lower()
+        entity_type = next(
+            (value for word, value in _ENTITY_TYPE_WORDS if word in lowered), "other"
+        )
+        verdicts.append({"term": headword.strip(), "entity_type": entity_type})
+    return {"verdicts": verdicts or [{"term": "none", "entity_type": "other"}]}
+
+
+#: A marker in the *short* entry's definitions that makes the scripted judge answer
+#: ``alias_of`` — the two headwords name one referent.
+ALIAS_SAME_MARKER = "the very same"
+
+#: A marker that makes it answer ``see_also`` — related, but not the same referent.
+ALIAS_RELATED_MARKER = "the kind of thing"
+
+
+def _alias_payload(prompt: str) -> dict[str, Any]:
+    """Judge the pair by the marker the short entry's definitions carry.
+
+    The last line of the prompt is the short entry's ``Definitions:``; a definitions block
+    that carries neither marker answers ``none``, which is the conservative default.
+    """
+    short_definitions = prompt.splitlines()[-1].lower()
+    if ALIAS_SAME_MARKER in short_definitions:
+        return {"verdict": "alias_of"}
+    if ALIAS_RELATED_MARKER in short_definitions:
+        return {"verdict": "see_also"}
+    return {"verdict": "none"}
+
+
+_PAYLOADS.update(
+    {
+        "_draftentitytypebatch": _entity_type_batch_payload,
+        "_draftaliasverdict": _alias_payload,
+    }
+)

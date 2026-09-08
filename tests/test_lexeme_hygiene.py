@@ -50,7 +50,7 @@ from opengloss_generator.workflows.lexeme_hygiene import (
     plan_lexeme_hygiene,
     run_lexeme_hygiene,
 )
-from tests.conftest import FRAGMENT_MARKER
+from tests.conftest import ALIAS_RELATED_MARKER, ALIAS_SAME_MARKER, FRAGMENT_MARKER
 
 # Two definitions that share a content word, so the scripted judge folds; and two that share
 # none, so it keeps. See ``conftest._inflection_fold_payload`` for why the scripted answer is
@@ -703,3 +703,231 @@ def test_the_cli_refuses_an_unknown_step(tmp_path):
 
     assert result.exit_code != 0
     assert "nonsense" in result.output
+
+
+# --------------------------------------------------------------------------------------
+# Step 3 — aliases (D-81)
+# --------------------------------------------------------------------------------------
+#
+# The only step here that *adds* an edge. What is asserted is mostly the refusals again:
+# the free skip when an edge already exists, the free `alias_of` when the short entry's own
+# gloss already names the long headword, and the `see_also` a common noun gets — because
+# the failure this step must never commit is calling "city" another name for New York City.
+
+LINCOLN_GLOSS = "The sixteenth president of the United States; Abraham Lincoln."
+LINCOLN_LONG_GLOSS = "The sixteenth president, who issued the Emancipation Proclamation."
+# A short entry the scripted judge calls one referent with the long name, without naming
+# it verbatim — so the free keep does not fire and the verdict is actually bought.
+FDR_SHORT_GLOSS = f"A twentieth-century American president, {ALIAS_SAME_MARKER} man."
+FDR_LONG_GLOSS = "The thirty-second president of the United States, in office 1933-1945."
+CITY_GLOSS = f"A large or important town: {ALIAS_RELATED_MARKER} a settlement is."
+NYC_GLOSS = "The largest city in the United States, on the Atlantic coast."
+NUMERAL_GLOSS = "The Roman numeral for two."
+WAR_GLOSS = "The global conflict of 1939 to 1945 between Allied and Axis powers."
+
+
+def _candidate_file(tmp_path: Path, pairs: list[tuple[str, str]]) -> Path:
+    """Write a candidate TSV whose ``notes`` column proposes each ``(name, target)`` pair."""
+    lines = ["name\tword\tentity_type\tsource\tqid\tnotes"]
+    lines += [
+        f"{name}\t{name}\tperson\tname_seed\t\talias_of candidate: store has '{target}'; wn"
+        for name, target in pairs
+    ]
+    path = tmp_path / "tier6_candidates.tsv"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+async def _aliases(session, alias_list: Path, **kwargs: object) -> module.StepResult:
+    """Run the aliases step alone and return its result."""
+    outcome = await run_lexeme_hygiene(
+        session.store,
+        session.stages,
+        workers=4,
+        only={LexemeHygieneStep.ALIASES},
+        alias_list=alias_list,
+        **kwargs,
+    )
+    return outcome.steps[LexemeHygieneStep.ALIASES]
+
+
+def _edges(entry: Lexeme) -> list[tuple[str, str]]:
+    """Return ``(relation type, target term)`` for every relation on every live sense."""
+    return [
+        (relation.type.value, relation.target.term)
+        for _, sense, _ in entry.iter_senses()
+        if not sense.retired
+        for relation in sense.relations
+    ]
+
+
+async def test_a_short_entry_naming_the_long_headword_is_an_alias_for_free(session, tmp_path):
+    session.store.write(_entry("Abraham Lincoln", [_sense(0, LINCOLN_LONG_GLOSS)]))
+    session.store.write(_entry("Lincoln", [_sense(0, LINCOLN_GLOSS)]))
+    path = _candidate_file(tmp_path, [("Abraham Lincoln", "lincoln")])
+
+    result = await _aliases(session, path)
+
+    assert result.candidates == 1
+    assert result.calls == 0
+    assert result.cost_usd == 0.0
+    assert result.alias_free == 1
+    assert result.alias_written == 1
+    assert _edges(session.store.read("abraham_lincoln")) == [("alias_of", "Lincoln")]
+
+
+async def test_the_alias_edge_has_no_far_side(session, tmp_path):
+    session.store.write(_entry("Abraham Lincoln", [_sense(0, LINCOLN_LONG_GLOSS)]))
+    session.store.write(_entry("Lincoln", [_sense(0, LINCOLN_GLOSS)]))
+    path = _candidate_file(tmp_path, [("Abraham Lincoln", "lincoln")])
+
+    await _aliases(session, path)
+
+    # An alias points one way (D-81). The short entry is read and never written.
+    assert _edges(session.store.read("lincoln")) == []
+
+
+async def test_a_bought_verdict_can_write_an_alias_too(session, tmp_path):
+    session.store.write(_entry("Franklin D. Roosevelt", [_sense(0, FDR_LONG_GLOSS)]))
+    session.store.write(_entry("FDR", [_sense(0, FDR_SHORT_GLOSS)]))
+    path = _candidate_file(tmp_path, [("Franklin D. Roosevelt", "fdr")])
+
+    result = await _aliases(session, path)
+
+    assert result.calls == 1
+    assert result.alias_free == 0
+    assert result.alias_written == 1
+    assert _edges(session.store.read("franklin_d_roosevelt")) == [("alias_of", "FDR")]
+
+
+def test_the_alias_prompt_carries_both_headwords_and_both_definitions():
+    # The prompt is what the verdict is bought on, and it is the one thing a marker-keyed
+    # scripted judge cannot assert, so it is checked exactly here instead.
+    prompt = module._build_alias_prompt(
+        _entry("New York City", [_sense(0, NYC_GLOSS)]),
+        _entry("city", [_sense(0, CITY_GLOSS)]),
+    )
+    assert "Long: New York City" in prompt
+    assert NYC_GLOSS in prompt
+    assert "Short: city" in prompt
+    assert CITY_GLOSS in prompt
+
+
+async def test_a_common_noun_gets_an_authored_see_also_not_an_alias(session, tmp_path):
+    session.store.write(_entry("New York City", [_sense(0, NYC_GLOSS)]))
+    session.store.write(_entry("city", [_sense(0, CITY_GLOSS)]))
+    path = _candidate_file(tmp_path, [("New York City", "city")])
+
+    result = await _aliases(session, path)
+
+    assert result.calls == 1
+    assert result.see_also_written == 1
+    assert result.alias_written == 0
+    stored = session.store.read("new_york_city")
+    assert _edges(stored) == [("see_also", "city")]
+    # An *authored* see_also, carrying no demotion note, so relation-reconcile's tombstone
+    # step leaves it where it is (D-65 removes only edges that were demoted to see_also).
+    relation = stored.pos_entries[0].senses[0].relations[0]
+    assert relation.note == module.SEE_ALSO_NOTE
+    assert "demoted" not in relation.note
+
+
+async def test_an_unrelated_short_entry_writes_nothing(session, tmp_path):
+    session.store.write(_entry("World War II", [_sense(0, WAR_GLOSS)]))
+    session.store.write(_entry("ii", [_sense(0, NUMERAL_GLOSS)]))
+    path = _candidate_file(tmp_path, [("World War II", "ii")])
+
+    result = await _aliases(session, path)
+
+    assert result.calls == 1
+    assert result.alias_none == 1
+    assert _edges(session.store.read("world_war_ii")) == []
+
+
+async def test_an_entry_already_linked_to_its_target_is_skipped_for_free(session, tmp_path):
+    session.store.write(
+        _entry(
+            "Abraham Lincoln",
+            [
+                _sense(
+                    0, LINCOLN_LONG_GLOSS, relations=[_relation(RelationType.SEE_ALSO, "Lincoln")]
+                )
+            ],
+        )
+    )
+    session.store.write(_entry("Lincoln", [_sense(0, LINCOLN_GLOSS)]))
+    path = _candidate_file(tmp_path, [("Abraham Lincoln", "lincoln")])
+
+    result = await _aliases(session, path)
+
+    assert result.calls == 0
+    assert result.skipped_already_linked == 1
+    assert result.alias_written == 0
+
+
+async def test_a_missing_target_is_counted_and_costs_nothing(session, tmp_path):
+    session.store.write(_entry("Abraham Lincoln", [_sense(0, LINCOLN_LONG_GLOSS)]))
+    path = _candidate_file(tmp_path, [("Abraham Lincoln", "lincoln")])
+
+    result = await _aliases(session, path)
+
+    assert result.candidates == 1
+    assert result.skipped_target_missing == 1
+    assert result.calls == 0
+
+
+async def test_an_entry_the_list_does_not_pair_is_not_a_candidate(session, tmp_path):
+    session.store.write(_entry("Denver", [_sense(0, "The capital city of Colorado.")]))
+    path = _candidate_file(tmp_path, [("Abraham Lincoln", "lincoln")])
+
+    result = await _aliases(session, path)
+
+    assert result.candidates == 0
+    assert result.calls == 0
+
+
+async def test_the_step_is_idempotent(session, tmp_path):
+    session.store.write(_entry("New York City", [_sense(0, NYC_GLOSS)]))
+    session.store.write(_entry("city", [_sense(0, CITY_GLOSS)]))
+    path = _candidate_file(tmp_path, [("New York City", "city")])
+
+    first = await _aliases(session, path)
+    second = await _aliases(session, path)
+
+    assert first.calls == 1
+    # The free already-linked check catches it before the marker is even read, which is
+    # what makes a second sweep cost nothing whatever the digest says.
+    assert second.calls == 0
+    assert second.skipped_already_linked == 1
+    assert len(_edges(session.store.read("new_york_city"))) == 1
+
+
+async def test_a_missing_candidate_file_makes_the_step_a_no_op(session, tmp_path):
+    session.store.write(_entry("Abraham Lincoln", [_sense(0, LINCOLN_LONG_GLOSS)]))
+
+    result = await _aliases(session, tmp_path / "absent.tsv")
+
+    assert result.candidates == 0
+    assert result.calls == 0
+
+
+async def test_the_dry_run_plan_prices_the_calls_the_alias_step_would_buy(session, tmp_path):
+    session.store.write(_entry("New York City", [_sense(0, NYC_GLOSS)]))
+    session.store.write(_entry("city", [_sense(0, CITY_GLOSS)]))
+    session.store.write(_entry("Abraham Lincoln", [_sense(0, LINCOLN_LONG_GLOSS)]))
+    session.store.write(_entry("Lincoln", [_sense(0, LINCOLN_GLOSS)]))
+    path = _candidate_file(tmp_path, [("New York City", "city"), ("Abraham Lincoln", "lincoln")])
+
+    plan = plan_lexeme_hygiene(
+        session.store,
+        sorted(session.store.iter_ids()),
+        only={LexemeHygieneStep.ALIASES},
+        alias_list=path,
+    )
+
+    step = plan["steps"][LexemeHygieneStep.ALIASES]
+    assert step["candidates"] == 2
+    # One is settled for free by the short entry's own gloss; only the other is bought.
+    assert step["kept_wordnet"] == 1
+    assert step["calls_due"] == 1
+    assert plan["estimated_calls"] == 1

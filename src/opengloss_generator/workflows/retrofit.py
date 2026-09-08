@@ -18,6 +18,30 @@ Every pass is **idempotent** and does the free work first:
     marker, so every migrated entry is re-examined on the first sweep whatever kind
     migration guessed.
 
+``entity_type``
+    Runs straight after ``classify_kind``, because it only has a question to ask about an
+    entry whose kind is already settled as ``proper_noun``. D-12 and D-18 both write
+    ``EntityType.OTHER`` onto every proper noun they create — migration cannot know the
+    type and the ``classify_kind`` batch deliberately does not ask for it — so every one
+    of the store's proper nouns carries the same placeholder, indistinguishable from a
+    type a model actually judged. This pass replaces it, free first (D-81):
+
+    (a) the tier-6 candidate TSV (``data/core/tier6_candidates.tsv`` by default,
+    ``--from-list`` for another) already carries an ``entity_type`` and a ``qid`` for
+    every name it lists, derived from Wikidata ``P31``, WordNet's instance hypernym or the
+    curated US list the name came from. Any entry that file names is typed from it at zero
+    cost, and its ``wikidata_qid`` — which the store has no other way to learn and which is
+    the join key every later name pass needs — is stored at the same time;
+    (b) what is left, and still carries the ``other`` placeholder, goes to the model 40
+    headwords per call, each with a gloss snippet, answering a strict
+    :class:`~opengloss_generator.schema.EntityType` enum. A proper noun already typed as
+    anything but ``other`` is left alone: this pass replaces a placeholder, it does not
+    re-judge a verdict.
+
+    D-47's marker keys on the type and QID *as the pass leaves them*, so a settled entry
+    is free on every later sweep and one whose type was changed underneath earns at most
+    one more attempt.
+
 ``tag_domain``
     Only senses whose ``domain`` is ``None`` are sent, one call per entry covering all of
     them. The taxonomy itself never enters the per-call prompt (it lives in the cached
@@ -255,6 +279,7 @@ from opengloss_generator.schema import (
     canonical_rendition,
 )
 from opengloss_generator.taxonomy import TAXONOMY_VERSION, is_general
+from opengloss_generator.wordnet_import import DEFAULT_CANDIDATES_PATH, candidate_index
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
@@ -262,6 +287,7 @@ if TYPE_CHECKING:
     from opengloss_generator.schema import Lexeme
     from opengloss_generator.stages import StageRunner
     from opengloss_generator.store import LexemeStore
+    from opengloss_generator.wordnet_import import CandidateRow
 
 __all__ = ["PassResult", "RetrofitOutcome", "RetrofitPass", "run_retrofit"]
 
@@ -284,6 +310,11 @@ class RetrofitPass:
     """Names of the passes ``run_retrofit`` can select between."""
 
     CLASSIFY_KIND = StageName.CLASSIFY_KIND.value
+    #: Not a ``StageName`` value: this pass reuses ``StageName.CLASSIFY_KIND``'s model
+    #: policy (nano, batched) rather than adding a stage of its own, since it asks the
+    #: same shape of question about the same entries — one enum per headword, 40 to a
+    #: call — one step further down (D-81).
+    ENTITY_TYPE = "entity_type"
     HYGIENE = StageName.HYGIENE.value
     TAG_DOMAIN = StageName.TAG_DOMAIN.value
     SPANS = StageName.SPANS.value
@@ -304,6 +335,7 @@ class RetrofitPass:
     #: opens with the headword is caught in the same sweep that produced it.
     ALL: tuple[str, ...] = (
         CLASSIFY_KIND,
+        ENTITY_TYPE,
         HYGIENE,
         TAG_DOMAIN,
         SPANS,
@@ -605,6 +637,47 @@ async def _drive[T](
 type _PassFn = Callable[..., Awaitable[PassResult]]
 
 
+def _pass_for(
+    name: str,
+    *,
+    candidates: Mapping[str, CandidateRow] | None,
+    taxonomy_version: str,
+    force_retag_domains: bool,
+) -> _PassFn:
+    """Return the callable for one pass name, with its per-pass settings already bound.
+
+    A table rather than a chain of ``elif``s in :func:`run_retrofit`, so adding a pass is
+    one row here instead of one more branch in a function that also owns the id list, the
+    pool size and the stop handling.
+
+    Args:
+        name: The pass name, already validated against :attr:`RetrofitPass.ALL`.
+        candidates: The candidate index the ``entity_type`` pass reads.
+        taxonomy_version: The version ``hygiene`` and ``tag_domain`` compare and stamp.
+        force_retag_domains: ``hygiene``'s domain-clearing override.
+
+    Returns:
+        The pass callable.
+    """
+    table: dict[str, _PassFn] = {
+        RetrofitPass.CLASSIFY_KIND: _classify_kind_pass,
+        RetrofitPass.ENTITY_TYPE: functools.partial(_entity_type_pass, candidates=candidates),
+        RetrofitPass.HYGIENE: functools.partial(
+            _hygiene_pass,
+            taxonomy_version=taxonomy_version,
+            force_retag_domains=force_retag_domains,
+        ),
+        RetrofitPass.TAG_DOMAIN: functools.partial(
+            _tag_domain_pass, taxonomy_version=taxonomy_version
+        ),
+        RetrofitPass.SPANS: _spans_pass,
+        RetrofitPass.REPAIR: _repair_pass,
+        RetrofitPass.RENDITION_HYGIENE: _rendition_hygiene_pass,
+        RetrofitPass.READABILITY_HYGIENE: _readability_hygiene_pass,
+    }
+    return table[name]
+
+
 async def run_retrofit(
     store: LexemeStore,
     runner: StageRunner,
@@ -616,6 +689,7 @@ async def run_retrofit(
     stop_event: asyncio.Event | None = None,
     taxonomy_version: str = TAXONOMY_VERSION,
     force_retag_domains: bool = False,
+    candidates: Mapping[str, CandidateRow] | None = None,
 ) -> RetrofitOutcome:
     """Run the retrofit passes over a store.
 
@@ -624,7 +698,8 @@ async def run_retrofit(
             one hold of its own lock (see the module docstring).
         runner: The stage runner.
         only: Pass names to run; defaults to all of :attr:`RetrofitPass.ALL`, in that
-            order (kind, then hygiene, then domain, then spans, then repair, then
+            order (kind, then entity type, then hygiene, then domain, then spans, then
+            repair, then
             readability hygiene, then rendition hygiene — hygiene runs before domain
             because it is what makes some senses need re-tagging, repair runs after spans
             so its duplicate check sees every other pass's writes, and the two
@@ -643,6 +718,12 @@ async def run_retrofit(
             :data:`~opengloss_generator.taxonomy.TAXONOMY_VERSION`. An override lets a
             caller stage a version bump — or re-run a pilot retag — without editing the
             module constant (D-67).
+        candidates: ``lexeme_id -> row`` from
+            :func:`~opengloss_generator.wordnet_import.candidate_index`, read by the
+            ``entity_type`` pass for the entity types and QIDs a candidate list already
+            knows (D-81). ``None`` loads
+            :data:`~opengloss_generator.wordnet_import.DEFAULT_CANDIDATES_PATH` if it is
+            on disk, and otherwise leaves every proper noun to the model.
         force_retag_domains: Passed to the ``hygiene`` pass's domain-clearing step —
             clears *every* live sense's domain, not only weak ``.general`` ones, so the
             next ``tag_domain`` pass re-tags the whole selection (D-67). Off by default;
@@ -666,30 +747,19 @@ async def run_retrofit(
     if limit is not None:
         ids = ids[:limit]
     pool_size = runner.config.concurrency.workers if workers is None else workers
+    if candidates is None and RetrofitPass.ENTITY_TYPE in selected:
+        candidates = candidate_index(DEFAULT_CANDIDATES_PATH)
 
     outcome = RetrofitOutcome()
     for name in RetrofitPass.ALL:
         if name not in selected:
             continue
-        runnable: _PassFn
-        if name == RetrofitPass.CLASSIFY_KIND:
-            runnable = _classify_kind_pass
-        elif name == RetrofitPass.HYGIENE:
-            runnable = functools.partial(
-                _hygiene_pass,
-                taxonomy_version=taxonomy_version,
-                force_retag_domains=force_retag_domains,
-            )
-        elif name == RetrofitPass.TAG_DOMAIN:
-            runnable = functools.partial(_tag_domain_pass, taxonomy_version=taxonomy_version)
-        elif name == RetrofitPass.SPANS:
-            runnable = _spans_pass
-        elif name == RetrofitPass.REPAIR:
-            runnable = _repair_pass
-        elif name == RetrofitPass.RENDITION_HYGIENE:
-            runnable = _rendition_hygiene_pass
-        else:
-            runnable = _readability_hygiene_pass
+        runnable = _pass_for(
+            name,
+            candidates=candidates,
+            taxonomy_version=taxonomy_version,
+            force_retag_domains=force_retag_domains,
+        )
         result = await runnable(store, runner, ids, workers=pool_size, stop_event=stop_event)
         outcome.passes[name] = result
         if result.stopped_reason is not None:
@@ -885,7 +955,365 @@ async def _classify_kind_batch(
 
 
 # --------------------------------------------------------------------------------------
-# Pass 2 — hygiene
+# Pass 2 — entity_type
+# --------------------------------------------------------------------------------------
+#
+# Instructions and the output contract live here rather than in prompts.py / contracts.py
+# for the reason the passes below give: a self-contained call site has no other
+# dependents, and this pass reuses `StageName.CLASSIFY_KIND`'s policy rather than adding a
+# stage of its own.
+
+#: How many headwords one entity-type call decides. Matched to ``KIND_BATCH_SIZE``'s
+#: argument rather than copied from it: the answer here is one enum per term with no
+#: free text at all, so the output is smaller than a kind batch's, but the *input* — a
+#: headword plus a gloss snippet — is the same, and 40 keeps a failed call's blast radius
+#: to a batch rather than a sweep.
+ENTITY_TYPE_BATCH_SIZE = 40
+
+#: D-47 marker prefix for the pass. Shares the shape ``_hygiene_attempt_due`` writes, so
+#: one parser reads every attempt-bounded marker this module leaves.
+_ENTITY_TYPE_PREFIX = "entity_type"
+
+#: What a free write from the candidate list records, so a reader of the provenance table
+#: can tell a typed-from-a-source entry from one a model answered for.
+_ENTITY_TYPE_LIST_NOTE = "entity_type: from candidate list"
+
+#: One residue item for this pass: ``(lexeme_id, headword, gloss snippet, attempt)``. The
+#: attempt number is carried from phase one because that is where D-47's bound was
+#: checked, and phase two is what actually writes the marker it belongs to.
+type _EntityResidue = tuple[str, str, str | None, int]
+
+
+def _attempt_of(note: str) -> int:
+    """Return the attempt number :func:`_hygiene_attempt_due` put in a marker note.
+
+    Args:
+        note: The note that function returned, ``<prefix>:<digest>;attempts=<n>``.
+
+    Returns:
+        ``n``, or 1 when the note carries no parsable count.
+    """
+    _, _, attempts = note.partition(_ATTEMPTS_SEPARATOR)
+    return int(attempts) if attempts.isdigit() else 1
+
+
+def _entity_type_marker(entry: Lexeme, attempt: int) -> Provenance:
+    """Return the zero-cost D-47 marker for one entity-typing attempt.
+
+    The digest is taken over the entry **as the attempt leaves it** — the discipline every
+    marker in this project follows — so a settled entry is skipped for free on the next
+    sweep and one changed underneath is re-examined.
+
+    Args:
+        entry: The entry, already written.
+        attempt: The 1-based attempt number this marker answers for.
+
+    Returns:
+        The provenance record to add.
+    """
+    digest = _offender_digest(_entity_type_refs(entry))
+    note = f"{_ENTITY_TYPE_PREFIX}:{digest}{_ATTEMPTS_SEPARATOR}{attempt}"
+    return _marker(StageName.CLASSIFY_KIND).model_copy(update={"note": note})
+
+
+ENTITY_TYPE_INSTRUCTIONS = """\
+You are typing named entities for a dictionary. Each line gives one proper-noun headword \
+and, where the dictionary has one, a short piece of its own definition. Answer with the \
+kind of thing the name refers to, one answer per headword, in the order given.
+
+THE EIGHT ANSWERS.
+
+- person. A named individual human being. This includes fictional and mythological \
+characters -- Sherlock Holmes, Zeus, Santa Claus are all person, not other -- and it \
+includes a person known by one name (Aristotle, Beyonce) or by a title (Queen Victoria).
+- place. A named location: a country, state, province, city, town, neighbourhood, \
+region, continent, ocean, river, mountain, park, building or address. Both the political \
+kind (France, Colorado, Denver) and the physical kind (the Nile, Everest, the Sahara).
+- organization. A named group of people acting as one body: a government, agency, court, \
+company, university, church, political party, army, sports team, band, or association.
+- work. A named thing somebody made or wrote: a book, poem, play, film, song, album, \
+painting, sculpture, statute, treaty, newspaper, television programme or named speech.
+- event. A named happening bounded in time: a war, battle, treaty signing, revolution, \
+disaster, festival, election, expedition, epidemic or named holiday.
+- product. A named manufactured thing or brand of one -- a model of car, a make of \
+aircraft, a piece of software sold under a name.
+- species. A named taxon: a Linnaean genus or species name, or a named breed or cultivar.
+- other. Everything the seven above do not cover: a language, a script, an alphabet, a \
+calendar, a named ethnic group, a named period, a named prize, a named law of nature, a \
+deity's abstract attribute, a unit named after somebody.
+
+HOW TO DECIDE.
+
+- Ask what the name *refers to*, not what it is made of or where it comes from. \
+"Nobel Prize" is an award, so other; "Nobel Foundation" is a body, so organization; \
+"Alfred Nobel" is a man, so person.
+- A place that is also a government is a place when the name is used for the territory \
+and an organization when it is used for the body. Prefer place for a country, a state or \
+a city name: that is how the name is nearly always used.
+- A named building is a place. A named institution housed in it is an organization. \
+"The Louvre" is a place; "the Metropolitan Museum of Art" as a body is an organization; \
+either answer is defensible for a museum and the definition decides.
+- A dynasty, empire or kingdom named as a period of rule is an event only if the \
+definition treats it as a bounded happening; if it names the polity itself, it is a place.
+- Do not answer other because you are unsure between two of the seven. Other means none \
+of the seven applies -- a language, a calendar, a script, an ethnic group. Pick the \
+better of the two specific answers instead.
+
+WHAT IS NOT EVIDENCE. Capitalisation is why you are being shown these headwords and \
+tells you nothing about which of the eight applies. Neither does length, nor how many \
+words the name has, nor whether the definition is long or short."""
+
+
+class _DraftEntityTypeVerdict(BaseModel):
+    """One headword's entity type."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    term: Annotated[str, Field(min_length=1)]
+    entity_type: EntityType
+
+
+class _DraftEntityTypeBatch(BaseModel):
+    """Entity types for a batch of proper-noun headwords, in the order given."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    verdicts: Annotated[
+        list[_DraftEntityTypeVerdict], Field(min_length=1, max_length=ENTITY_TYPE_BATCH_SIZE)
+    ]
+
+
+def _entity_type_refs(entry: Lexeme) -> list[str]:
+    """Return the D-47 marker refs for one entry's entity typing.
+
+    The refs are the answer itself — the stored type and QID — rather than the question,
+    because the question never changes for a given headword. An entry the pass has settled
+    therefore produces the same digest on every later sweep and is skipped for free, while
+    one whose type another pass has since overwritten produces a different digest and is
+    due one more attempt.
+
+    Args:
+        entry: The entry, after any write this sweep made.
+
+    Returns:
+        The refs, or ``[]`` when the entry is not a proper noun at all — which makes
+        :func:`_hygiene_attempt_due` refuse it, since there is nothing to type.
+    """
+    block = entry.proper_noun
+    if entry.kind is not LexemeKind.PROPER_NOUN or block is None:
+        return []
+    return [f"entity_type:{block.entity_type.value}", f"qid:{block.wikidata_qid or ''}"]
+
+
+def _apply_entity_type(
+    entry: Lexeme, entity_type: EntityType | None, wikidata_qid: str | None
+) -> bool:
+    """Write an entity type and a QID onto a proper noun's block, in place.
+
+    Neither value is ever cleared: a ``None`` argument means "this source had nothing to
+    say", not "unset what is there". The QID is written only when the block has none, so a
+    candidate list cannot silently re-point an entry a better source already identified.
+
+    Args:
+        entry: The entry to edit.
+        entity_type: The type to store, or ``None`` to leave the stored one alone.
+        wikidata_qid: The QID to store when the block carries none.
+
+    Returns:
+        Whether anything changed.
+    """
+    block = entry.proper_noun
+    if block is None:
+        return False
+    changed = False
+    if entity_type is not None and block.entity_type is not entity_type:
+        block.entity_type = entity_type
+        changed = True
+    if wikidata_qid and block.wikidata_qid is None:
+        block.wikidata_qid = wikidata_qid
+        changed = True
+    return changed
+
+
+async def _entity_type_pass(
+    store: LexemeStore,
+    runner: StageRunner,
+    ids: Sequence[str],
+    *,
+    workers: int,
+    stop_event: asyncio.Event | None = None,
+    candidates: Mapping[str, CandidateRow] | None = None,
+) -> PassResult:
+    """Replace the ``entity_type`` placeholder on every proper noun, free first (D-81).
+
+    Two pooled phases, the shape ``classify_kind`` uses. The first decides what the
+    candidate list can, under each entry's lock, and collects the residue — proper nouns
+    the list does not name that still carry the ``other`` placeholder. The second sends
+    that residue to the model :data:`ENTITY_TYPE_BATCH_SIZE` headwords at a time and
+    writes each verdict back under its own entry's lock. The residue is sorted before it
+    is batched, so the same store produces the same batches, prompts and cache keys
+    whatever order the workers finished phase one in.
+
+    Args:
+        store: The store to type.
+        runner: The stage runner.
+        ids: The entry ids to visit.
+        workers: Pool size.
+        stop_event: Shared stop event.
+        candidates: ``lexeme_id -> row`` index of a tier candidate list, or ``None``.
+
+    Returns:
+        The pass's :class:`PassResult`. ``metrics`` carries ``proper_nouns`` (entries the
+        pass had anything to say about), ``from_list`` (typed for free), ``residue`` (sent
+        to the model), ``from_model`` (verdicts applied) and ``skipped_typed`` (proper
+        nouns already carrying a type that is not the placeholder).
+    """
+    tally = _Tally(RetrofitPass.ENTITY_TYPE)
+    index = candidates or {}
+    residue: list[_EntityResidue] = []
+    residue_lock = asyncio.Lock()
+
+    async def decide(lexeme_id: str) -> None:
+        undecided: _EntityResidue | None = None
+        metrics: dict[str, float] = {}
+        changed = False
+        async with store.locked(lexeme_id):
+            entry = store.read(lexeme_id)
+            if entry is None or entry.kind is not LexemeKind.PROPER_NOUN:
+                return
+            metrics["proper_nouns"] = 1.0
+            due = _hygiene_attempt_due(entry, _ENTITY_TYPE_PREFIX, _entity_type_refs(entry))
+            if due is None:
+                await tally.entry(metrics=metrics | {"skipped_marker": 1.0})
+                return
+            attempt = _attempt_of(due)
+            row = index.get(lexeme_id)
+            block = entry.proper_noun
+            if row is not None and (row.entity_type is not None or row.wikidata_qid):
+                changed = _apply_entity_type(entry, row.entity_type, row.wikidata_qid)
+                metrics["from_list"] = 1.0
+                entry.add_provenance(
+                    _marker(StageName.CLASSIFY_KIND).model_copy(
+                        update={"note": _ENTITY_TYPE_LIST_NOTE}
+                    )
+                )
+            elif block is not None and block.entity_type is EntityType.OTHER:
+                undecided = (lexeme_id, entry.headword, _residue_snippet(entry), attempt)
+            else:
+                # Already typed by an earlier pass or by the import path. A placeholder is
+                # what this pass replaces; a verdict it did not write is not re-bought.
+                metrics["skipped_typed"] = 1.0
+            if undecided is None:
+                entry.add_provenance(_entity_type_marker(entry, attempt))
+                store.write(entry)
+        if undecided is not None:
+            async with residue_lock:
+                residue.append(undecided)
+            await tally.entry(metrics=metrics | {"residue": 1.0})
+            return
+        await tally.entry(items_changed=1 if changed else 0, metrics=metrics)
+
+    await _drive(ids, decide, tally, workers=workers, stop_event=stop_event)
+
+    residue.sort(key=lambda item: item[0])
+    batches = [
+        tuple(residue[start : start + ENTITY_TYPE_BATCH_SIZE])
+        for start in range(0, len(residue), ENTITY_TYPE_BATCH_SIZE)
+    ]
+
+    async def classify(batch: tuple[_EntityResidue, ...]) -> None:
+        await _entity_type_batch(store, runner, batch, tally)
+
+    await _drive(batches, classify, tally, workers=workers, stop_event=stop_event)
+
+    result = tally.result
+    for key in ("proper_nouns", "from_list", "residue", "from_model", "skipped_typed"):
+        result.metrics.setdefault(key, 0.0)
+    _LOG.info(
+        "entity_type_pass",
+        scanned=result.entries_scanned,
+        from_list=result.metrics["from_list"],
+        residue=len(residue),
+        from_model=result.metrics["from_model"],
+        cost_usd=round(result.cost_usd, 6),
+        stopped_reason=result.stopped_reason,
+    )
+    return result
+
+
+def _build_entity_type_prompt(batch: Sequence[_EntityResidue]) -> str:
+    """Return the volatile half of one entity-type call's prompt.
+
+    Args:
+        batch: The residue items this call answers for.
+
+    Returns:
+        One line per headword, the gloss snippet appended where the entry has one.
+    """
+    lines = [
+        f"{headword} — {snippet}" if snippet else headword for _, headword, snippet, _ in batch
+    ]
+    return "Type each of these proper-noun headwords:\n" + "\n".join(lines)
+
+
+async def _entity_type_batch(
+    store: LexemeStore,
+    runner: StageRunner,
+    batch: Sequence[_EntityResidue],
+    tally: _Tally,
+) -> None:
+    """Type one batch of proper nouns and write the verdicts back.
+
+    Like ``classify_kind``'s batch this is the one place the pass cannot hold a lock
+    across its call, because the call decides forty entries at once; each verdict is
+    applied read-modify-write inside its own entry's lock instead.
+
+    Args:
+        store: The store.
+        runner: The stage runner.
+        batch: The residue items this call answers for.
+        tally: The pass tally.
+
+    Raises:
+        BudgetExceededError: A budget stop is a run-level condition and propagates.
+    """
+    try:
+        stage_result = await runner.run(
+            stage=StageName.CLASSIFY_KIND,
+            output_type=_DraftEntityTypeBatch,
+            instructions=ENTITY_TYPE_INSTRUCTIONS,
+            prompt=_build_entity_type_prompt(batch),
+            prompt_version=PROMPT_VERSION,
+        )
+    except BudgetExceededError:
+        raise
+    except GenerationError as exc:
+        _LOG.warning("entity_type_batch_failed", size=len(batch), error=str(exc))
+        return
+
+    await tally.call(stage_result.cost_usd)
+    verdicts = {v.term.strip().lower(): v.entity_type for v in stage_result.output.verdicts}
+    for lexeme_id, headword, _, attempt in batch:
+        entity_type = verdicts.get(headword.strip().lower())
+        if entity_type is None:
+            continue
+        async with store.locked(lexeme_id):
+            entry = store.read(lexeme_id)
+            if entry is None or entry.kind is not LexemeKind.PROPER_NOUN:
+                continue
+            changed = _apply_entity_type(entry, entity_type, None)
+            entry.add_provenance(stage_result.provenance)
+            entry.add_provenance(_entity_type_marker(entry, attempt))
+            store.write(entry)
+        # The entry was already counted as scanned in phase one; this records only what
+        # the model's verdict changed.
+        await tally.entry(
+            scanned=False, items_changed=1 if changed else 0, metrics={"from_model": 1.0}
+        )
+
+
+# --------------------------------------------------------------------------------------
+# Pass 3 — hygiene
 # --------------------------------------------------------------------------------------
 #
 # Instructions and the output contract for step (c) live here, not in prompts.py /
@@ -1365,7 +1793,7 @@ async def _hygiene_pass(
 
 
 # --------------------------------------------------------------------------------------
-# Pass 3 — tag_domain
+# Pass 4 — tag_domain
 # --------------------------------------------------------------------------------------
 
 
@@ -1480,7 +1908,7 @@ async def _tag_entry(
 
 
 # --------------------------------------------------------------------------------------
-# Pass 4 — spans
+# Pass 5 — spans
 # --------------------------------------------------------------------------------------
 
 
@@ -1618,7 +2046,7 @@ async def _span_fallback(
 
 
 # --------------------------------------------------------------------------------------
-# Pass 5 — repair
+# Pass 6 — repair
 # --------------------------------------------------------------------------------------
 #
 # The instructions and the output contract for step (b) live here, not in prompts.py /
@@ -1934,7 +2362,7 @@ async def _repair_pass(
 
 
 # --------------------------------------------------------------------------------------
-# Pass 6 — rendition_hygiene
+# Pass 7 — rendition_hygiene
 # --------------------------------------------------------------------------------------
 #
 # The instructions and the output contract for this pass live here, not in prompts.py /
@@ -2303,7 +2731,7 @@ async def _rendition_hygiene_pass(
 
 
 # --------------------------------------------------------------------------------------
-# Pass 7 — readability_hygiene
+# Pass 8 — readability_hygiene
 # --------------------------------------------------------------------------------------
 #
 # The instructions and the output contract for this pass live here, not in prompts.py /

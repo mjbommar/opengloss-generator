@@ -104,6 +104,7 @@ from opengloss_generator.log import get_logger
 from opengloss_generator.prompts import PROMPT_VERSION
 from opengloss_generator.runner import run_pool
 from opengloss_generator.schema import (
+    PROTECTED_RELATION_TYPES,
     Provenance,
     Relation,
     RelationTarget,
@@ -352,6 +353,12 @@ def _load_view(store: LexemeStore) -> _StoreView:
                     note=relation.note,
                 )
                 for index, relation in enumerate(sense.relations)
+                # A protected type is left out of the projection entirely (D-81), which
+                # is stronger than a guard in each of the four steps: an edge this pass
+                # cannot see is one it cannot demote, cannot pull into a cycle, and
+                # cannot infer a reciprocal for. An alias has no far side by definition,
+                # so step 4 has nothing to complete either.
+                if relation.type not in PROTECTED_RELATION_TYPES
             ]
     return view
 

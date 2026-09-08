@@ -242,7 +242,13 @@ from opengloss_generator.identity import edge_id
 from opengloss_generator.log import get_logger
 from opengloss_generator.prompts import PROMPT_VERSION
 from opengloss_generator.runner import run_pool
-from opengloss_generator.schema import ContrastVerdict, Provenance, RelationType, StageName
+from opengloss_generator.schema import (
+    PROTECTED_RELATION_TYPES,
+    ContrastVerdict,
+    Provenance,
+    RelationType,
+    StageName,
+)
 from opengloss_generator.workflows.content_hygiene import (
     PROGRESS_EVERY,
     UNRESOLVED_GLOSS,
@@ -418,6 +424,16 @@ DEMOTION_NOTE_PREFIXES: tuple[str, ...] = (
 #: of that module's ``__all__``) exactly as ``relation_hygiene`` mirrors it. Only these
 #: have a reverse edge that can disagree, so only these interest ``asymmetric``, and only
 #: these can be left one-sided by ``cap``.
+#: Relation types every step here leaves exactly as it found them (D-81). Imported rather
+#: than redefined so one edit to the schema exempts the whole pass at once. An alias is
+#: not a claim about meaning that this module's verdicts, caps and dedupes were built to
+#: police: it says two headwords name one thing, it has no far side to reconcile against,
+#: and ``see_also`` — the floor every demotion here lands on — is a *weaker* statement
+#: that would lose exactly the information the alias was written to carry. The four
+#: removing/demoting steps skip it; ``tombstone`` needs no guard, since it only removes
+#: ``see_also`` edges carrying a demotion note and an alias is neither.
+_PROTECTED: frozenset[RelationType] = PROTECTED_RELATION_TYPES
+
 _SYMMETRIC_RELATION_TYPES: frozenset[RelationType] = frozenset(
     {RelationType.SYNONYM, RelationType.ANTONYM, RelationType.CONFUSABLE_WITH}
 )
@@ -1556,6 +1572,8 @@ def _collect_retype_candidates(
     for _, sense, sense_id in _live_senses(entry):
         source_gloss = sense.canonical_gloss()
         for relation in sense.relations:
+            if relation.type in _PROTECTED:
+                continue
             if relation.type not in _RETYPE_KINDS or _is_retyped(relation):
                 continue
             contrast = keyed.get(edge_id(sense_id, relation.type.value, relation.target.lexeme_id))
@@ -2059,6 +2077,8 @@ def _apply_verdicts(
         return
     for _, sense, sense_id in _live_senses(entry):
         for relation in sense.relations:
+            if relation.type in _PROTECTED:
+                continue
             if relation.type is RelationType.SEE_ALSO or _is_retyped(relation):
                 continue
             target_lexeme = relation.target.lexeme_id
@@ -2306,7 +2326,7 @@ def _demote_asymmetric(
     """
     for _, sense, _ in _live_senses(entry):
         for relation in sense.relations:
-            if relation.type not in _SYMMETRIC_RELATION_TYPES:
+            if relation.type in _PROTECTED or relation.type not in _SYMMETRIC_RELATION_TYPES:
                 continue
             far_sense = relation.target.sense_id
             if far_sense is None:
@@ -2371,6 +2391,9 @@ def _dedup(entry: Lexeme, editor: _Editor, edits: _EntryEdits) -> None:
         kept: list[Relation] = []
         lines: list[str] = []
         for relation in sense.relations:
+            if relation.type in _PROTECTED:
+                kept.append(relation)
+                continue
             key = (relation.type.value, relation.target.lexeme_id, relation.target.sense_id)
             if key in seen:
                 lines.append(_removal_line(DEDUP_LINE_PREFIX, relation))
@@ -2442,6 +2465,8 @@ def _cap(entry: Lexeme, editor: _Editor, caps: RelationCaps, edits: _EntryEdits)
     for _, sense, sense_id in _live_senses(entry):
         groups: dict[RelationType, list[tuple[tuple[int, int, int], int, Relation]]] = {}
         for index, relation in enumerate(sense.relations):
+            if relation.type in _PROTECTED:
+                continue
             key = _cap_sort_key(relation, index, judged=judged)
             groups.setdefault(relation.type, []).append((key, index, relation))
 
