@@ -1753,3 +1753,11 @@ changelog ("What changed since v2.1"); `V22` placeholders (pretraining docs/word
 tokens, judge) that make a v2.2 render fail until filled at release time. Store census
 before tier 5's hygiene: 152,859 entry files, **148,292 live lexemes**, 4,567 fully
 retired (fold 4,377 + fragments 172 + 18 other), 290,220 live senses.
+
+**Tier 5 chain, 2026-09-07:** import free (38,100); classify $0.28; hygiene $0.02;
+tag_domain **$2.49** (40,482 senses, 2h33m); repair **$2.01** (65,679 neutral examples
+for the WordNet senses); spans $0.58; resolve **$6.11** (63,297 calls, 2h11m, under
+cap); graph-hygiene 23,445 entries; **sections** (etymology + encyclopedia + lexical
+explanation for the 38,223 entries lacking them): 114,423 calls, **$29.24**, 4h17m, 0
+failures — $0.00077/entry, an order of magnitude under the $200 cap set for an
+unmeasured stage. Gloss levels started 21:43. Tier so far $40.73.
