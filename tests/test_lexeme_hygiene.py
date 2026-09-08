@@ -15,13 +15,15 @@ corpus on disk. The two tests that do want the real corpus skip themselves when 
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
-from opengloss_generator import cli, wordnet
+from opengloss_generator import cli, prompts, wordnet
 from opengloss_generator.config import StoreConfig
 from opengloss_generator.runner import RunSession
 from opengloss_generator.schema import (
@@ -931,3 +933,74 @@ async def test_the_dry_run_plan_prices_the_calls_the_alias_step_would_buy(sessio
     assert step["kept_wordnet"] == 1
     assert step["calls_due"] == 1
     assert plan["estimated_calls"] == 1
+
+
+# --------------------------------------------------------------------------------------
+# The head-noun trap (D-81 pilot finding, D-84 prompt fix)
+# --------------------------------------------------------------------------------------
+#
+# The pilot's 100 compound-head pairs measured a 3% alias_of false-positive rate --
+# "Albers-Schonberg disease" -> "disease" and "Alpine scurvy" -> "scurvy" were both wrongly
+# called aliases, because the short entry is the class or a confused-with condition, never
+# the long thing itself. `ALIASES_INSTRUCTIONS` was rewritten to name this shape explicitly
+# and the pass keeps a strict enum; both are asserted here.
+
+#: A compound-head pair of exactly the pilot's shape: the short entry is the class the long
+#: thing belongs to, not another name for it -- the scripted judge answers `see_also` for
+#: any short gloss carrying this marker (`tests/conftest.py`).
+HORDE_LONG_GLOSS = "A confederation of Mongol and Turkic tribes that dominated medieval Rus."
+HORDE_SHORT_GLOSS = f"A large group or swarm, {ALIAS_RELATED_MARKER} tribes formed."
+
+
+def test_aliases_instructions_are_byte_stable():
+    # A fresh execution of the module must produce the identical string: no timestamp, no
+    # uuid, no set-iteration order can have leaked into the instructions, or the provider's
+    # prefix cache silently stops matching between processes (D-25). Registered in
+    # ``sys.modules`` under its own name before ``exec_module`` runs, because the module's
+    # dataclasses resolve their field types by looking themselves up there.
+    spec = importlib.util.spec_from_file_location("lexeme_hygiene_reloaded", Path(module.__file__))
+    assert spec is not None
+    assert spec.loader is not None
+    reloaded = importlib.util.module_from_spec(spec)
+    sys.modules["lexeme_hygiene_reloaded"] = reloaded
+    try:
+        spec.loader.exec_module(reloaded)
+        assert reloaded.ALIASES_INSTRUCTIONS == module.ALIASES_INSTRUCTIONS
+        assert reloaded.PROMPT_VERSION == prompts.PROMPT_VERSION == "9"
+    finally:
+        del sys.modules["lexeme_hygiene_reloaded"]
+
+
+def test_aliases_instructions_name_the_head_noun_trap():
+    # The rule must be explicit, not left to be inferred from the worked examples alone
+    # (D-81's finding was that the un-amended instructions already showed compound-head
+    # worked examples and the model still got two wrong).
+    text = module.ALIASES_INSTRUCTIONS
+    assert "HEAD-NOUN TRAP" in text
+    assert "Albers-Schonberg disease" in text
+    assert "Alpine scurvy" in text
+    assert "Golden Horde" in text
+    assert "never alias_of" in text
+
+
+def test_the_alias_verdict_enum_is_unchanged():
+    assert module._DraftAliasVerdict.model_fields["verdict"].annotation.__args__ == (
+        "alias_of",
+        "see_also",
+        "none",
+    )
+
+
+async def test_a_head_noun_pair_gets_see_also_not_alias_of(session, tmp_path):
+    # "Golden Horde" / "horde" is D-81's own example of the trap: a compound whose last
+    # word is the class it belongs to, not another name for the specific horde.
+    session.store.write(_entry("Golden Horde", [_sense(0, HORDE_LONG_GLOSS)]))
+    session.store.write(_entry("horde", [_sense(0, HORDE_SHORT_GLOSS)]))
+    path = _candidate_file(tmp_path, [("Golden Horde", "horde")])
+
+    result = await _aliases(session, path)
+
+    assert result.calls == 1
+    assert result.see_also_written == 1
+    assert result.alias_written == 0
+    assert _edges(session.store.read("golden_horde")) == [("see_also", "horde")]

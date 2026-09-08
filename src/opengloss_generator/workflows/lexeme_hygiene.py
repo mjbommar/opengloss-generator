@@ -1818,35 +1818,56 @@ would be false. Sometimes there is no useful connection at all.
 
 THE THREE ANSWERS.
 
-- alias_of. The two headwords name the SAME referent. The short one is a shorter name for \
-the very thing the long one names -- a surname used for one famous bearer, a short form of \
-a place or a body, an initialism. "Abraham Lincoln" and "Lincoln" when the short entry \
-defines the president. "United Nations" and "UN". "Franklin D. Roosevelt" and "FDR".
-- see_also. The two are genuinely related but are NOT the same referent. The short entry \
-is the common noun the name is built from, or a class the named thing belongs to, or a \
-different bearer of the same surname. "New York City" and "city": a city is what New York \
-City is, not another name for it. "Abraham Lincoln" and "Lincoln" when the short entry \
-defines a city in England or a make of car and says nothing about the president. \
-"Supreme Court of the United States" and "court".
+- alias_of. The two headwords name the SAME REFERENT under a different surface form: a \
+short name and a full name for one specific person, place, or body ("Abraham Lincoln" / \
+"Lincoln", when the short entry is about that president); an initialism and its expansion \
+("United Nations" / "UN", "Franklin D. Roosevelt" / "FDR"); a leading-article variant \
+("the Netherlands" / "Netherlands"); a transliteration or diacritic variant ("Curacao" / \
+"Curaçao"); or a nickname of that same specific entity. Nothing here is a class, a kind, \
+or a condition the long thing merely belongs to or resembles -- see THE HEAD-NOUN TRAP.
+- see_also. The two are genuinely related but are NOT the same referent: the short entry \
+is the common noun or class the long name is built from, a different bearer of the same \
+surname, a different thing the name has been confused with, or another connection short \
+of identity. "New York City" and "city": a city is what New York City is, not another \
+name for it.
 - none. There is no useful link. The two share a string and nothing else -- the short \
 entry is an unrelated common word, or its definitions have nothing to do with the name.
 
-HOW TO DECIDE. Read the short entry's definitions and ask: do any of them describe THE \
-THING the long headword names? If yes -- if one of them is about that person, that place, \
-that body -- answer alias_of. If the short entry describes the KIND of thing the long one \
-is an instance of, or a different individual with the same name, answer see_also. If \
-neither, answer none.
+THE HEAD-NOUN TRAP -- READ THIS BEFORE ANSWERING alias_of. Most of the pairs you will be \
+shown are a compound whose LAST WORD is the short headword: "Albers-Schonberg disease" / \
+"disease", "Alpine scurvy" / "scurvy", "Golden Horde" / "horde" -- the general pattern is \
+"X disease" / "disease". In every one of these, the short entry names the CLASS the long \
+thing belongs to (a disease is a class; a horde is a class) or a different thing it has \
+been confused with or named after (scurvy is a different, specific disease from Alpine \
+scurvy) -- never the long thing itself. A compound is not an alias of its own head noun \
+any more than "New York City" is an alias of "city" or "World War II" is an alias of \
+"war": that shape is ALWAYS see_also or none, never alias_of, no matter how specific or \
+technical the compound sounds. That the short headword is the tail end of the long one is \
+why you are being asked and settles nothing on its own -- alias_of requires the short \
+entry's OWN definitions to already single out the specific person, place, or thing the \
+long headword names, not the kind of thing it is.
+
+HOW TO DECIDE. First check THE HEAD-NOUN TRAP: if the short headword is the class, \
+condition, or thing the long compound is built from or resembles, stop and answer \
+see_also (a real connection) or none (a coincidental one). Otherwise, read the short \
+entry's definitions and ask: do any of them describe THE THING the long headword names? \
+If yes -- if one of them is about that specific person, place, or body -- answer \
+alias_of. If the short entry describes a different individual with the same name, answer \
+see_also. If neither, answer none.
 
 BE CONSERVATIVE ABOUT alias_of. Answering alias_of asserts that two headwords are two \
 names for one thing, and that assertion is published and is not reviewed again. A surname \
 that many people share is see_also unless the short entry's own definitions single out \
-this bearer. A common noun is never an alias of a name built from it: "city" is not \
-another name for New York City, "court" is not another name for the Supreme Court, "war" \
-is not another name for World War II.
+this bearer. A common noun or class is never an alias of a name built from it: "city" is \
+not another name for New York City, "court" is not another name for the Supreme Court, \
+"disease" is not another name for any disease named after someone.
 
 WHAT IS NOT EVIDENCE. That the short headword is the last word of the long one is why you \
-are being shown the pair and settles nothing. That one entry is longer or better written \
-than the other is not evidence. That the two are both proper nouns is not evidence.
+are being shown the pair and settles nothing -- see THE HEAD-NOUN TRAP. That one entry is \
+longer or better written than the other is not evidence. That the two are both proper \
+nouns is not evidence. That the compound sounds technical, medical, or historical rather \
+than ordinary is not evidence either -- "Albers-Schonberg disease" is exactly as much a \
+hyponym of "disease" as "New York City" is of "city".
 
 WORKED EXAMPLES.
 
@@ -1858,11 +1879,32 @@ Short: "Lincoln"
 England, the county town of Lincolnshire.
 Answer: alias_of. The short entry's first definition is the same man.
 
-Long: "New York City"
-  Definitions: The largest city in the United States, in south-eastern New York state.
-Short: "city"
-  Definitions: A large or important town. | An incorporated municipality.
-Answer: see_also. "City" is what New York City is, not another name for it.
+Long: "Franklin D. Roosevelt"
+  Definitions: 32nd President of the United States, in office 1933-1945, who led the \
+country through the Great Depression and most of World War II.
+Short: "FDR"
+  Definitions: An initialism for the 32nd U.S. president, known for the New Deal and his \
+wartime leadership.
+Answer: alias_of. Both name the same president; "FDR" is his initialism, not a class or \
+condition he belongs to.
+
+Long: "Albers-Schonberg disease"
+  Definitions: A rare inherited disorder causing abnormally dense bone, also called \
+osteopetrosis.
+Short: "disease"
+  Definitions: An abnormal condition impairing the function of an organism. | A specific \
+illness with recognizable signs.
+Answer: see_also. "Disease" is the class Albers-Schonberg disease belongs to, not another \
+name for this specific disorder -- the head-noun trap.
+
+Long: "Alpine scurvy"
+  Definitions: An archaic name for pellagra, a niacin-deficiency disease once observed \
+among alpine populations and confused with scurvy.
+Short: "scurvy"
+  Definitions: A disease caused by vitamin C deficiency, marked by weakness and bleeding \
+gums.
+Answer: see_also. "Alpine scurvy" is a historical name for a DIFFERENT disease that was \
+merely confused with scurvy -- the short entry names a distinct condition, not this one.
 
 Long: "World War II"
   Definitions: The global war of 1939 to 1945 between the Allies and the Axis powers.

@@ -74,7 +74,7 @@ __all__ = [
     "build_vocabulary_feedback",
 ]
 
-PROMPT_VERSION = "8"
+PROMPT_VERSION = "9"
 
 # ``(sense_ref, part of speech, canonical gloss, one existing example)`` for one live
 # sense shown to the example-writing stage. ``sense_ref`` is the number the sense is

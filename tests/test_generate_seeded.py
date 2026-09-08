@@ -194,7 +194,7 @@ def test_senses_instructions_are_byte_stable_and_the_version_is_unchanged():
     assert module.SENSES_INSTRUCTIONS == prompts.SENSES_INSTRUCTIONS
     # The seed block is volatile content appended to the per-call prompt, so the stable
     # half did not change and PROMPT_VERSION must not move (D-25).
-    assert module.PROMPT_VERSION == prompts.PROMPT_VERSION == "8"
+    assert module.PROMPT_VERSION == prompts.PROMPT_VERSION == "9"
 
 
 def test_the_seed_block_is_not_in_the_cached_instructions():
