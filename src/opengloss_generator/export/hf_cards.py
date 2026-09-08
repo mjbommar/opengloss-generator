@@ -68,12 +68,12 @@ JUDGE_SAMPLE_ENTRIES = 40
 
 #: Synonym / antonym reciprocity over the whole 54,724-entry store, closing audit of
 #: 2026-09-05 after tier 3 (``opengloss audit``).
-SYNONYM_RECIPROCITY = 0.943
-ANTONYM_RECIPROCITY = 0.953
+SYNONYM_RECIPROCITY = 0.942
+ANTONYM_RECIPROCITY = 0.943
 
 #: Senses left with no relation at all in that audit (of 137,314 live) — the largest
 #: known gap.
-SENSES_WITHOUT_RELATIONS = 1_890
+SENSES_WITHOUT_RELATIONS = 4_524
 
 PAPER_URL = "https://arxiv.org/abs/2511.18622"
 LICENSE_ID = "cc-by-4.0"
