@@ -1828,3 +1828,11 @@ the production sweep); export columns and `V23` placeholders. One merge left a
 conflict marker in `hf_cards.py` that reached `main` for four minutes before the checks
 caught it — fixed in the next commit; gotcha #10: run the four checks *before* pushing a
 merge, not after.
+
+**2026-09-08 17:11 — seeds cleaned (D-83), alias prompt fixed (D-81 amendment), tier-6
+chain started.** Seed cleanup: 11,120 `name_seed` rows → 11,077 kept, 43 dropped as not
+named entities; 603 disambiguators stripped; nano retyping (278 batched calls, $0.14)
+agreed with the TSV on 89.5% and retyped 1,154 — all six of D-82's mis-typed examples
+now correct; hypernym coverage 99.6%, domain hint 77.8% (blank where no safe default
+exists). Alias prompt: 31/31 true aliases kept, 0/100 compound-head false positives
+after the rewrite. Chain caps $130, expected ≈ $60; monitors on `tier6_chain.log`.
