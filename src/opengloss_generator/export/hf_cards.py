@@ -344,10 +344,10 @@ class V22:
     #: this is the whole-store count at the time of the sweep).
     RETIRED_LEXEMES = 4_549
 
-    PRETRAIN_DOCS: int | None = None  # fill at release
-    PRETRAIN_WORDS: int | None = None  # fill at release
-    PRETRAIN_TOKENS: int | None = None  # fill at release, cl100k_base
-    JUDGE: str | None = None  # fill at release
+    PRETRAIN_DOCS: int | None = 1_458_684  # fill at release
+    PRETRAIN_WORDS: int | None = 398_029_628  # fill at release
+    PRETRAIN_TOKENS: int | None = 565_384_746  # fill at release, cl100k_base
+    JUDGE: str | None = "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5)"  # fill at release
 
 
 #: :class:`V22` attributes that must be measured against the finished release before a
