@@ -312,6 +312,11 @@ class V21:
     MULTIWORD = 36_366  # compound 33,959 + phrasal verb 875 + idiom 331 + affix/other
     PROPER_NOUNS = 17_073
     FUNCTION_WORDS = 462
+    GLOSS_RENDITIONS = 1_684_865
+    EXAMPLES = 2_163_329
+    RELATIONS = 1_574_438
+    QUERIES = 1_304_650
+    QA_PAIRS = 736_010
     PRETRAIN_DOCS = 1_111_044
     PRETRAIN_WORDS = 331_888_239
     PRETRAIN_TOKENS = 471_451_693  # cl100k_base
@@ -347,7 +352,9 @@ class V22:
     PRETRAIN_DOCS: int | None = 1_458_684  # fill at release
     PRETRAIN_WORDS: int | None = 398_029_628  # fill at release
     PRETRAIN_TOKENS: int | None = 565_384_746  # fill at release, cl100k_base
-    JUDGE: str | None = "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5)"  # fill at release
+    JUDGE: str | None = (
+        "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5)"  # fill at release
+    )
 
 
 #: :class:`V22` attributes that must be measured against the finished release before a
@@ -397,10 +404,10 @@ def _changelog_v20_v21(stats: Stats) -> str:
         stats: The export's statistics (the current release's live counts).
     """
     size = _table(
-        ("", "v2.0 (2026-09-05)", "vX (2026-09-07)"),
+        ("", "v2.0 (2026-09-05)", "v2.1 (2026-09-07)"),
         [
-            ("Lexemes", _n(V20.LEXEMES), _n(stats.lexemes)),
-            ("Live senses", _n(V20.LIVE_SENSES), _n(stats.live_senses)),
+            ("Lexemes", _n(V20.LEXEMES), _n(V21.LEXEMES)),
+            ("Live senses", _n(V20.LIVE_SENSES), _n(V21.LIVE_SENSES)),
             (
                 "Multiword entries (compounds, phrasal verbs, idioms)",
                 _n(V20.MULTIWORD),
@@ -408,11 +415,11 @@ def _changelog_v20_v21(stats: Stats) -> str:
             ),
             ("Proper nouns", _n(V20.PROPER_NOUNS), _n(V21.PROPER_NOUNS)),
             ("Function words", _n(V20.FUNCTION_WORDS), _n(V21.FUNCTION_WORDS)),
-            ("Gloss renditions", _n(V20.GLOSS_RENDITIONS), _n(stats.gloss_renditions)),
-            ("Example sentences", _n(V20.EXAMPLES), _n(stats.example_renditions)),
-            ("Live relations", _n(V20.RELATIONS), _n(stats.relations_total)),
-            ("Synthetic queries", _n(V20.QUERIES), _n(stats.queries)),
-            ("QA pairs", _n(V20.QA_PAIRS), _n(stats.qa_pairs)),
+            ("Gloss renditions", _n(V20.GLOSS_RENDITIONS), _n(V21.GLOSS_RENDITIONS)),
+            ("Example sentences", _n(V20.EXAMPLES), _n(V21.EXAMPLES)),
+            ("Live relations", _n(V20.RELATIONS), _n(V21.RELATIONS)),
+            ("Synthetic queries", _n(V20.QUERIES), _n(V21.QUERIES)),
+            ("QA pairs", _n(V20.QA_PAIRS), _n(V21.QA_PAIRS)),
             ("Pretraining documents", _n(V20.PRETRAIN_DOCS), _n(V21.PRETRAIN_DOCS)),
             ("Pretraining words", _n(V20.PRETRAIN_WORDS), _n(V21.PRETRAIN_WORDS)),
             ("Pretraining tokens (cl100k_base)", _n(V20.PRETRAIN_TOKENS), _n(V21.PRETRAIN_TOKENS)),

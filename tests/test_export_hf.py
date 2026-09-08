@@ -1250,3 +1250,18 @@ def test_the_schemas_module_names_every_repo_exactly_once():
         hf_schemas.ALL_REPO_SLUGS
     )
     assert not hf_schemas.STORE_REPO_SLUGS & hf_schemas.DERIVED_REPO_SLUGS
+
+
+def test_older_changelog_sections_are_frozen_not_live(tmp_path):
+    """The v2.0→v2.1 section must show v2.1's own counts on a later release, not the live ones."""
+    from opengloss_generator.export import hf_cards
+
+    stats = hf_cards.Stats() if hasattr(hf_cards, "Stats") else None
+    if stats is None:
+        from opengloss_generator.export.hf_rows import Stats
+
+        stats = Stats()
+    stats.lexemes = 999_999
+    section = hf_cards._changelog_v20_v21(stats)
+    assert "999,999" not in section
+    assert "109,633" in section and "v2.1 (2026-09-07)" in section
