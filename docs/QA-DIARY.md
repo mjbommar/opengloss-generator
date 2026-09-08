@@ -995,3 +995,17 @@ tiers. This is direct evidence for the paper's methods section: the LLM pipeline
 weakest component is the relation graph it generates, and grafting it onto a curated
 inventory closes most of the gap. Caveat: 41 senses on 40 entries — the tier is
 mostly monosemous, which flatters distinctness by construction.
+
+## Iteration 21 — v2.2 post-upload QA (2026-09-08 16:45)
+
+Live checks on `mjbommar/opengloss-v2.2-*`: 16/16 public with README + parquet (3.74
+GB); `load_dataset` spot reads — the lexicon row for "databases" is `retired=true,
+retired_reason="inflection_fold: database"`, and a WordNet-sourced tier-5 sense carries
+`source="wordnet-3.0"`, a domain, 6 examples and 3 relations; the senses card has both
+changelog sections, the "Sources and licences" section with the 38,100 count, tier 5 in
+every tier table, no placeholders. **One defect found and fixed:** the older
+"What changed since v2.0" section rendered the *current* release's live counts in its
+second column (148,292 lexemes under a "v2.2 (2026-09-07)" header) instead of v2.1's
+own; the template now freezes v2.1's counts (`V21` constants) and the 16 live cards
+were patched and re-uploaded (verified). Pointers: v2.1 cards → v2.2 (16), v2.0 cards →
+v2.1 (15), v1.3 cards → v2.1 (7). Release QA closed.
