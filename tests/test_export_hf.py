@@ -1273,6 +1273,8 @@ def test_older_changelog_sections_are_frozen_not_live(tmp_path):
     section = hf_cards._changelog_v20_v21(stats)
     assert "999,999" not in section
     assert "109,633" in section and "v2.1 (2026-09-07)" in section
+
+
 # --------------------------------------------------------------------------------------
 # D-81 — tier 6, entity types, aliases
 # --------------------------------------------------------------------------------------
