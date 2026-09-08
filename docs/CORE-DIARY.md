@@ -1790,3 +1790,17 @@ re-judge 81.3, store-wide audit (152,859 files; 0 cycles; reciprocity 94.2 / 94.
 4,524 senses without relations — the card constants updated before render). The 16
 v2.1 cards carry a "superseded by v2.2" pointer. Goal 5 complete: tier 5 $127.94 +
 fold $1.14 + closing $2 ≈ **$131**; total enrichment spend ≈ **$1,030**.
+
+## Goal 6 — tier 6: named entities (docs/NAMED-ENTITY-PLAN.md) — 2026-09-08 16:30
+
+Plan merged (15,000 candidates: 6,300 people, 3,900 places, 2,031 works, 1,553
+organizations, 926 events, 290 other; 12,718 new; ≈ $52). Open questions decided:
+§4d option (ii) — leaves `nature.settlements` + `law_government.polities`; §4c both
+shapes — `Lexeme.aliases` for surface forms, `ALIAS_OF` edges (never pruned) for
+separate lexemes; size 15,000; living figures penalised, not excluded. Two agents
+building in parallel: the schema/taxonomy/entity-type/alias/export work (D-81) and the
+seeded `generate --seed-list` path that skips the overview call (D-82, with a 100-entry
+pilot to measure $/entry against the $0.0009 ceiling). `data/core/tier6.tsv` written.
+Chain after both land: import-wordnet (3,880) → seeded generate (11,120) →
+classify_kind / entity_type / tag_domain / spans → resolve → hygiene → alias pass →
+gloss/example/encyclopedia levels (no registers, no contrasts) → judge → audit → v2.3.
