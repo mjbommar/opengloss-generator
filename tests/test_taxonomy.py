@@ -258,3 +258,38 @@ def test_history_has_no_iptc_top_level_topic_and_that_is_documented_not_missing(
     # codes is deliberately empty, not silently absent from IPTC_MAP.
     assert "history" in IPTC_MAP
     assert IPTC_MAP["history"] == ()
+
+
+# --------------------------------------------------------------------------------------
+# D-81 — the two named-entity leaves
+# --------------------------------------------------------------------------------------
+#
+# 26% of tier 6 is a settlement or a polity and the taxonomy had no leaf for either. A
+# `geography` root would have been a breaking change to a fixed 15-root vocabulary, so the
+# two went under roots that already exist: the physical place beside landforms and water
+# bodies, the governed entity beside government structure and civics.
+
+
+def test_settlement_and_polity_leaves_exist_under_existing_roots():
+    assert DomainTag.NATURE_SETTLEMENTS.value == "nature.settlements"
+    assert DomainTag.LAW_GOVERNMENT_POLITIES.value == "law_government.polities"
+    assert root_of(DomainTag.NATURE_SETTLEMENTS) == "nature"
+    assert root_of(DomainTag.LAW_GOVERNMENT_POLITIES) == "law_government"
+    # No root was added: adding one is the breaking change D-81 declined to make.
+    assert len(ROOTS) == 15
+
+
+def test_the_two_new_leaves_carry_glosses_and_reach_the_prompt_block():
+    for tag in (DomainTag.NATURE_SETTLEMENTS, DomainTag.LAW_GOVERNMENT_POLITIES):
+        assert tag in GLOSSES
+        assert GLOSSES[tag].strip()
+        # The block is built from GLOSSES, so a leaf added without one is invisible to
+        # every tagger — which is the failure this asserts against (D-44's convention).
+        assert f"{tag.value} — {GLOSSES[tag]}" in TAXONOMY_PROMPT_BLOCK
+
+
+def test_the_taxonomy_version_was_bumped_for_the_new_leaves():
+    # D-44's rule: the version is bumped whenever a leaf is added, so `retrofit`'s
+    # hygiene step can tell a `.general` verdict tagged under the older, thinner taxonomy
+    # from one tagged with these two already on the menu.
+    assert TAXONOMY_VERSION == "3"

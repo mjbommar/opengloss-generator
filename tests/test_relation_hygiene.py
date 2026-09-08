@@ -17,6 +17,7 @@ from opengloss_generator.config import AppConfig, ConcurrencyConfig, StoreConfig
 from opengloss_generator.router import estimate_tokens
 from opengloss_generator.runner import RunSession
 from opengloss_generator.schema import (
+    PROTECTED_RELATION_TYPES,
     Example,
     Lexeme,
     LexemeKind,
@@ -454,10 +455,13 @@ async def test_a_long_relation_set_is_chunked_at_the_cap(session):
 
 def test_the_instructions_are_long_enough_to_cache():
     # A provider prompt cache needs 1,024 tokens before it will match at all, and the
-    # rubric has to define every relation type it asks the model to choose between.
+    # rubric has to define every relation type it asks the model to choose between —
+    # which is every type this pass judges, so a protected type (D-81) is deliberately
+    # absent from the rubric rather than missing from it: `validity` never sees one.
     assert estimate_tokens("", RELATION_VALIDITY_INSTRUCTIONS, 0) >= 1_100
     for member in RelationType:
-        assert f'"{member.value}"' in RELATION_VALIDITY_INSTRUCTIONS
+        named = f'"{member.value}"' in RELATION_VALIDITY_INSTRUCTIONS
+        assert named is (member not in PROTECTED_RELATION_TYPES), member.value
 
 
 # --------------------------------------------------------------------------------------
@@ -923,3 +927,67 @@ def test_a_pre_existing_marker_is_parsed():
     # The same set is not re-judged; a changed set earns the second and last attempt.
     assert module._attempt_number(entry, module._VALIDITY_PREFIX, ["a", "b"]) is None
     assert module._attempt_number(entry, module._VALIDITY_PREFIX, ["a", "b", "c"]) == 2
+
+
+# --------------------------------------------------------------------------------------
+# D-81 — alias_of is exempt from every step of this pass too
+# --------------------------------------------------------------------------------------
+#
+# `validity`'s question is "is this edge the relation it claims to be?", and an alias
+# cannot fail it: it does not claim a semantic relation, it claims that two headwords name
+# one thing. The three free steps are exempt for the same reason plus a sharper one — an
+# alias's target is *supposed* to look like the headword ("Lincoln" for "Abraham Lincoln"),
+# which is exactly the shape `inflections` and `headword_phrases` demote for.
+
+
+def _alias_relation(term: str) -> Relation:
+    """Build one alias edge, the shape ``lexeme-hygiene``'s alias step writes."""
+    return _relation(RelationType.ALIAS_OF, term, note="alias: lexeme_hygiene")
+
+
+async def test_the_headword_phrase_step_never_demotes_an_alias(session):
+    # "Abraham Lincoln" contains the headword "Lincoln" whole, which is the exact shape
+    # this step demotes — and the exact shape an alias has.
+    session.store.write(_entry("Lincoln", relations=[_alias_relation("Abraham Lincoln")]))
+
+    outcome = await run_relation_hygiene(
+        session.store, session.stages, workers=4, only={RelationHygieneStep.HEADWORD_PHRASES}
+    )
+
+    assert outcome.steps[RelationHygieneStep.HEADWORD_PHRASES].demoted == 0
+    assert _relations_of(session.store.read("lincoln"))[0].type is RelationType.ALIAS_OF
+
+
+async def test_the_inflections_step_never_demotes_an_alias(session):
+    session.store.write(_entry("stay", relations=[_alias_relation("stays")]))
+
+    outcome = await run_relation_hygiene(
+        session.store, session.stages, workers=4, only={RelationHygieneStep.INFLECTIONS}
+    )
+
+    assert outcome.steps[RelationHygieneStep.INFLECTIONS].demoted == 0
+    assert _relations_of(session.store.read("stay"))[0].type is RelationType.ALIAS_OF
+
+
+async def test_the_meta_label_step_never_demotes_an_alias(session):
+    session.store.write(_entry("alpha", relations=[_alias_relation("descriptive term")]))
+
+    outcome = await run_relation_hygiene(
+        session.store, session.stages, workers=4, only={RelationHygieneStep.META_LABELS}
+    )
+
+    assert outcome.steps[RelationHygieneStep.META_LABELS].demoted == 0
+    assert _relations_of(session.store.read("alpha"))[0].type is RelationType.ALIAS_OF
+
+
+async def test_validity_never_buys_a_verdict_about_an_alias(session):
+    session.store.write(_entry("abraham_lincoln", relations=[_alias_relation("Lincoln")]))
+
+    outcome = await run_relation_hygiene(
+        session.store, session.stages, workers=4, only={RelationHygieneStep.VALIDITY}
+    )
+
+    result = outcome.steps[RelationHygieneStep.VALIDITY]
+    assert result.calls == 0
+    assert result.cost_usd == 0.0
+    assert _relations_of(session.store.read("abraham_lincoln"))[0].type is RelationType.ALIAS_OF

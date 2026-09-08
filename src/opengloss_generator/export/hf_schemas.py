@@ -272,8 +272,20 @@ _TIER_DESCRIPTION = (
     "`core` (top 10K by composite frequency), `tier2` (ranks to ~42K), `tier3` "
     "(the rest of the frequency-ranked single words), `tier4` (stopwords, plus "
     "compounds and names at Wikipedia frequency ≥ 10), `tier5` (the WordNet 3.0 gap "
-    "the earlier tiers lacked) or `unknown` (on none of the rank lists); an export may "
-    "contain only some of these — see the coverage table."
+    "the earlier tiers lacked), `tier6` (named entities — people, places, organizations, "
+    "works and events, ranked by importance rather than by frequency) or `unknown` (on "
+    "none of the rank lists); an export may contain only some of these — see the "
+    "coverage table."
+)
+
+#: The `entity_type` column's field description, shared by `lexicon` and `senses` (D-81).
+#: Nullable on both, and the null is meaningful: a common noun has no entity type at all,
+#: while `other` on a proper noun is a real, if residual, answer.
+_ENTITY_TYPE_DESCRIPTION = (
+    "What kind of thing a proper noun names: `person` (including fictional and "
+    "mythological characters, following OntoNotes), `place`, `organization`, `work`, "
+    "`event`, `product`, `species` or `other` (a language, a script, a calendar, an "
+    "ethnic group — none of the seven fits). Null when `kind` is not `proper_noun`."
 )
 
 #: The `source` column's field description, shared by `lexicon` and `senses` (D-80).
@@ -462,6 +474,25 @@ print(grade5.head())""",
                     "Lexeme kind discriminator: `simplex`, `compound`, `phrasal_verb`, "
                     "`idiom`, `proper_noun`, `abbreviation`, `affix`, `function_word`.",
                 ),
+                FieldSpec("entity_type", _STR, _ENTITY_TYPE_DESCRIPTION),
+                FieldSpec(
+                    "wikidata_qid",
+                    _STR,
+                    "The Wikidata item id of the entity this proper noun names, e.g. "
+                    "`Q91` for Abraham Lincoln, when a source supplied one. The join key "
+                    "for reconciling an entry against Wikidata; null for every entry "
+                    "whose type was decided without one, and for every common noun.",
+                ),
+                FieldSpec(
+                    "aliases",
+                    pa.list_(_STR),
+                    "Surface forms that resolve to this entry and have no entry of their "
+                    'own — a leading-article form ("the Netherlands"), a diacritic or '
+                    "transliteration variant, an initialism nothing else holds. Each one "
+                    "is also an `alias` row in `opengloss-vX-inflections`, so resolving "
+                    "any surface string stays one lookup. A variant that *does* have an "
+                    "entry is an `alias_of` edge in `opengloss-vX-relations` instead.",
+                ),
                 FieldSpec(
                     "status",
                     _STR,
@@ -590,6 +621,7 @@ for row in bank:
                     "secondary_domains", pa.list_(_STR), "Additional domain leaves, when tagged."
                 ),
                 FieldSpec("source", _STR, _SOURCE_DESCRIPTION),
+                FieldSpec("entity_type", _STR, _ENTITY_TYPE_DESCRIPTION),
                 FieldSpec("gloss", _STR, "The canonical `(neutral, plain)` definition."),
                 FieldSpec(
                     "gloss_renditions",
@@ -894,7 +926,8 @@ print(resolve("Ran"))""",
                     _STR,
                     "`lemma` (the headword itself), `plural`, `past_tense`, "
                     "`past_participle`, `present_participle`, `third_person_singular`, "
-                    "`comparative`, `superlative` or `derivation`.",
+                    "`comparative`, `superlative`, `derivation`, or `alias` (an "
+                    "alternative name for the entry that has no entry of its own).",
                 ),
             ),
         ),

@@ -132,6 +132,39 @@ that still exists, while both steps here conclude that the *headword* should not
 entry. Leaving one sense alive to keep the entry non-empty would leave exactly the defect the
 step was run to remove.
 
+``aliases`` (nano, ``HYGIENE`` policy, D-81)
+-------------------------------------------
+
+The third step is the only one here that *adds* something rather than retiring it, and it
+is in this module for the same reason the other two are: its question is about the
+**headword** and it cannot be answered from inside one entry. Tier 6 brings 12,718 names
+into a store that already holds the last token of 9,475 of them as an entry of its own —
+it knows *Lincoln*, *Washington*, *Einstein* — and the candidate list records the
+opportunity as a note (``alias_of candidate: store has 'lincoln'``) without deciding it,
+because whether the single-word entry is the *same referent* or a homonym is a per-entry
+judgement. "Lincoln" is Abraham Lincoln, and also a city in England and a make of car.
+
+For each candidate the step answers one three-valued question and writes at most one edge
+on the **candidate's** first live sense, never on the far side:
+
+* ``alias_of`` — the two name one referent, so the candidate gets a
+  :attr:`~opengloss_generator.schema.RelationType.ALIAS_OF` edge toward the single-word
+  entry. An alias points one way (D-81): no reciprocal is written, inferred or repaired,
+  and :data:`~opengloss_generator.schema.PROTECTED_RELATION_TYPES` keeps every later
+  reconcile, hygiene and graph pass from demoting, pruning, capping or re-judging it.
+* ``see_also`` — related but not the same referent, which is the ordinary answer for a
+  surname that many people share. An **authored** ``see_also``, carrying no demotion note,
+  so ``relation-reconcile``'s tombstone step leaves it alone.
+* ``none`` — the single-word entry is a different word entirely (*Lincoln* the car for
+  *Abraham Lincoln*'s note would be), and nothing is written.
+
+One free keep runs first (D-8): if a live sense of the **single-word** entry already names
+the candidate's full headword verbatim in its canonical gloss — WordNet's *Lincoln* gloss
+is "16th President of the United States… Abraham Lincoln" — then the store has already
+said they are the same referent and the verdict is ``alias_of`` for nothing. An entry
+already carrying an edge toward the target is skipped for free as well, which is what
+makes a second sweep a no-op even before the marker is read.
+
 Idempotence (D-47)
 ------------------
 
@@ -141,7 +174,9 @@ attempts per entry. ``inflection_fold`` keys on the *form's live canonical gloss
 the lemma id*: the question is what these definitions say and which lemma they were compared
 against, so rewriting the glosses or re-pointing the candidate at a different lemma earns a
 fresh verdict, and nothing else does. ``fragments`` keys on the gloss digests plus the matched
-reason. Following ``relation_hygiene`` and ``sense_hygiene``, the digest is taken over the set
+reason, and ``aliases`` on the gloss digests plus the target id — a candidate re-pointed
+at a different single-word entry is a different question, and a rewritten gloss is too.
+Following ``relation_hygiene`` and ``sense_hygiene``, the digest is taken over the set
 **as the answers leave it**: a folded entry has no live gloss left, so it is never revisited at
 any price, and a kept one is free on every later sweep.
 
@@ -179,20 +214,26 @@ from opengloss_generator.schema import (
     LexemeKind,
     PartOfSpeech,
     Provenance,
+    Relation,
+    RelationTarget,
     RelationType,
     StageName,
 )
 from opengloss_generator.wordnet import Availability
+from opengloss_generator.wordnet_import import DEFAULT_CANDIDATES_PATH, read_candidate_rows
 from opengloss_generator.workflows.content_hygiene import PROGRESS_EVERY
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Sequence
+    from pathlib import Path
 
-    from opengloss_generator.schema import Lexeme, POSEntry, Relation, Sense
+    from opengloss_generator.schema import Lexeme, POSEntry, Sense
     from opengloss_generator.stages import StageRunner
     from opengloss_generator.store import LexemeStore
 
 __all__ = [
+    "ALIASES_INSTRUCTIONS",
+    "ALIAS_NOTE",
     "FOLD_RELATION_NOTE",
     "FRAGMENTS_INSTRUCTIONS",
     "INFLECTION_FOLD_INSTRUCTIONS",
@@ -201,7 +242,9 @@ __all__ = [
     "MAX_ATTEMPTS",
     "RETIRED_FOLD_NOTE",
     "RETIRED_FRAGMENT_NOTE",
+    "SEE_ALSO_NOTE",
     "TRAILING_FUNCTION_WORDS",
+    "AliasIndex",
     "FoldPlan",
     "InflectionIndex",
     "LexemeHygieneOutcome",
@@ -331,6 +374,7 @@ class LexemeHygieneStep:
 
     INFLECTION_FOLD = "inflection_fold"
     FRAGMENTS = "fragments"
+    ALIASES = "aliases"
 
     #: The order the steps run in. ``inflection_fold`` first: it is the larger population by
     #: two orders of magnitude, and a multiword plural that is also a fragment ("hand signals")
@@ -338,7 +382,11 @@ class LexemeHygieneStep:
     #: nothing. Neither step can create work for the other — a retired entry is a candidate for
     #: neither — so the order is a preference about which reason gets written, not a
     #: dependency.
-    ALL: tuple[str, ...] = (INFLECTION_FOLD, FRAGMENTS)
+    #: ``aliases`` runs last because it is the only step that *adds* an edge, and adding
+    #: one to an entry another step is about to tombstone would be work thrown away: a
+    #: retired entry has no live sense to hang a relation on, so it is not a candidate here
+    #: at all once the first two steps have run.
+    ALL: tuple[str, ...] = (INFLECTION_FOLD, FRAGMENTS, ALIASES)
 
 
 # --------------------------------------------------------------------------------------
@@ -380,6 +428,15 @@ class StepResult:
         wordnet_unavailable: Candidates whose WordNet check could not be made because ``nltk``
             or its corpus is missing. Reported rather than silently answered ``False``: every
             one of these went to the model that WordNet might have settled for free.
+        skipped_target_missing: ``aliases``: candidates whose single-word target is not in
+            the store, or has no live sense to be the same referent as.
+        skipped_already_linked: ``aliases``: candidates that already assert an edge toward
+            the target, which is what makes a re-run free before the marker is even read.
+        alias_free: ``aliases``: candidates the target's own gloss settled for nothing —
+            it names the full headword verbatim.
+        alias_written: ``aliases``: ``alias_of`` edges written (free keeps included).
+        see_also_written: ``aliases``: authored ``see_also`` edges written.
+        alias_none: ``aliases``: verdicts of ``none``, which write nothing.
         attempts_exhausted: Candidates skipped because D-47's per-entry attempt bound was
             already reached.
         calls: Model calls made.
@@ -404,6 +461,12 @@ class StepResult:
     senses_retired: int = 0
     relations_demoted: int = 0
     wordnet_unavailable: int = 0
+    skipped_target_missing: int = 0
+    skipped_already_linked: int = 0
+    alias_free: int = 0
+    alias_written: int = 0
+    see_also_written: int = 0
+    alias_none: int = 0
     attempts_exhausted: int = 0
     calls: int = 0
     cost_usd: float = 0.0
@@ -415,9 +478,10 @@ class StepResult:
 
         ``retired`` is deliberately absent: it counts the same edits ``senses_retired`` does,
         one entry at a time rather than one sense at a time. ``relations_demoted`` is absent
-        because every demoted relation sits on a sense already counted.
+        because every demoted relation sits on a sense already counted. ``aliases`` changes
+        nothing by retiring, so its two edge counters stand in.
         """
-        return self.senses_retired
+        return self.senses_retired + self.alias_written + self.see_also_written
 
     @property
     def cost_per_candidate_usd(self) -> float:
@@ -442,6 +506,12 @@ class StepResult:
             "senses_retired": self.senses_retired,
             "relations_demoted": self.relations_demoted,
             "wordnet_unavailable": self.wordnet_unavailable,
+            "skipped_target_missing": self.skipped_target_missing,
+            "skipped_already_linked": self.skipped_already_linked,
+            "alias_free": self.alias_free,
+            "alias_written": self.alias_written,
+            "see_also_written": self.see_also_written,
+            "alias_none": self.alias_none,
             "attempts_exhausted": self.attempts_exhausted,
             "calls": self.calls,
             "cost_usd": round(self.cost_usd, 6),
@@ -555,12 +625,18 @@ class _Tally:
             result.senses_retired += counts.senses_retired
             result.relations_demoted += counts.relations_demoted
             result.wordnet_unavailable += counts.wordnet_unavailable
+            result.skipped_target_missing += counts.skipped_target_missing
+            result.skipped_already_linked += counts.skipped_already_linked
+            result.alias_free += counts.alias_free
+            result.alias_written += counts.alias_written
+            result.see_also_written += counts.see_also_written
+            result.alias_none += counts.alias_none
             result.attempts_exhausted += counts.attempts_exhausted
             if counts.retired and counts.reason:
                 result.retired_by_reason[counts.reason] = (
                     result.retired_by_reason.get(counts.reason, 0) + 1
                 )
-            if counts.senses_retired:
+            if counts.senses_retired or counts.alias_written or counts.see_also_written:
                 self._changed.add(lexeme_id)
                 self._changed_ids.add(lexeme_id)
                 result.entries_changed = len(self._changed)
@@ -606,6 +682,12 @@ class _Counts:
         senses_retired: Senses tombstoned on this entry.
         relations_demoted: Relations on those senses demoted.
         wordnet_unavailable: 1 when the WordNet check could not be made.
+        skipped_target_missing: 1 when an alias candidate's target is absent or retired.
+        skipped_already_linked: 1 when it already asserts an edge toward the target.
+        alias_free: 1 when the target's own gloss settled the alias verdict for nothing.
+        alias_written: 1 when an ``alias_of`` edge was written.
+        see_also_written: 1 when an authored ``see_also`` edge was written.
+        alias_none: 1 when the verdict was ``none`` and nothing was written.
         attempts_exhausted: 1 when D-47's bound skipped the entry.
         answered: Whether a model call actually completed, which is what earns a marker.
     """
@@ -623,6 +705,12 @@ class _Counts:
     senses_retired: int = 0
     relations_demoted: int = 0
     wordnet_unavailable: int = 0
+    skipped_target_missing: int = 0
+    skipped_already_linked: int = 0
+    alias_free: int = 0
+    alias_written: int = 0
+    see_also_written: int = 0
+    alias_none: int = 0
     attempts_exhausted: int = 0
     answered: bool = False
 
@@ -1696,6 +1784,403 @@ async def _fragments_step(
 
 
 # --------------------------------------------------------------------------------------
+# Step 3 — aliases
+# --------------------------------------------------------------------------------------
+#
+# The instructions and the output contract live here for the reason the two steps above
+# give: a self-contained call site has no other dependents and never conflicts with
+# concurrent edits to prompts.py / contracts.py.
+
+
+#: The note an ``alias_of`` edge carries, naming what wrote it so a reader of the stored
+#: relation can tell an alias established by this pass from one a generator proposed.
+ALIAS_NOTE = "alias: lexeme_hygiene"
+
+#: The same for an authored ``see_also``. Deliberately **not** a ``demoted:`` note: this
+#: edge was authored at this type, not weakened to it, and ``relation-reconcile``'s
+#: tombstone step removes only ``see_also`` edges carrying a demotion note (D-65).
+SEE_ALSO_NOTE = "see_also: lexeme_hygiene"
+
+#: Sentinel prefix for this step's D-47 marker.
+_ALIASES_PREFIX: Final = "lexeme_hygiene:aliases"
+
+ALIASES_INSTRUCTIONS = """\
+You are linking a dictionary's long name entries to the short ones it already has. You \
+are shown two headwords from the same dictionary and the definitions filed under each. \
+Decide what the relationship between them is.
+
+WHY THIS IS ASKED. The dictionary is adding full names -- "Abraham Lincoln", "New York \
+City", "Supreme Court of the United States" -- to a lexicon that already holds single \
+words: "lincoln", "city", "court". Sometimes the short entry is the *same thing* under a \
+shorter name, and a reader who looks up the short one should be told about the long one. \
+Sometimes it is a different thing that merely shares a word, and saying they are the same \
+would be false. Sometimes there is no useful connection at all.
+
+THE THREE ANSWERS.
+
+- alias_of. The two headwords name the SAME referent. The short one is a shorter name for \
+the very thing the long one names -- a surname used for one famous bearer, a short form of \
+a place or a body, an initialism. "Abraham Lincoln" and "Lincoln" when the short entry \
+defines the president. "United Nations" and "UN". "Franklin D. Roosevelt" and "FDR".
+- see_also. The two are genuinely related but are NOT the same referent. The short entry \
+is the common noun the name is built from, or a class the named thing belongs to, or a \
+different bearer of the same surname. "New York City" and "city": a city is what New York \
+City is, not another name for it. "Abraham Lincoln" and "Lincoln" when the short entry \
+defines a city in England or a make of car and says nothing about the president. \
+"Supreme Court of the United States" and "court".
+- none. There is no useful link. The two share a string and nothing else -- the short \
+entry is an unrelated common word, or its definitions have nothing to do with the name.
+
+HOW TO DECIDE. Read the short entry's definitions and ask: do any of them describe THE \
+THING the long headword names? If yes -- if one of them is about that person, that place, \
+that body -- answer alias_of. If the short entry describes the KIND of thing the long one \
+is an instance of, or a different individual with the same name, answer see_also. If \
+neither, answer none.
+
+BE CONSERVATIVE ABOUT alias_of. Answering alias_of asserts that two headwords are two \
+names for one thing, and that assertion is published and is not reviewed again. A surname \
+that many people share is see_also unless the short entry's own definitions single out \
+this bearer. A common noun is never an alias of a name built from it: "city" is not \
+another name for New York City, "court" is not another name for the Supreme Court, "war" \
+is not another name for World War II.
+
+WHAT IS NOT EVIDENCE. That the short headword is the last word of the long one is why you \
+are being shown the pair and settles nothing. That one entry is longer or better written \
+than the other is not evidence. That the two are both proper nouns is not evidence.
+
+WORKED EXAMPLES.
+
+Long: "Abraham Lincoln"
+  Definitions: 16th President of the United States; he issued the Emancipation \
+Proclamation and was assassinated in 1865.
+Short: "Lincoln"
+  Definitions: 16th President of the United States (1809-1865). | A city in eastern \
+England, the county town of Lincolnshire.
+Answer: alias_of. The short entry's first definition is the same man.
+
+Long: "New York City"
+  Definitions: The largest city in the United States, in south-eastern New York state.
+Short: "city"
+  Definitions: A large or important town. | An incorporated municipality.
+Answer: see_also. "City" is what New York City is, not another name for it.
+
+Long: "World War II"
+  Definitions: The global war of 1939 to 1945 between the Allies and the Axis powers.
+Short: "ii"
+  Definitions: The Roman numeral for two.
+Answer: none. The two share a token and nothing else."""
+
+
+class _DraftAliasVerdict(BaseModel):
+    """What the relationship between a long name and a short entry is."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    verdict: Literal["alias_of", "see_also", "none"]
+
+
+@dataclass(frozen=True, slots=True)
+class AliasIndex:
+    """Which entries a candidate list proposes as alias links, by lexeme id (D-81).
+
+    Built from the tier-6 candidate TSV rather than from the store, because the pairing is
+    a fact the *list* recorded (``alias_of candidate: store has 'lincoln'``) and nothing in
+    a store can rediscover it: "Lincoln" is the last token of "Abraham Lincoln" and also of
+    nothing else the store holds, and a rule that paired headwords by their last token
+    would pair far more than the list ever proposed.
+
+    Attributes:
+        targets: ``candidate lexeme id -> the single-word entry's lexeme id``.
+    """
+
+    targets: dict[str, str]
+
+    @classmethod
+    def from_path(cls, path: Path | None) -> AliasIndex:
+        """Read a candidate TSV into the index.
+
+        Args:
+            path: The candidate list, or ``None`` for
+                :data:`~opengloss_generator.wordnet_import.DEFAULT_CANDIDATES_PATH`. An
+                absent file yields an empty index — the tier lists are gitignored (D-75),
+                so their absence is an ordinary state of the tree — and an empty index
+                makes the step a no-op rather than an error.
+
+        Returns:
+            The index.
+        """
+        rows = read_candidate_rows(path if path is not None else DEFAULT_CANDIDATES_PATH)
+        index = cls(
+            targets={
+                row.lexeme_id: row.alias_target for row in rows if row.alias_target is not None
+            }
+        )
+        _LOG.info("lexeme_hygiene_alias_index_built", rows=len(rows), pairs=len(index.targets))
+        return index
+
+    def target_for(self, entry: Lexeme) -> str | None:
+        """Return the single-word entry this candidate would link to, or ``None``.
+
+        Args:
+            entry: The candidate entry.
+
+        Returns:
+            The target lexeme id, or ``None`` when the list names no pairing for it or
+            names the entry itself.
+        """
+        target = self.targets.get(entry.lexeme_id)
+        return target if target != entry.lexeme_id else None
+
+
+def _alias_refs(entry: Lexeme, target_id: str) -> list[str]:
+    """Return the marker refs for one alias decision: the target, plus each live gloss.
+
+    Args:
+        entry: The candidate entry.
+        target_id: The single-word entry it was compared against.
+
+    Returns:
+        The refs, or ``[]`` when the entry has no live sense to carry an edge.
+    """
+    glosses = _live_glosses(entry)
+    if not glosses:
+        return []
+    return [
+        f"target:{target_id}",
+        *(f"{pos.value}:{_ref_digest([gloss])}" for pos, gloss in glosses),
+    ]
+
+
+def _links_to(entry: Lexeme, target_id: str) -> bool:
+    """Return whether any live sense already points at ``target_id``.
+
+    The free idempotence check, ahead of the marker: an entry linked by an earlier sweep,
+    by the generator, or by ``import-wordnet``'s own pointers has nothing left to buy.
+
+    Args:
+        entry: The candidate entry.
+        target_id: The target lexeme id.
+
+    Returns:
+        Whether an edge of any type already reaches it.
+    """
+    return any(
+        relation.target.lexeme_id == target_id
+        for _, sense, _ in _live_senses(entry)
+        for relation in sense.relations
+    )
+
+
+def _target_names_headword(target_entry: Lexeme, headword: str) -> bool:
+    """Return whether the short entry's own definitions name the long headword verbatim.
+
+    The free ``alias_of`` (D-8). WordNet's *Lincoln* gloss reads "16th President of the
+    United States (1809-1865); Abraham Lincoln", so the store has already said the two are
+    one referent and a verdict would be buying an answer it holds. Whole-string,
+    case-insensitive: a substring test on the *full* headword cannot fire on a shared
+    token, because the headword contains the target's own word by construction.
+
+    Args:
+        target_entry: The single-word entry.
+        headword: The candidate's full headword.
+
+    Returns:
+        Whether any live canonical gloss contains it.
+    """
+    needle = _one_line(headword).casefold()
+    return any(needle in _one_line(gloss).casefold() for _, gloss in _live_glosses(target_entry))
+
+
+def _build_alias_prompt(entry: Lexeme, target_entry: Lexeme) -> str:
+    """Return the volatile half of this step's prompt.
+
+    Args:
+        entry: The long-name candidate.
+        target_entry: The short single-word entry.
+
+    Returns:
+        The per-call prompt body: both headwords and both entries' canonical glosses.
+    """
+    long_glosses = " | ".join(_one_line(gloss) for _, gloss in _live_glosses(entry)) or "(none)"
+    short_glosses = (
+        " | ".join(_one_line(gloss) for _, gloss in _live_glosses(target_entry)) or "(none)"
+    )
+    return (
+        f"Long: {entry.headword}\n"
+        f"  Definitions: {long_glosses}\n"
+        f"Short: {target_entry.headword}\n"
+        f"  Definitions: {short_glosses}"
+    )
+
+
+async def _decide_alias(
+    entry: Lexeme, target_entry: Lexeme, runner: StageRunner, tally: _Tally
+) -> tuple[bool, str]:
+    """Ask nano whether a long name and a short entry are one referent.
+
+    Args:
+        entry: The candidate. Never mutated here.
+        target_entry: The single-word entry.
+        runner: The stage runner.
+        tally: The step tally, for the call and its cost.
+
+    Returns:
+        ``(answered, verdict)`` — whether a call completed, and what it said.
+
+    Raises:
+        BudgetExceededError: A budget stop is a run-level condition and propagates.
+    """
+    try:
+        stage_result = await runner.run(
+            stage=StageName.HYGIENE,
+            output_type=_DraftAliasVerdict,
+            instructions=ALIASES_INSTRUCTIONS,
+            prompt=_build_alias_prompt(entry, target_entry),
+            prompt_version=PROMPT_VERSION,
+        )
+    except BudgetExceededError:
+        raise
+    except GenerationError as exc:
+        _LOG.warning("lexeme_hygiene_alias_failed", headword=entry.headword, error=str(exc))
+        return False, "none"
+
+    await tally.call(stage_result.cost_usd)
+    entry.add_provenance(stage_result.provenance)
+    return True, stage_result.output.verdict
+
+
+def _write_alias_edge(entry: Lexeme, target_entry: Lexeme, verdict: str) -> _Counts:
+    """Write the one edge a verdict calls for, on the candidate's first live sense.
+
+    **No far side.** An alias points one way (D-81): the single-word entry is not opened,
+    not locked and not written, which is also what keeps this step inside the one-lock
+    discipline every pass in this module follows.
+
+    Args:
+        entry: The candidate, mutated in place.
+        target_entry: The single-word entry, read only for its headword.
+        verdict: ``alias_of``, ``see_also`` or ``none``.
+
+    Returns:
+        Counts carrying whichever edge was written.
+    """
+    counts = _Counts()
+    if verdict == "none":
+        counts.alias_none = 1
+        return counts
+    live = _live_senses(entry)
+    if not live:  # pragma: no cover - guarded by the caller
+        return counts
+    _, sense, sense_id = live[0]
+    relation_type = RelationType.ALIAS_OF if verdict == "alias_of" else RelationType.SEE_ALSO
+    note = ALIAS_NOTE if verdict == "alias_of" else SEE_ALSO_NOTE
+    provenance_id = entry.add_provenance(
+        _rule_provenance(f"{verdict}: {sense_id} -> {target_entry.lexeme_id}")
+    )
+    sense.relations.append(
+        Relation(
+            type=relation_type,
+            target=RelationTarget(term=target_entry.headword),
+            note=note,
+            provenance_id=provenance_id,
+        )
+    )
+    if relation_type is RelationType.ALIAS_OF:
+        counts.alias_written = 1
+    else:
+        counts.see_also_written = 1
+    _LOG.info(
+        "lexeme_hygiene_alias_written",
+        headword=entry.headword,
+        target=target_entry.lexeme_id,
+        verdict=verdict,
+    )
+    return counts
+
+
+async def _aliases_step(
+    store: LexemeStore,
+    runner: StageRunner,
+    ids: Sequence[str],
+    *,
+    index: AliasIndex,
+    workers: int,
+    stop_event: asyncio.Event | None,
+    changed_ids: set[str],
+) -> StepResult:
+    """Link every long-name candidate to the short entry the store already holds.
+
+    Args:
+        store: The store to edit. The candidate is read, decided and written inside one
+            hold of its own lock; the target is read outside it, never written (D-31, the
+            same deliberate departure ``inflection_fold`` makes and for the same reason).
+        runner: The stage runner.
+        ids: The entry ids to visit.
+        index: The candidate-list pairings, built once by the caller.
+        workers: Pool size.
+        stop_event: Shared stop event.
+        changed_ids: Run-level set of entries written by any step.
+
+    Returns:
+        The step's :class:`StepResult`.
+    """
+    tally = _Tally(LexemeHygieneStep.ALIASES, changed_ids)
+
+    async def decide(entry: Lexeme, target_entry: Lexeme) -> _Counts:
+        """Return what happens to one candidate: a free skip, a free alias, or a verdict."""
+        counts = _Counts(candidate=1)
+        target_id = target_entry.lexeme_id
+        if _links_to(entry, target_id):
+            counts.skipped_already_linked = 1
+            return counts
+        attempt = _attempt_number(entry, _ALIASES_PREFIX, _alias_refs(entry, target_id))
+        if attempt is None:
+            counts.attempts_exhausted = 1
+            return counts
+        if _target_names_headword(target_entry, entry.headword):
+            counts.alias_free = 1
+            written = _write_alias_edge(entry, target_entry, "alias_of")
+        else:
+            counts.answered, verdict = await _decide_alias(entry, target_entry, runner, tally)
+            if not counts.answered:
+                return counts
+            written = _write_alias_edge(entry, target_entry, verdict)
+        counts.alias_written = written.alias_written
+        counts.see_also_written = written.see_also_written
+        counts.alias_none = written.alias_none
+        entry.add_provenance(
+            _rule_provenance(_marker_note(_ALIASES_PREFIX, _alias_refs(entry, target_id), attempt))
+        )
+        return counts
+
+    async def judge(lexeme_id: str) -> None:
+        counts = _Counts()
+        target_entry: Lexeme | None = None
+        target_id: str | None = None
+        async with store.locked(lexeme_id):
+            entry = store.read(lexeme_id)
+            if entry is None:
+                return
+            target_id = index.target_for(entry)
+            if target_id is None or not _live_senses(entry):
+                await tally.entry(lexeme_id, counts)
+                return
+            # Read outside the candidate's write, but under its lock, exactly as
+            # `_fold_plan` reads the lemma: the target is never mutated by this step.
+            target_entry = store.read(target_id)
+            if target_entry is None or not _live_senses(target_entry):
+                counts = _Counts(candidate=1, skipped_target_missing=1)
+            else:
+                counts = await decide(entry, target_entry)
+                if counts.answered or counts.alias_free:
+                    store.write(entry)
+        await tally.entry(lexeme_id, counts)
+
+    await _drive(ids, judge, tally, workers=workers, stop_event=stop_event)
+    return tally.result
+
+
+# --------------------------------------------------------------------------------------
 # The dry-run plan
 # --------------------------------------------------------------------------------------
 
@@ -1727,7 +2212,11 @@ class _PlanCounts:
 
 
 def plan_lexeme_hygiene(
-    store: LexemeStore, ids: Sequence[str], *, only: set[str] | None = None
+    store: LexemeStore,
+    ids: Sequence[str],
+    *,
+    only: set[str] | None = None,
+    alias_list: Path | None = None,
 ) -> dict[str, object]:
     """Return what a sweep would do, without a single model call.
 
@@ -1739,6 +2228,9 @@ def plan_lexeme_hygiene(
         store: The store to inspect. Never written.
         ids: The entry ids the sweep would visit.
         only: Step names to plan for; defaults to all of them.
+        alias_list: The candidate TSV ``aliases`` would read, or ``None`` for the default
+            path. The pairings, the target lookups and the free gloss keep all run for
+            real here, so ``calls_due`` is what the sweep would buy.
 
     Returns:
         A JSON-able plan, keyed by step, plus the WordNet availability the plan assumed.
@@ -1749,6 +2241,11 @@ def plan_lexeme_hygiene(
         InflectionIndex.build(store)
         if LexemeHygieneStep.INFLECTION_FOLD in selected
         else InflectionIndex(forms={}, lemma_ids=frozenset())
+    )
+    aliases = (
+        AliasIndex.from_path(alias_list)
+        if LexemeHygieneStep.ALIASES in selected
+        else AliasIndex(targets={})
     )
     scanned = 0
     for lexeme_id in ids:
@@ -1762,6 +2259,9 @@ def plan_lexeme_hygiene(
         fragments = plans.get(LexemeHygieneStep.FRAGMENTS)
         if fragments is not None:
             _plan_fragment(entry, fragments)
+        alias = plans.get(LexemeHygieneStep.ALIASES)
+        if alias is not None:
+            _plan_alias(entry, aliases, store, alias)
     return {
         "entries_scanned": scanned,
         "wordnet": wordnet.availability().reason or "available",
@@ -1786,6 +2286,35 @@ def _plan_fold(
         plan.free_skips += 1
         return
     if wordnet.distinct_from_lemma(entry.headword, decision.lemma.headword):
+        plan.kept_wordnet += 1
+        return
+    plan.calls_due += 1
+
+
+def _plan_alias(entry: Lexeme, index: AliasIndex, store: LexemeStore, plan: _PlanCounts) -> None:
+    """Fold one entry's ``aliases`` outlook into the dry-run plan.
+
+    Every free filter the step applies runs here too — the pairing, the already-linked
+    check, the marker and the target's own gloss — so a candidate counted in ``calls_due``
+    is one the sweep would actually pay for. ``kept_wordnet`` carries the free
+    ``alias_of`` keeps, since this step consults no WordNet and the field is the plan's
+    "settled for nothing" column.
+    """
+    target_id = index.target_for(entry)
+    if target_id is None or not _live_senses(entry):
+        return
+    plan.candidates += 1
+    target_entry = store.read(target_id)
+    if target_entry is None or not _live_senses(target_entry):
+        plan.free_skips += 1
+        return
+    if _links_to(entry, target_id):
+        plan.free_skips += 1
+        return
+    if _attempt_number(entry, _ALIASES_PREFIX, _alias_refs(entry, target_id)) is None:
+        plan.free_skips += 1
+        return
+    if _target_names_headword(target_entry, entry.headword):
         plan.kept_wordnet += 1
         return
     plan.calls_due += 1
@@ -1822,10 +2351,11 @@ async def run_lexeme_hygiene(
     stop_event: asyncio.Event | None = None,
     only: set[str] | None = None,
     lexeme_ids: Sequence[str] | None = None,
+    alias_list: Path | None = None,
 ) -> LexemeHygieneOutcome:
-    """Tombstone entries that are inflections of other entries, and sentence fragments.
+    """Tombstone entries that are not lexemes, and link long names to short entries.
 
-    Two steps, described in full in the module docstring. ``inflection_fold`` retires an entry
+    Three steps, described in full in the module docstring. ``inflection_fold`` retires an entry
     whose headword the store already records as a plural, past tense, participle or comparative
     of another live lexeme — unless WordNet lists it as a lemma of its own, unless a nano
     verdict says its definitions carry a meaning the base word's do not, and never when it is
@@ -1834,6 +2364,11 @@ async def run_lexeme_hygiene(
     — unless it is a phrasal verb or an idiom, unless WordNet holds the phrase as a lemma, and
     unless a nano verdict calls it a lexical unit. Nothing is deleted, no sense is renumbered
     (D-1), and every retired sense's relations are demoted to ``see_also`` rather than dropped.
+    ``aliases`` (D-81) links a long-name entry the candidate list pairs with a single-word
+    entry the store already holds — ``alias_of`` when they name one referent, an authored
+    ``see_also`` when they are merely related, nothing when they are not — one nano verdict
+    each, free when the short entry's own gloss already names the long headword, and never a
+    far side.
 
     Args:
         store: The store to repair.
@@ -1847,6 +2382,10 @@ async def run_lexeme_hygiene(
         lexeme_ids: Ids to visit; defaults to every id in the store, sorted. The
             :class:`InflectionIndex` is always built over the *whole* store whatever this says,
             because a list naming only the suspected forms would find no lemma for any of them.
+        alias_list: The candidate TSV ``aliases`` reads its pairings from, or ``None`` for
+            :data:`~opengloss_generator.wordnet_import.DEFAULT_CANDIDATES_PATH`. An absent
+            file makes the step a no-op rather than an error (D-75: the tier lists are
+            gitignored).
 
     Returns:
         A :class:`LexemeHygieneOutcome` carrying counts and cost per step. If a step stopped
@@ -1881,11 +2420,21 @@ async def run_lexeme_hygiene(
                 stop_event=stop_event,
                 changed_ids=changed_ids,
             )
-        else:
+        elif name == LexemeHygieneStep.FRAGMENTS:
             result = await _fragments_step(
                 store,
                 runner,
                 ids,
+                workers=workers,
+                stop_event=stop_event,
+                changed_ids=changed_ids,
+            )
+        else:
+            result = await _aliases_step(
+                store,
+                runner,
+                ids,
+                index=AliasIndex.from_path(alias_list),
                 workers=workers,
                 stop_event=stop_event,
                 changed_ids=changed_ids,

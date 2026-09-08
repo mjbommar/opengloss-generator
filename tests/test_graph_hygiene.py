@@ -26,6 +26,7 @@ from opengloss_generator.schema import (
     StageName,
 )
 from opengloss_generator.store import LexemeStore
+from opengloss_generator.workflows import graph_hygiene
 from opengloss_generator.workflows.graph_hygiene import (
     DEMOTION_MODEL,
     RECIPROCITY_MODEL,
@@ -722,3 +723,57 @@ async def test_reciprocity_does_not_restore_a_pair_a_hygiene_pass_demoted(tmp_pa
     ]
     assert synonyms == []
     assert outcome.reciprocal_added.get("synonym", 0) == 0
+
+
+# --------------------------------------------------------------------------------------
+# D-81 — alias_of never reaches this pass at all
+# --------------------------------------------------------------------------------------
+#
+# The exemption is applied at *projection* time rather than in each of the four steps,
+# which is the stronger place for it: an edge this pass cannot see is one it cannot
+# demote, cannot pull into a cycle and cannot infer a reciprocal for. An alias has no far
+# side by definition (D-81), so step 4 has nothing to complete either.
+
+
+def _alias(term: str, sense: str | None) -> Relation:
+    """Build one resolved alias edge, the shape ``lexeme-hygiene``'s alias step writes."""
+    return Relation(
+        type=RelationType.ALIAS_OF,
+        target=RelationTarget(term=term, sense_id=sense, confidence=0.9),
+        note="alias: lexeme_hygiene",
+    )
+
+
+async def test_an_alias_edge_is_left_out_of_the_projection(tmp_path: Path):
+    store = _store(tmp_path)
+    _write(store, _entry("alpha", [_alias("alpha", "alpha:noun:1")], senses=2))
+
+    view = graph_hygiene._load_view(store)
+
+    # A self-loop, which step 1 would demote on any other type.
+    assert [ref.type for ref in view.iter_refs()] == []
+
+
+async def test_a_full_sweep_leaves_an_alias_self_loop_alone(tmp_path: Path):
+    store = _store(tmp_path)
+    _write(store, _entry("alpha", [_alias("alpha", "alpha:noun:1")], senses=2))
+
+    outcome = await run_graph_hygiene(store, None, workers=WORKERS)
+
+    assert outcome.self_loops_demoted == 0
+    assert outcome.entries_changed == 0
+    assert _relations_of(store, "alpha")[0].type is RelationType.ALIAS_OF
+
+
+async def test_no_reciprocal_is_ever_written_for_an_alias(tmp_path: Path):
+    store = _store(tmp_path)
+    _write(
+        store,
+        _entry("abraham_lincoln", [_alias("lincoln", "lincoln:noun:0")]),
+        _entry("lincoln"),
+    )
+
+    outcome = await run_graph_hygiene(store, None, workers=WORKERS)
+
+    assert outcome.relations_added == 0
+    assert _relations_of(store, "lincoln") == []

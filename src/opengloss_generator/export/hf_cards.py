@@ -15,6 +15,7 @@ package, and a rendering bug is a Python error rather than a silently empty sect
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from opengloss_generator.export.hf_rows import (
@@ -22,6 +23,7 @@ from opengloss_generator.export.hf_rows import (
     SOURCE_WORDNET,
     TIER_DESCRIPTIONS,
     TIER_TIER5,
+    TIER_TIER6,
     TIER_UNKNOWN,
 )
 from opengloss_generator.export.hf_schemas import (
@@ -37,7 +39,7 @@ if TYPE_CHECKING:
     from opengloss_generator.export.hf_rows import Stats
     from opengloss_generator.export.hf_schemas import RepoSpec
 
-__all__ = ["V13", "V20", "V21", "V22", "render_card"]
+__all__ = ["V13", "V20", "V21", "V22", "V23", "render_card"]
 
 
 # --------------------------------------------------------------------------------------
@@ -331,6 +333,12 @@ class V22:
     of them still is, exactly so a `v2.2` export cannot ship with an invented number.
     """
 
+    #: The store as v2.2 shipped it (docs/NAMED-ENTITY-PLAN.md's opening measurement,
+    #: 2026-09-08), for the *previous* column of the next release's size table — the same
+    #: role :class:`V21`'s ``LEXEMES``/``LIVE_SENSES`` play in v2.2's own.
+    LEXEMES = 148_292
+    LIVE_SENSES = 288_304
+
     #: `data/core/tier5.tsv` row count (D-78): the WordNet 3.0 gap the earlier tiers
     #: lacked, before slugification and matching against the store.
     TIER5_CANDIDATES = 43_652
@@ -347,7 +355,92 @@ class V22:
     PRETRAIN_DOCS: int | None = 1_458_684  # fill at release
     PRETRAIN_WORDS: int | None = 398_029_628  # fill at release
     PRETRAIN_TOKENS: int | None = 565_384_746  # fill at release, cl100k_base
-    JUDGE: str | None = "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5)"  # fill at release
+    JUDGE: str | None = (
+        "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5)"  # fill at release
+    )
+
+
+class V23:
+    """v2.3's own release-time facts (D-81), unmeasured until the tier has been built.
+
+    The same contract :class:`V22` states, one release on. ``TIER6_CANDIDATES`` is
+    already known — it is the row count of the candidate list on disk, produced by
+    ``scripts/build_tier6_candidates.py`` and fixed at 15,000 by the size decision
+    recorded in D-81 — and everything below it is a *measurement of a release that does
+    not exist yet*: how many of those candidates became entries, how many proper nouns
+    the ``entity_type`` pass typed, how many alias edges the alias pass wrote, and what
+    the Opus judge scored a fresh tier-6 sample. **Never fill them by guessing.**
+    :func:`_changelog_v22_v23` refuses to render v2.3's changelog while any of them is
+    still ``None``, exactly so a `v2.3` export cannot ship with an invented number, and
+    :data:`~opengloss_generator.export.hf_schemas.DEFAULT_RELEASE` stays `v2.2` until
+    they are all filled.
+    """
+
+    #: `data/core/tier6_candidates.tsv` row count (D-81): the ranked named-entity
+    #: candidate list, before slugification and matching against the store.
+    TIER6_CANDIDATES = 15_000
+
+    TIER6_LEXEMES: int | None = None  # fill at release: entries the tier actually added
+    ENTITY_TYPED: int | None = None  # fill at release: proper nouns given a real type
+    ALIAS_EDGES: int | None = None  # fill at release: `alias_of` edges written
+    PRETRAIN_DOCS: int | None = None  # fill at release
+    PRETRAIN_WORDS: int | None = None  # fill at release
+    PRETRAIN_TOKENS: int | None = None  # fill at release, cl100k_base
+    JUDGE: str | None = None  # fill at release
+
+
+#: :class:`V23` attributes that must be measured against the finished release before a
+#: `v2.3` card can render (D-81) — see :class:`V23`'s own docstring for why. The same
+#: shape as :data:`_V22_PLACEHOLDERS`, deliberately, so one reader understands both.
+_V23_PLACEHOLDERS: tuple[str, ...] = (
+    "TIER6_LEXEMES",
+    "ENTITY_TYPED",
+    "ALIAS_EDGES",
+    "PRETRAIN_DOCS",
+    "PRETRAIN_WORDS",
+    "PRETRAIN_TOKENS",
+    "JUDGE",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _V23Facts:
+    """:class:`V23`'s release-time facts, typed without the ``| None`` they carry.
+
+    The shape :func:`_require_v22_filled` returns as a tuple, as a record instead: seven
+    values is past the point where positional unpacking stays readable.
+    """
+
+    tier6_lexemes: int
+    entity_typed: int
+    alias_edges: int
+    pretrain_docs: int
+    pretrain_words: int
+    pretrain_tokens: int
+    judge: str
+
+
+def _require_v23_filled() -> _V23Facts:
+    """Return :class:`V23`'s release-time facts, once every one of them is filled.
+
+    Returns:
+        The facts, narrowed to their non-optional types by the check below.
+
+    Raises:
+        ValueError: Naming every :class:`V23` attribute that is still ``None`` — its
+            ``# fill at release`` comment says what each one needs.
+    """
+    values = [getattr(V23, name) for name in _V23_PLACEHOLDERS]
+    missing = [name for name, value in zip(_V23_PLACEHOLDERS, values, strict=True) if value is None]
+    if missing:
+        raise ValueError(
+            "hf_cards.V23 is not filled in: "
+            + ", ".join(missing)
+            + " must be measured against the finished v2.3 release before its cards can "
+            "render (see each attribute's '# fill at release' comment)."
+        )
+    lexemes, typed, aliases, docs, words, tokens, judge = values
+    return _V23Facts(lexemes, typed, aliases, docs, words, tokens, judge)
 
 
 #: :class:`V22` attributes that must be measured against the finished release before a
@@ -513,17 +606,90 @@ v1.3's own files. The other three changes are about honesty rather than coverage
 """
 
 
+def _changelog_v22_v23(stats: Stats) -> str:
+    """Return the "what changed since v2.2" section: tier 6, entity types, aliases (D-81).
+
+    A stub in the sense that its *numbers* are not measured yet — it raises through
+    :func:`_require_v23_filled` until they are — not in the sense that its content is
+    provisional: the four changes it names are the ones this release is, and each is
+    already implemented.
+
+    Args:
+        stats: The export's statistics (the current release's live counts).
+    """
+    facts = _require_v23_filled()
+    # v2.2's own release-time facts are the "previous release" column here, and they are
+    # already guarded: a v2.3 card cannot render on a v2.2 that never finished measuring.
+    prev_docs, prev_words, prev_tokens, prev_judge = _require_v22_filled()
+    tier6_lexemes = stats.lexemes_by_tier.get(TIER_TIER6, 0)
+    size = _table(
+        ("", "v2.2 (2026-09-07)", "v2.3"),
+        [
+            ("Lexemes", _n(V22.LEXEMES), _n(stats.lexemes)),
+            ("Live senses", _n(V22.LIVE_SENSES), _n(stats.live_senses)),
+            ("Tier 6 lexemes (named entities)", "0", _n(tier6_lexemes)),
+            ("Pretraining documents", _n(prev_docs), _n(facts.pretrain_docs)),
+            ("Pretraining words", _n(prev_words), _n(facts.pretrain_words)),
+            ("Pretraining tokens (cl100k_base)", _n(prev_tokens), _n(facts.pretrain_tokens)),
+            ("Judge score, Opus, 40-entry samples", prev_judge, facts.judge),
+        ],
+    )
+    return f"""## What changed since v2.2
+
+v2.2 (2026-09-07) added tier 5, the WordNet 3.0 gap. v2.3 adds **tier 6**: named
+entities. Every tier before it was selected by word frequency or by WordNet membership,
+and neither signal ranks a name — a name's importance is a fact about the world, not
+about a corpus — so v2.2 knew *Washington* and *Lincoln* but not **George Washington**,
+**New York City** or **World War II**. Tier 6 is {_n(V23.TIER6_CANDIDATES)} candidates
+ranked by Wikipedia vital-article level, Wikidata sitelink count, WordNet instance
+membership and US salience, of which {_n(facts.tier6_lexemes)} became entries. Three
+schema changes come with it:
+
+- **Entity types are written rather than defaulted.** Every proper noun in v2.2 carried
+  `entity_type = other`, because the two migrations and the kind classifier all wrote
+  that placeholder and nothing ever replaced it. {_n(facts.entity_typed)} proper nouns now
+  carry a real type — `person`, `place`, `organization`, `work`, `event`, `product`,
+  `species` — taken from the candidate list where it knew one and bought as a single
+  batched verdict where it did not. `lexicon` and `senses` gain an `entity_type` column,
+  and `lexicon` gains `wikidata_qid`, the join key for reconciling an entry against
+  Wikidata.
+- **Aliases.** A name has variants — *Lincoln* for *Abraham Lincoln*, *the Netherlands*
+  for *Netherlands*, *FDR*, *NASA* — and v2.2 had nowhere to put them. A variant with no
+  entry of its own is now a member of `lexicon`'s `aliases` column and an `alias` row in
+  `opengloss-v2.3-inflections`, so resolving any surface string stays one lookup; a
+  variant that *does* have an entry is an `alias_of` edge in `opengloss-v2.3-relations`
+  ({_n(facts.alias_edges)} of them). An `alias_of` edge is never demoted, pruned, capped
+  or re-judged by the hygiene passes, unlike every other relation type.
+- **Two new domain leaves.** `nature.settlements` (cities, towns, villages,
+  neighbourhoods) and `law_government.polities` (countries, states, provinces, empires,
+  historical polities). A quarter of tier 6 is a settlement or a polity and the taxonomy
+  had no leaf for either; adding a `geography` root would have been a breaking change to
+  a fixed 15-root vocabulary, so both went under roots that already exist.
+
+{size}
+
+**Schema.** No column was removed or retyped. `lexicon` gains `entity_type`,
+`wikidata_qid` and `aliases`; `senses` gains `entity_type`; `relations` gains the
+`alias_of` type; `inflections` gains the `alias` relation; `tier` gains the value
+`tier6`; and the domain taxonomy gains two leaves (taxonomy version 3).
+
+"""
+
+
 def _changelog(stats: Stats, release: str) -> str:
     """Return every "what changed" section this release carries, newest first.
 
     Args:
         stats: The export's statistics.
-        release: The release label being rendered. Only `v2.2` gets the v2.1 -> v2.2
-            section; every release keeps the v2.0 -> v2.1 section (D-75's own
-            reproducibility promise did not extend to dropping history from the card).
+        release: The release label being rendered. Only `v2.3` gets the v2.2 -> v2.3
+            section (D-81), `v2.2` and `v2.3` get the v2.1 -> v2.2 one, and every release
+            keeps the v2.0 -> v2.1 section (D-75's own reproducibility promise did not
+            extend to dropping history from the card).
     """
     sections = []
-    if release == "v2.2":
+    if release == "v2.3":
+        sections.append(_changelog_v22_v23(stats))
+    if release in {"v2.2", "v2.3"}:
         sections.append(_changelog_v21_v22(stats))
     sections.append(_changelog_v20_v21(stats))
     return "".join(sections)

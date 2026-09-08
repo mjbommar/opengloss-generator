@@ -66,7 +66,9 @@ from opengloss_generator.schema import (
 from opengloss_generator.store import LexemeStore
 from opengloss_generator.taxonomy import TAXONOMY_VERSION
 from opengloss_generator.wordnet_import import (
+    DEFAULT_CANDIDATES_PATH,
     WORDNET_SOURCE,
+    candidate_index,
     load_wordnet,
     read_candidates,
 )
@@ -1007,7 +1009,21 @@ def resolve(
 
 @app.command()
 def retrofit(
-    only: Annotated[str, typer.Option("--only", help="classify_kind|tag_domain|spans|all")] = "all",
+    only: Annotated[
+        str,
+        typer.Option("--only", help="classify_kind|entity_type|tag_domain|spans|...|all"),
+    ] = "all",
+    from_list: Annotated[
+        Path | None,
+        typer.Option(
+            "--from-list",
+            help=(
+                "Candidate TSV the entity_type pass reads free answers from "
+                f"(default: {DEFAULT_CANDIDATES_PATH}). Its `word`, `entity_type` and "
+                "`qid` columns type every proper noun it names at zero cost."
+            ),
+        ),
+    ] = None,
     limit: Annotated[
         int | None, typer.Option("--limit", help="Cap entries visited per pass.")
     ] = None,
@@ -1040,13 +1056,26 @@ def retrofit(
     concurrency: _ConcurrencyOpt = None,
     dry_run: _DryRunOpt = False,
 ) -> None:
-    """Backfill kind, domain, and example spans over an existing store, idempotently."""
+    """Backfill kind, entity type, domain, and example spans over a store, idempotently.
+
+    ``entity_type`` (D-81) replaces the ``other`` placeholder D-12 and D-18 write onto
+    every proper noun: free for any entry the candidate TSV names, one batched nano call
+    for the rest, and it stores the Wikidata QID at the same time.
+    """
     if only not in (*RetrofitPass.ALL, "all"):
         message = f"--only must be one of {(*RetrofitPass.ALL, 'all')}"
         raise typer.BadParameter(message)
     cfg = _build_config(config_path, store, budget, concurrency, dry_run)
     passes = None if only == "all" else [only]
     version = taxonomy_version if taxonomy_version is not None else TAXONOMY_VERSION
+    try:
+        candidates = candidate_index(
+            from_list if from_list is not None else DEFAULT_CANDIDATES_PATH
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--from-list") from exc
+    if from_list is not None and not candidates:
+        raise typer.BadParameter(f"no usable rows in {from_list}", param_hint="--from-list")
 
     async def _main() -> dict[str, object]:
         async with RunSession(cfg, install_signal_handler=True) as session:
@@ -1061,6 +1090,7 @@ def retrofit(
                 stop_event=session.stop_event,
                 taxonomy_version=version,
                 force_retag_domains=force_retag_domains,
+                candidates=candidates,
             )
             if outcome.stopped_reason:
                 session.stop_reason = outcome.stopped_reason
@@ -1269,6 +1299,10 @@ def import_wordnet(
     try:
         corpus = load_wordnet()
         words = read_candidates(from_list, source=source or None)
+        # The same file, read a second time for the columns an entry can *store* — the
+        # entity type and the QID a candidate list already knows (D-81). Filtered by the
+        # same `source`, so the index names exactly the rows being imported.
+        candidates = candidate_index(from_list, source=source or None)
     except (OpenGlossError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     if offset:
@@ -1286,8 +1320,14 @@ def import_wordnet(
             absent: list[str] = []
             failures: list[str] = []
             for word in words:
+                row = candidates.get(slugify(word))
                 try:
-                    entry = wordnet_entry_for(word, corpus=corpus)
+                    entry = wordnet_entry_for(
+                        word,
+                        corpus=corpus,
+                        entity_type=row.entity_type if row else None,
+                        wikidata_qid=row.wikidata_qid if row else None,
+                    )
                 except Exception as exc:  # one bad word must not abort the whole sweep
                     counts["failed"] += 1
                     failures.append(f"{word}: {exc}")
@@ -1689,6 +1729,7 @@ def _lexeme_hygiene_dry_run_estimate(
     words: Sequence[str],
     cfg: AppConfig,
     steps: set[str] | None,
+    alias_list: Path | None = None,
 ) -> dict[str, object]:
     """Price the plan ``lexeme-hygiene`` would follow, without making a call.
 
@@ -1701,12 +1742,13 @@ def _lexeme_hygiene_dry_run_estimate(
         store: The store to read entries from. Never written.
         words: The ids the sweep would visit.
         cfg: The run configuration, for the reused ``HYGIENE`` policy.
-        steps: The step names selected by ``--only``, or ``None`` for both.
+        steps: The step names selected by ``--only``, or ``None`` for every step.
+        alias_list: The candidate TSV the ``aliases`` step reads its pairings from.
 
     Returns:
         Extra summary fields describing the plan and its estimated cost.
     """
-    plan = plan_lexeme_hygiene(store, words, only=steps)
+    plan = plan_lexeme_hygiene(store, words, only=steps, alias_list=alias_list)
     policy = cfg.policy(StageName.HYGIENE)
     per_call = estimate_cost(
         policy.model,
@@ -1726,13 +1768,17 @@ def _lexeme_hygiene_dry_run_estimate(
 def lexeme_hygiene(
     only: Annotated[
         str | None,
-        typer.Option("--only", help="Comma list of steps (inflection_fold, fragments)."),
+        typer.Option("--only", help="Comma list of steps (inflection_fold, fragments, aliases)."),
     ] = None,
     from_list: Annotated[
         Path | None,
         typer.Option(
             "--from-list",
-            help="Restrict the sweep to the headwords in this list (default: whole store).",
+            help=(
+                "Restrict the sweep to the headwords in this list (default: whole store). "
+                "For the `aliases` step this is also the candidate TSV whose `notes` "
+                f"column names each pairing (default: {DEFAULT_CANDIDATES_PATH})."
+            ),
         ),
     ] = None,
     config_path: _ConfigOpt = None,
@@ -1741,7 +1787,7 @@ def lexeme_hygiene(
     concurrency: _ConcurrencyOpt = None,
     dry_run: _DryRunOpt = False,
 ) -> None:
-    """Tombstone entries that are inflections of other entries, and sentence fragments (D-79).
+    """Tombstone entries that are not lexemes; link long names to short ones (D-79, D-81).
 
     ``inflection_fold`` retires an entry whose headword the store already records as a plural,
     past tense, participle or comparative of another live lexeme — 13,139 of the v2.1 release's
@@ -1753,8 +1799,13 @@ def lexeme_hygiene(
     verbs and idioms whole. Both keep for free whatever WordNet holds as a lemma of its own
     ("glasses", "arms", "of course") and buy one nano verdict for the rest; both tombstone
     every sense (never delete, never renumber) and demote its relations to ``see_also``. WordNet
-    is optional: without ``nltk`` the checks are skipped, counted, and reported. Idempotent per
-    entry (D-47); ``--dry-run`` runs every free filter and prices the calls it would have made.
+    is optional: without ``nltk`` the checks are skipped, counted, and reported. ``aliases``
+    (D-81) reads the tier-6 candidate TSV's ``alias_of candidate`` notes and, for each pair
+    whose two entries both exist, buys one nano verdict — ``alias_of`` (one referent under two
+    names), ``see_also`` (related, not the same) or ``none`` — writing at most one edge on the
+    long name's own first live sense and never a far side. It is free when the short entry's
+    gloss already names the long headword. Idempotent per entry (D-47); ``--dry-run`` runs
+    every free filter and prices the calls it would have made.
     """
     cfg = _build_config(config_path, store, budget, concurrency, dry_run)
     steps = {s.strip() for s in only.split(",") if s.strip()} if only else None
@@ -1770,7 +1821,9 @@ def lexeme_hygiene(
             words = lexeme_ids if lexeme_ids is not None else sorted(session.store.iter_ids())
             if cfg.dry_run:
                 session.stop_reason = "dry_run"
-                extra = _lexeme_hygiene_dry_run_estimate(session.store, words, cfg, steps)
+                extra = _lexeme_hygiene_dry_run_estimate(
+                    session.store, words, cfg, steps, alias_list=from_list
+                )
                 return session.summary(**extra).as_dict()
             outcome = await run_lexeme_hygiene(
                 session.store,
@@ -1779,6 +1832,7 @@ def lexeme_hygiene(
                 stop_event=session.stop_event,
                 only=steps,
                 lexeme_ids=lexeme_ids,
+                alias_list=from_list,
             )
             if outcome.stopped_reason is not None:
                 session.stop_reason = outcome.stopped_reason

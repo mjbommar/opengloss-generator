@@ -367,6 +367,16 @@ class RelationType(StrEnum):
     ENTAILS = "entails"
     USED_WITH = "used_with"
     INSTANCE_OF = "instance_of"
+    #: Two lexemes that name the *same referent* under different surface forms, where
+    #: both forms have an entry of their own — "Abraham Lincoln" and "Lincoln", "NASA"
+    #: and "National Aeronautics and Space Administration" (D-81). Asymmetric, and the
+    #: direction is fixed: the edge is written on the entry carrying the **full** form
+    #: and points at the variant, so ``Abraham Lincoln --alias_of--> Lincoln`` reads
+    #: "this entry is also reached by the name *Lincoln*". **The far side is nothing** —
+    #: an alias points one way, and no pass ever writes, infers or repairs a reciprocal
+    #: for it. See :data:`PROTECTED_RELATION_TYPES` for what this type is exempt from.
+    #: A variant with no entry of its own belongs in :attr:`Lexeme.aliases` instead.
+    ALIAS_OF = "alias_of"
 
     @property
     def namespace(self) -> str:
@@ -388,8 +398,27 @@ class RelationType(StrEnum):
 #: lexicographic information a wordnet-style synset/sense-relation model has no slot for
 #: (STANDARDS.md § 2c). :attr:`RelationType.namespace` returns ``"og"`` for these.
 _OG_RELATION_TYPES: frozenset[RelationType] = frozenset(
-    {RelationType.CONFUSABLE_WITH, RelationType.USED_WITH, RelationType.COLLOCATION}
+    {
+        RelationType.CONFUSABLE_WITH,
+        RelationType.USED_WITH,
+        RelationType.COLLOCATION,
+        # WN-LMF types relations between senses and synsets and has no relation for
+        # "these two entries are two names for one thing" — a wordnet puts both forms in
+        # one synset instead, which this project cannot do because a headword is an
+        # entry, not a lemma inside a synset (D-81).
+        RelationType.ALIAS_OF,
+    }
 )
+
+#: Relation types no hygiene, reconcile or graph pass may demote, prune, cap, dedupe or
+#: buy a verdict about (D-81). One member today. An alias is not a *claim about meaning*
+#: that a judge could be right or wrong about — it is a statement that two surface forms
+#: name one thing, written by the pass that established it from an outside source. The
+#: passes that shorten relation lists exist to remove edges a model guessed at, and
+#: removing an alias would delete the only link a reader has between "Abraham Lincoln"
+#: and "Lincoln". ``see_also`` is the demotion floor everywhere else; there is nothing
+#: below an alias to demote it to, so it is exempted rather than weakened.
+PROTECTED_RELATION_TYPES: frozenset[RelationType] = frozenset({RelationType.ALIAS_OF})
 
 #: WN-LMF ``relType`` string per :class:`RelationType` member whose namespace is
 #: ``"wn"`` (STANDARDS.md § 2a/2c). ``synonym`` has no bare WN-LMF value — within-synset
@@ -443,7 +472,27 @@ class LexemeKind(StrEnum):
 
 
 class EntityType(StrEnum):
-    """What kind of thing a proper noun names."""
+    """What kind of thing a proper noun names.
+
+    The eight members are OntoNotes-aligned (:data:`ONTONOTES_MAP`, STANDARDS.md § 4a),
+    and two of the alignments are decisions rather than labels:
+
+    * **A fictional or mythological character is a** :attr:`PERSON`. Sherlock Holmes,
+      Zeus, Frodo and Santa Claus are all ``person``, following OntoNotes, whose PERSON
+      is explicitly "people, including fictional" (STANDARDS.md § 4a). They are not
+      ``other``, and the fact that the referent never existed is a matter for the gloss,
+      not for the type.
+    * **There is no member for a language, a script, a calendar or an ethnic group.**
+      *English language*, *Cyrillic script*, *Gregorian calendar* and *Yoruba people*
+      land in :attr:`OTHER`, which is a documented gap rather than a classification
+      (docs/NAMED-ENTITY-PLAN.md § 4a). :attr:`PRODUCT` is the opposite case: no source
+      this project reads ever reaches it, because a product name is a ``work`` or an
+      ``organization`` to Wikidata.
+
+    A stored value of :attr:`OTHER` is ambiguous between "judged to be other" and "never
+    typed at all" — D-12 and D-18 both write it as a placeholder — which is what
+    ``retrofit --only entity_type`` (D-81) exists to resolve.
+    """
 
     PERSON = "person"
     PLACE = "place"
@@ -1417,6 +1466,14 @@ class Lexeme(_Base):
     language: str = "en"
     kind: LexemeKind
     proper_noun: ProperNounInfo | None = None
+    #: Surface forms that resolve to *this* entry and have no entry of their own (D-81):
+    #: the leading-article form ("the Netherlands"), a diacritic or transliteration
+    #: variant ("Lao Zi" for *Laozi*), an initialism nothing else holds. They carry no
+    #: senses, no relations and no ids — they are strings a reader might type — and the
+    #: ``inflections`` dataset exports one ``alias`` row per member so that resolving any
+    #: of them is the same single lookup as resolving an inflected form. A variant that
+    #: *does* have an entry of its own is :attr:`RelationType.ALIAS_OF` instead.
+    aliases: list[str] = Field(default_factory=list)
     status: EntryStatus = EntryStatus.COMPLETE
     pos_entries: list[POSEntry] = Field(default_factory=list)
     etymology: Etymology | None = None
@@ -1458,6 +1515,36 @@ class Lexeme(_Base):
             raise ValueError("kind is proper_noun but proper_noun block is missing")
         if not is_proper and self.proper_noun is not None:
             raise ValueError(f"proper_noun block present but kind is {self.kind.value}")
+        return self
+
+    @model_validator(mode="after")
+    def _aliases_are_distinct_surface_forms(self) -> Self:
+        """Reject an alias that is blank, repeated, or already reachable by id (D-81).
+
+        Three rules, each closing a way the list could carry something useless:
+
+        * **Non-empty.** A blank alias resolves nothing and would export an empty row.
+        * **Slug-distinct from the headword.** ``slugify`` folds case, whitespace and
+          diacritics, so "Curacao" and "the Netherlands" already resolve to *Curaçao*
+          and *Netherlands* through :attr:`lexeme_id` alone. Listing one as an alias
+          adds a row that duplicates the ``lemma`` row, so it is refused rather than
+          silently kept — the alias list is for forms a slug lookup **cannot** reach.
+        * **Deduped by slug.** Two aliases that slug the same are one alias written
+          twice; the second would export a second, identical resolution row.
+        """
+        seen: set[str] = set()
+        for alias in self.aliases:
+            if not alias.strip():
+                raise ValueError("alias must not be blank")
+            slug = slugify(alias)
+            if slug == self.lexeme_id:
+                raise ValueError(
+                    f"alias {alias!r} slugs to the headword's own id {self.lexeme_id!r}; "
+                    "it already resolves without an alias row"
+                )
+            if slug in seen:
+                raise ValueError(f"duplicate alias {alias!r} (slug {slug!r})")
+            seen.add(slug)
         return self
 
     @model_validator(mode="after")

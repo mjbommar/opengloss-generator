@@ -51,7 +51,7 @@ _LOG = get_logger(__name__)
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
     from pathlib import Path
 
     from opengloss_generator.schema import (
@@ -64,6 +64,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "COVERAGE_FEATURES",
+    "RELATION_ALIAS",
     "SOURCE_OPENGLOSS",
     "SOURCE_WORDNET",
     "TIERS",
@@ -73,6 +74,7 @@ __all__ = [
     "TIER_TIER3",
     "TIER_TIER4",
     "TIER_TIER5",
+    "TIER_TIER6",
     "TIER_UNKNOWN",
     "CoverageFeature",
     "RowBuilder",
@@ -98,6 +100,12 @@ TIER_TIER4 = "tier4"
 #: sub-population of that pass." Which of the two an entry actually is remains visible on
 #: every row through the ``source`` column (:func:`source_of`).
 TIER_TIER5 = "tier5"
+#: Named entities: the ranked candidate list of people, places, organizations, works and
+#: events that word frequency and WordNet membership between them never reach, because a
+#: name's importance is a fact about the world rather than about a corpus (D-81,
+#: docs/NAMED-ENTITY-PLAN.md). Last in :data:`TIER_FILES`, so a headword an earlier list
+#: already named keeps the earlier tier (D-75's rule).
+TIER_TIER6 = "tier6"
 #: Assigned to an entry that is in the store but on none of the rank lists. It is a real
 #: value in the exported data rather than a null, so a consumer filtering by tier never
 #: silently loses rows.
@@ -110,6 +118,7 @@ TIERS: tuple[str, ...] = (
     TIER_TIER3,
     TIER_TIER4,
     TIER_TIER5,
+    TIER_TIER6,
     TIER_UNKNOWN,
 )
 
@@ -126,6 +135,11 @@ TIER_DESCRIPTIONS: dict[str, str] = {
         "technical nouns, adjectives, adverbs and verbs (instances, taxa and organisms "
         "excluded); 5,126 from v1.3 files, the rest imported from WordNet"
     ),
+    TIER_TIER6: (
+        "named entities — people, places, organizations, works and events ranked by "
+        "Wikipedia vital-article level, Wikidata sitelinks, WordNet instance membership "
+        "and US salience, which no frequency list ranks"
+    ),
 }
 
 #: The rank lists under ``data/core/``, in precedence order: an entry is assigned the
@@ -137,6 +151,7 @@ TIER_FILES: tuple[tuple[str, str], ...] = (
     (TIER_TIER3, "tier3_final.tsv"),
     (TIER_TIER4, "tier4.tsv"),
     (TIER_TIER5, "tier5.tsv"),
+    (TIER_TIER6, "tier6.tsv"),
 )
 
 #: How much of a provenance ``note`` the flat provenance repo keeps. Long enough for
@@ -171,6 +186,12 @@ SOURCE_RENDITIONS = "renditions"
 
 #: ``relation`` value for the headword itself, in the ``inflections`` repo.
 RELATION_LEMMA = "lemma"
+#: The ``relation`` value of an :attr:`~opengloss_generator.schema.Lexeme.aliases` row in
+#: the ``inflections`` repo (D-81). An alias is not morphology, but it answers the same
+#: question that repo exists for — "what entry does this surface string resolve to?" — and
+#: a consumer resolving "the Netherlands" should not have to know in advance whether the
+#: string it holds is an inflection or an alternative name.
+RELATION_ALIAS = "alias"
 #: ``relation`` value for a recorded derivation, in the ``inflections`` repo.
 RELATION_DERIVATION = "derivation"
 #: The single-valued :class:`~opengloss_generator.schema.Morphology` fields, in the order
@@ -853,6 +874,9 @@ class RowBuilder:
                 "domain_root": root_of(sense.domain) if sense.domain is not None else None,
                 "secondary_domains": [tag.value for tag in sense.secondary_domains],
                 "source": source,
+                "entity_type": (
+                    None if entry.proper_noun is None else entry.proper_noun.entity_type.value
+                ),
                 "gloss": sense.canonical_gloss(),
                 "gloss_renditions": [_strip(row, _PROSE_KEYS) for row in gloss_rows],
                 "examples": [_strip(row, _EXAMPLE_KEYS) for row in example_rows],
@@ -1108,6 +1132,11 @@ class RowBuilder:
             "headword": entry.headword,
             "language": entry.language,
             "kind": entry.kind.value,
+            "entity_type": None
+            if entry.proper_noun is None
+            else entry.proper_noun.entity_type.value,
+            "wikidata_qid": None if entry.proper_noun is None else entry.proper_noun.wikidata_qid,
+            "aliases": list(entry.aliases),
             "status": entry.status.value,
             "tier": tier,
             "source": source,
@@ -1232,7 +1261,7 @@ class RowBuilder:
                 "pos": pos_entry.pos.value,
                 "tier": tier,
             }
-            for form, relation in self._forms_of(entry.headword, morphology):
+            for form, relation in self._forms_of(entry.headword, morphology, entry.aliases):
                 identity = form, relation
                 if identity in seen:
                     continue
@@ -1251,12 +1280,21 @@ class RowBuilder:
                 )
 
     @staticmethod
-    def _forms_of(headword: str, morphology: Any) -> Iterator[tuple[str, str]]:  # noqa: ANN401
-        """Yield ``(form, relation)`` pairs for one POS entry's morphology.
+    def _forms_of(
+        headword: str,
+        morphology: Any,  # noqa: ANN401 - the caller's Morphology, untyped here as before
+        aliases: Sequence[str] = (),
+    ) -> Iterator[tuple[str, str]]:
+        """Yield ``(form, relation)`` pairs for one POS entry's morphology, plus aliases.
 
         Args:
             headword: The owning entry's headword, emitted once as the ``lemma`` row.
             morphology: The POS entry's :class:`~opengloss_generator.schema.Morphology`.
+            aliases: The entry's :attr:`~opengloss_generator.schema.Lexeme.aliases`, each
+                emitted as an ``alias`` row (D-81). Entry-level rather than per-POS, so
+                they are yielded once per POS entry exactly as the ``lemma`` row is — a
+                homograph resolves its alias to both of its parts of speech, which is the
+                same answer this repo already gives for the headword itself.
         """
         yield headword, RELATION_LEMMA
         for relation in _MORPHOLOGY_RELATIONS:
@@ -1266,6 +1304,8 @@ class RowBuilder:
         for derivation in morphology.derivations:
             if derivation:
                 yield derivation, RELATION_DERIVATION
+        for alias in aliases:
+            yield alias, RELATION_ALIAS
 
     def _provenance_rows(
         self, entry: Lexeme, tier: str

@@ -15,6 +15,7 @@ from pydantic_ai.models.function import FunctionModel
 
 from opengloss_generator.config import AppConfig, ConcurrencyConfig, StoreConfig
 from opengloss_generator.hygiene import is_headword_initial, is_near_copy
+from opengloss_generator.identity import slugify
 from opengloss_generator.prompts import build_classify_kind_prompt
 from opengloss_generator.readability import flesch_kincaid_grade
 from opengloss_generator.runner import RunSession
@@ -43,6 +44,7 @@ from opengloss_generator.schema import (
 )
 from opengloss_generator.store import LexemeStore
 from opengloss_generator.taxonomy import TAXONOMY_VERSION, DomainTag
+from opengloss_generator.wordnet_import import CandidateRow
 from opengloss_generator.workflows import retrofit
 from opengloss_generator.workflows import retrofit as retrofit_module
 from opengloss_generator.workflows.retrofit import (
@@ -534,6 +536,9 @@ async def test_all_passes_run_by_default_includes_hygiene_in_order(session):
     assert set(outcome.passes) == set(RetrofitPass.ALL)
     assert RetrofitPass.ALL == (
         RetrofitPass.CLASSIFY_KIND,
+        # D-81: entity_type runs straight after classify_kind, because it only has a
+        # question to ask about an entry whose kind is already settled as proper_noun.
+        RetrofitPass.ENTITY_TYPE,
         RetrofitPass.HYGIENE,
         RetrofitPass.TAG_DOMAIN,
         RetrofitPass.SPANS,
@@ -2126,3 +2131,149 @@ def test_a_readability_rewrite_that_duplicates_a_sibling_example_is_refused():
     assert offender_rendition.content.text.startswith("Calendaring is a finishing")
     # The entry must still round-trip: no two renditions share a key.
     type(entry).model_validate(entry.model_dump(mode="json"))
+
+
+# --------------------------------------------------------------------------------------
+# D-81 — the entity_type pass
+# --------------------------------------------------------------------------------------
+#
+# Every proper noun in the store carried `entity_type = other`, written by migration
+# (D-12), by the kind classifier's residue batch (D-18) and by the WordNet import alike,
+# so nothing on an entry distinguished a placeholder from a verdict. This pass replaces
+# the placeholder, free first: the candidate list types what it names at zero cost and
+# stores the QID with it, and only what is left is bought. A proper noun already carrying
+# a type that is *not* the placeholder is left alone — this pass fills a hole, it does not
+# re-judge an answer.
+
+
+def _proper_noun(
+    headword: str,
+    gloss: str,
+    *,
+    entity_type: EntityType = EntityType.OTHER,
+    wikidata_qid: str | None = None,
+) -> Lexeme:
+    """Build a proper-noun entry carrying one gloss and the placeholder type by default."""
+    return Lexeme.empty(
+        headword,
+        kind=LexemeKind.PROPER_NOUN,
+        proper_noun=ProperNounInfo(entity_type=entity_type, wikidata_qid=wikidata_qid),
+        pos_entries=[
+            POSEntry(
+                pos=PartOfSpeech.NOUN,
+                senses=[
+                    Sense(
+                        index=0,
+                        gloss=Renditions[str](root=[canonical_rendition(gloss)]),
+                        examples=Renditions[Example](root=[]),
+                    )
+                ],
+                morphology=Morphology(),
+            )
+        ],
+    )
+
+
+async def _entity_type(session, **kwargs: object) -> retrofit.PassResult:
+    """Run the entity_type pass alone and return its result."""
+    outcome = await run_retrofit(
+        session.store, session.stages, only=[RetrofitPass.ENTITY_TYPE], **kwargs
+    )
+    return outcome.passes[RetrofitPass.ENTITY_TYPE]
+
+
+def _candidate_row(word: str, entity_type: str, qid: str) -> CandidateRow:
+    """Build one candidate index entry, the shape `candidate_index` returns."""
+    return CandidateRow(
+        word=word,
+        lexeme_id=slugify(word),
+        entity_type=EntityType(entity_type),
+        wikidata_qid=qid,
+    )
+
+
+async def test_entity_type_is_taken_from_the_candidate_list_for_free(session):
+    session.store.write(_proper_noun("Abraham Lincoln", "The sixteenth president."))
+    index = {"abraham_lincoln": _candidate_row("Abraham Lincoln", "person", "Q91")}
+
+    result = await _entity_type(session, candidates=index)
+
+    assert result.calls == 0
+    assert result.cost_usd == 0.0
+    assert result.metrics["from_list"] == 1.0
+    assert result.metrics["residue"] == 0.0
+
+    stored = session.store.read("abraham_lincoln")
+    assert stored.proper_noun.entity_type is EntityType.PERSON
+    # The QID rides along: it costs nothing, cannot be re-derived from the store, and is
+    # the join key every later name pass needs.
+    assert stored.proper_noun.wikidata_qid == "Q91"
+
+
+async def test_a_proper_noun_the_list_does_not_name_is_typed_by_one_batched_call(session):
+    session.store.write(_proper_noun("Denver", "The capital city of Colorado."))
+
+    result = await _entity_type(session, candidates={})
+
+    assert result.metrics["residue"] == 1.0
+    assert result.calls == 1
+    assert result.metrics["from_model"] == 1.0
+    assert session.store.read("denver").proper_noun.entity_type is EntityType.PLACE
+
+
+async def test_a_common_noun_is_never_visited_by_the_pass(session):
+    session.store.write(make_entry("abseil"))
+
+    result = await _entity_type(session, candidates={})
+
+    assert result.entries_scanned == 0
+    assert result.calls == 0
+
+
+async def test_a_proper_noun_already_typed_is_not_re_judged(session):
+    session.store.write(
+        _proper_noun("Denver", "The capital city of Colorado.", entity_type=EntityType.PLACE)
+    )
+
+    result = await _entity_type(session, candidates={})
+
+    assert result.calls == 0
+    assert result.metrics["skipped_typed"] == 1.0
+    assert result.metrics["residue"] == 0.0
+
+
+async def test_the_pass_is_idempotent_and_bills_nothing_on_a_second_sweep(session):
+    session.store.write(_proper_noun("Denver", "The capital city of Colorado."))
+
+    first = await _entity_type(session, candidates={})
+    second = await _entity_type(session, candidates={})
+
+    assert first.calls == 1
+    # D-47: the marker's digest is taken over the type as the pass leaves it, so a
+    # settled entry is skipped for free rather than re-typed at any price.
+    assert second.calls == 0
+    assert second.metrics["skipped_marker"] == 1.0
+
+
+async def test_the_list_does_not_clear_a_qid_it_has_nothing_to_say_about(session):
+    session.store.write(
+        _proper_noun("Denver", "The capital city of Colorado.", wikidata_qid="Q16554")
+    )
+    index = {"denver": _candidate_row("Denver", "place", "Q999999")}
+
+    await _entity_type(session, candidates=index)
+
+    stored = session.store.read("denver")
+    # A candidate list must not silently re-point an entry a better source identified.
+    assert stored.proper_noun.wikidata_qid == "Q16554"
+    assert stored.proper_noun.entity_type is EntityType.PLACE
+
+
+async def test_the_free_write_records_where_the_type_came_from(session):
+    session.store.write(_proper_noun("Abraham Lincoln", "The sixteenth president."))
+    index = {"abraham_lincoln": _candidate_row("Abraham Lincoln", "person", "Q91")}
+
+    await _entity_type(session, candidates=index)
+
+    notes = [r.note for r in session.store.read("abraham_lincoln").provenance.values() if r.note]
+    assert any("from candidate list" in note for note in notes)

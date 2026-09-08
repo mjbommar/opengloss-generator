@@ -609,6 +609,10 @@ def test_relation_type_namespace_is_og_only_for_the_three_project_only_relations
             RelationType.CONFUSABLE_WITH,
             RelationType.USED_WITH,
             RelationType.COLLOCATION,
+            # D-81: WN-LMF relates senses and synsets and has no relation for "these two
+            # entries are two names for one thing" — a wordnet puts both forms in one
+            # synset instead, which a headword-per-entry model cannot do.
+            RelationType.ALIAS_OF,
         }
         assert (member.namespace == "og") is expected
         if not expected:
@@ -680,3 +684,63 @@ def test_assessment_flag_helper_is_idempotent():
     assessment.flag(QAFlag.GRAMMAR_ERROR)
     assessment.flag(QAFlag.GRAMMAR_ERROR)
     assert assessment.qa_flags == [QAFlag.GRAMMAR_ERROR]
+
+
+# --------------------------------------------------------------------------------------
+# D-81 — aliases and the protected relation type
+# --------------------------------------------------------------------------------------
+#
+# Two shapes for two different situations: `Lexeme.aliases` for a surface form with no
+# entry of its own, `RelationType.ALIAS_OF` for one that has an entry. The validator is
+# what keeps the first from carrying anything the second should hold, or anything a bare
+# id lookup already resolves.
+
+
+def test_aliases_default_to_empty_and_accept_distinct_surface_forms():
+    entry = Lexeme.empty("netherlands")
+    assert entry.aliases == []
+    entry = Lexeme.empty("netherlands", aliases=["the Netherlands", "Holland"])
+    assert entry.aliases == ["the Netherlands", "Holland"]
+
+
+def test_an_alias_may_not_be_blank():
+    with pytest.raises(ValidationError, match="must not be blank"):
+        Lexeme.empty("netherlands", aliases=["   "])
+
+
+def test_an_alias_that_slugs_to_the_headword_is_refused():
+    # `slugify` folds case, whitespace and diacritics, so "Curacao" already resolves to
+    # `curacao` through `lexeme_id` alone; an alias row for it would duplicate the `lemma`
+    # row the inflections repo already writes.
+    with pytest.raises(ValidationError, match="already resolves"):
+        Lexeme.empty("Curaçao", aliases=["Curacao"])
+
+
+def test_two_aliases_that_slug_the_same_are_refused():
+    with pytest.raises(ValidationError, match="duplicate alias"):
+        Lexeme.empty("netherlands", aliases=["the Netherlands", "The  Netherlands"])
+
+
+def test_alias_of_is_a_relation_type_with_no_wordnet_analogue():
+    from opengloss_generator.schema import (  # noqa: PLC0415
+        SKOS_RELATION_MAP,
+        WN_RELATION_MAP,
+    )
+
+    assert RelationType.ALIAS_OF.value == "alias_of"
+    assert RelationType.ALIAS_OF.namespace == "og"
+    assert RelationType.ALIAS_OF not in WN_RELATION_MAP
+    assert RelationType.ALIAS_OF not in SKOS_RELATION_MAP
+
+
+def test_alias_of_is_the_only_protected_relation_type():
+    from opengloss_generator.schema import PROTECTED_RELATION_TYPES  # noqa: PLC0415
+
+    assert set(PROTECTED_RELATION_TYPES) == {RelationType.ALIAS_OF}
+
+
+def test_entity_type_docstring_records_the_ontonotes_fictional_person_rule():
+    # D-81: nothing in the enum said so, and "is Sherlock Holmes a person or an other?"
+    # is exactly the question a typing pass has to answer the same way every time.
+    assert "fictional" in EntityType.__doc__
+    assert "PERSON" in EntityType.__doc__

@@ -35,7 +35,9 @@ this package generated and which it copied (D-78).
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+import re
+from collections.abc import Iterable, Iterator, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -67,7 +69,9 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from opengloss_generator.schema import Rendition
 
 __all__ = [
+    "DEFAULT_CANDIDATES_PATH",
     "LEXNAME_DOMAIN_MAP",
+    "LEXNAME_ENTITY_MAP",
     "POS_LETTERS",
     "PROVENANCE_FIELDS",
     "WORDNET_LICENSE",
@@ -75,12 +79,16 @@ __all__ = [
     "WORDNET_NOTE",
     "WORDNET_PROMPT_VERSION",
     "WORDNET_VERSION",
+    "CandidateRow",
+    "candidate_index",
     "clean_definition",
     "clean_examples",
+    "entity_type_for_lexnames",
     "entry_for",
     "iter_entries",
     "lexname_domain",
     "load_wordnet",
+    "read_candidate_rows",
     "read_candidates",
     "wordnet_kind",
 ]
@@ -198,6 +206,69 @@ LEXNAME_DOMAIN_MAP: dict[str, DomainTag] = {
 #: The candidate file's ``source`` column value that marks a row as WordNet's.
 WORDNET_SOURCE = "wordnet"
 
+#: The tier-6 candidate list ``entity_type`` is read from when a caller names no other
+#: file (D-81). Gitignored like every other tier list, so an absent file is not an error:
+#: the readers below return nothing and every proper noun falls through to the model.
+DEFAULT_CANDIDATES_PATH = Path("data/core/tier6_candidates.tsv")
+
+#: WordNet lexname of an **instance hypernym** -> the entity type it implies (D-81).
+#: WordNet's encoding of "this is a named individual" is an ``instance_hypernym`` pointer
+#: (*Abraham Lincoln* is an instance of *President of the United States*), and the class
+#: it points at is filed under a supersense that already answers "what kind of thing":
+#: ``noun.person`` for a person, ``noun.location`` for a place, ``noun.group`` for an
+#: organization. This is the free half of the entity typing — an instance synset carries
+#: it whether or not a candidate list names the word.
+#:
+#: The table is deliberately short. ``noun.artifact`` and ``noun.communication`` map to
+#: ``work`` because the instance hypernyms actually reached through them are works —
+#: a painting, a ship, a poem, a language's named text — not because either supersense is
+#: about creative works in general; a supersense whose instances are not all one type is
+#: absent, and its entry falls through to :class:`~opengloss_generator.schema.EntityType`'s
+#: own placeholder for the ``entity_type`` retrofit pass to buy an answer for.
+LEXNAME_ENTITY_MAP: dict[str, EntityType] = {
+    "noun.person": EntityType.PERSON,
+    "noun.location": EntityType.PLACE,
+    "noun.group": EntityType.ORGANIZATION,
+    "noun.communication": EntityType.WORK,
+    "noun.artifact": EntityType.WORK,
+    "noun.act": EntityType.EVENT,
+    "noun.event": EntityType.EVENT,
+}
+
+#: The order :func:`entity_type_for_lexnames` resolves a tie in. A synset can have more
+#: than one instance hypernym (``Washington`` is an instance of both a *statesman* and a
+#: *national capital*), so "first match wins" needs a fixed order or the answer depends on
+#: WordNet's pointer order. Person first because a named individual is the commonest case
+#: and the least ambiguous; ``other``-ish supersenses last.
+_ENTITY_PRECEDENCE: tuple[EntityType, ...] = (
+    EntityType.PERSON,
+    EntityType.PLACE,
+    EntityType.ORGANIZATION,
+    EntityType.EVENT,
+    EntityType.WORK,
+)
+
+
+def entity_type_for_lexnames(lexnames: Iterable[str]) -> EntityType | None:
+    """Return the entity type a set of instance-hypernym lexnames implies, or ``None``.
+
+    Args:
+        lexnames: ``Synset.lexname()`` of every instance hypernym of every synset the
+            headword has, in any order.
+
+    Returns:
+        The highest-precedence type any of them maps to (:data:`_ENTITY_PRECEDENCE`), or
+        ``None`` when :data:`LEXNAME_ENTITY_MAP` covers none of them — which is the
+        honest answer, not :attr:`~opengloss_generator.schema.EntityType.OTHER`.
+    """
+    found = {
+        mapped
+        for lexname in lexnames
+        if (mapped := LEXNAME_ENTITY_MAP.get(lexname.strip().lower())) is not None
+    }
+    return next((candidate for candidate in _ENTITY_PRECEDENCE if candidate in found), None)
+
+
 #: What to do about each reason :func:`opengloss_generator.wordnet.availability` can give.
 #: Keyed on its exact strings, so a new reason there fails loudly here rather than silently
 #: producing an error message with no instruction in it.
@@ -296,6 +367,137 @@ def read_candidates(path: Path, *, source: str | None = WORDNET_SOURCE) -> list[
         seen.add(word)
         words.append(word)
     return words
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateRow:
+    """One row of a tier-candidate TSV, as much of it as the store can store (D-81).
+
+    A candidate list is the only place the entity type and the Wikidata QID of a name are
+    known *before* a model is asked, so reading them here is what stops the import path
+    writing :attr:`~opengloss_generator.schema.EntityType.OTHER` over an answer a source
+    already gave (D-12/D-18's placeholder, NAMED-ENTITY-PLAN § 4a-b).
+
+    Attributes:
+        word: The ``word`` cell, the surface form to import or look up.
+        lexeme_id: ``slugify(word)`` — the key every store lookup uses.
+        entity_type: The row's ``entity_type`` cell, when it names an
+            :class:`~opengloss_generator.schema.EntityType` member. A cell naming
+            something outside the enum is dropped rather than coerced, so a widened
+            candidate builder cannot smuggle an out-of-vocabulary type into the store.
+        wikidata_qid: The row's ``qid`` cell when it is a well-formed QID.
+        alias_target: The lexeme id named by an ``alias_of candidate`` note, when the row
+            carries one — the single-word entry the store already holds for part of this
+            name ("lincoln" for "Abraham Lincoln").
+    """
+
+    word: str
+    lexeme_id: str
+    entity_type: EntityType | None = None
+    wikidata_qid: str | None = None
+    alias_target: str | None = None
+
+
+#: The shape of the ``notes`` cell that records an alias opportunity, as
+#: ``scripts/build_tier6_candidates.py`` writes it: ``alias_of candidate: store has
+#: 'lincoln'``. The quoted id is what the alias step links to.
+_ALIAS_NOTE = re.compile(r"alias_of candidate:[^;]*?'([^']+)'")
+
+#: A well-formed Wikidata item id, the same pattern
+#: :class:`~opengloss_generator.schema.ProperNounInfo` validates against. Matched here so
+#: a malformed cell is dropped at read time rather than raising deep inside entry
+#: construction.
+_QID = re.compile(r"^Q[1-9][0-9]*$")
+
+
+def read_candidate_rows(path: Path, *, source: str | None = None) -> list[CandidateRow]:
+    """Read a tier-candidate TSV into typed rows, header-driven and source-filtered.
+
+    :func:`read_candidates` reads the same file for the one column ``import-wordnet``
+    needs; this reads the columns the *entity typing* and *alias* passes need, from the
+    same header-driven, ``source``-filtered shape, so the two never disagree about which
+    rows belong to whom. Every column but ``word`` is optional: a plain word list yields
+    rows carrying nothing but the word, which is exactly what a caller with no candidate
+    file should see.
+
+    Args:
+        path: The TSV to read. A header row naming ``word`` is required. A missing file
+            yields no rows at all — the tier lists are gitignored (D-75), so their absence
+            is an ordinary state of the tree and not an error.
+        source: Keep only rows whose ``source`` cell equals this. ``None`` keeps every
+            row.
+
+    Returns:
+        The rows, in file order, one per distinct lexeme id — the first row for an id
+        wins, matching :func:`read_candidates`' own de-duplication.
+
+    Raises:
+        ValueError: If the file has a header but no ``word`` column, or no ``source``
+            column when one was asked for.
+    """
+    if not path.is_file():
+        return []
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not lines:
+        return []
+    header = [cell.strip().lower() for cell in lines[0].split("\t")]
+    if "word" not in header:
+        raise ValueError(f"{path} has no 'word' column in its header row")
+    if source is not None and "source" not in header:
+        raise ValueError(f"{path} has no 'source' column, so --source {source!r} cannot apply")
+    index = {name: position for position, name in enumerate(header)}
+
+    def cell(cells: Sequence[str], name: str) -> str:
+        position = index.get(name)
+        if position is None or position >= len(cells):
+            return ""
+        return cells[position].strip()
+
+    rows: list[CandidateRow] = []
+    seen: set[str] = set()
+    for line in lines[1:]:
+        cells = line.split("\t")
+        word = cell(cells, "word")
+        if not word:
+            continue
+        if source is not None and cell(cells, "source") != source:
+            continue
+        lexeme_id = slugify(word)
+        if lexeme_id in seen:
+            continue
+        seen.add(lexeme_id)
+        raw_type = cell(cells, "entity_type").lower()
+        qid = cell(cells, "qid")
+        note = _ALIAS_NOTE.search(cell(cells, "notes"))
+        rows.append(
+            CandidateRow(
+                word=word,
+                lexeme_id=lexeme_id,
+                entity_type=EntityType(raw_type) if raw_type in _ENTITY_VALUES else None,
+                wikidata_qid=qid if _QID.match(qid) else None,
+                alias_target=note.group(1) if note else None,
+            )
+        )
+    return rows
+
+
+#: Every :class:`~opengloss_generator.schema.EntityType` value, for the membership test
+#: above — ``EntityType(x)`` raises on an unknown string and a candidate list is an
+#: outside file, so the test comes before the construction.
+_ENTITY_VALUES: frozenset[str] = frozenset(member.value for member in EntityType)
+
+
+def candidate_index(path: Path, *, source: str | None = None) -> dict[str, CandidateRow]:
+    """Return :func:`read_candidate_rows` keyed by lexeme id, for a store-side lookup.
+
+    Args:
+        path: The candidate TSV.
+        source: Optional ``source`` filter.
+
+    Returns:
+        ``lexeme_id -> row``. Empty when the file is absent.
+    """
+    return {row.lexeme_id: row for row in read_candidate_rows(path, source=source)}
 
 
 # --------------------------------------------------------------------------------------
@@ -559,7 +761,13 @@ def _sense_for(synset: Any, lemmas: Sequence[Any], index: int, lexeme_id: str) -
     )
 
 
-def entry_for(word: str, *, corpus: Any) -> Lexeme | None:  # noqa: ANN401 - untyped reader
+def entry_for(
+    word: str,
+    *,
+    corpus: Any,  # noqa: ANN401 - untyped reader
+    entity_type: EntityType | None = None,
+    wikidata_qid: str | None = None,
+) -> Lexeme | None:
     """Build one schema-v3 entry from every WordNet sense of a headword.
 
     Args:
@@ -567,6 +775,15 @@ def entry_for(word: str, *, corpus: Any) -> Lexeme | None:  # noqa: ANN401 - unt
             of the lemma wins, so ``"a battery"`` is stored as ``A battery`` and
             ``"11 november"`` as ``11 November``.
         corpus: The reader from :func:`load_wordnet`.
+        entity_type: The entity type a candidate list already knows for this name (D-81),
+            used verbatim when the entry turns out to be a proper noun. ``None`` falls
+            back to WordNet's own evidence — the supersense of the synset's instance
+            hypernym, through :func:`entity_type_for_lexnames` — and only then to
+            :attr:`~opengloss_generator.schema.EntityType.OTHER`, which is a placeholder
+            and is now written *last* rather than always (D-12, D-18).
+        wikidata_qid: The QID the same candidate list carries. Stored as the join key
+            every later name pass and every entity-typing audit needs; it costs nothing
+            and cannot be re-derived from the store.
 
     Returns:
         The validated entry, or ``None`` when WordNet has no synset listing this exact
@@ -579,6 +796,7 @@ def entry_for(word: str, *, corpus: Any) -> Lexeme | None:  # noqa: ANN401 - unt
     by_pos: list[tuple[PartOfSpeech, list[Any]]] = []
     headword: str | None = None
     is_instance = False
+    instance_lexnames: list[str] = []
     for letter, pos in POS_LETTERS:
         synsets = _synsets_for(corpus, key, letter)
         if not synsets:
@@ -587,19 +805,24 @@ def entry_for(word: str, *, corpus: Any) -> Lexeme | None:  # noqa: ANN401 - unt
         for synset in synsets:
             if headword is None:
                 headword = _term(_matching_lemmas(synset, key)[0].name())
-            is_instance = is_instance or bool(synset.instance_hypernyms())
+            instances = synset.instance_hypernyms()
+            is_instance = is_instance or bool(instances)
+            instance_lexnames.extend(hypernym.lexname() for hypernym in instances)
     if headword is None:
         return None
 
     lexeme_id = slugify(headword)
     kind = wordnet_kind(headword, [pos for pos, _ in by_pos], is_instance=is_instance)
+    typed = entity_type or entity_type_for_lexnames(instance_lexnames) or EntityType.OTHER
     entry = Lexeme(
         lexeme_id=lexeme_id,
         headword=headword,
         language="en",
         kind=kind,
         proper_noun=(
-            ProperNounInfo(entity_type=EntityType.OTHER) if kind is LexemeKind.PROPER_NOUN else None
+            ProperNounInfo(entity_type=typed, wikidata_qid=wikidata_qid)
+            if kind is LexemeKind.PROPER_NOUN
+            else None
         ),
         # Partial, and honestly so: WordNet supplies glosses, examples and a graph, and
         # none of etymology, encyclopedia text, the usage note or any non-canonical
@@ -632,19 +855,36 @@ def entry_for(word: str, *, corpus: Any) -> Lexeme | None:  # noqa: ANN401 - unt
     return Lexeme.model_validate(entry.model_dump(mode="json"))
 
 
-def iter_entries(words: Iterable[str], *, corpus: Any) -> Iterator[tuple[str, Lexeme | None]]:  # noqa: ANN401
+def iter_entries(
+    words: Iterable[str],
+    *,
+    corpus: Any,  # noqa: ANN401
+    candidates: Mapping[str, CandidateRow] | None = None,
+) -> Iterator[tuple[str, Lexeme | None]]:
     """Yield ``(word, entry)`` for every candidate, ``None`` where WordNet has no entry.
 
     Args:
         words: Candidate words, in the order they should be imported.
         corpus: The reader from :func:`load_wordnet`.
+        candidates: Optional ``lexeme_id -> row`` index from :func:`candidate_index`,
+            supplying each name's entity type and QID (D-81). A word the index does not
+            name is imported exactly as before.
 
     Yields:
         The word as given and the entry built from it, so a caller can count and name the
         misses without looking them up a second time.
     """
     for word in words:
-        yield (word, entry_for(word, corpus=corpus))
+        row = (candidates or {}).get(slugify(word))
+        yield (
+            word,
+            entry_for(
+                word,
+                corpus=corpus,
+                entity_type=row.entity_type if row else None,
+                wikidata_qid=row.wikidata_qid if row else None,
+            ),
+        )
 
 
 # --------------------------------------------------------------------------------------

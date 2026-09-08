@@ -16,13 +16,20 @@ import pytest
 
 from opengloss_generator.config import StoreConfig
 from opengloss_generator.export import hf, hf_cards, hf_rows, hf_schemas
-from opengloss_generator.export.hf_rows import TierIndex
+from opengloss_generator.export.hf_rows import (
+    TIER_DESCRIPTIONS,
+    TIER_FILES,
+    TIER_TIER6,
+    TIERS,
+    TierIndex,
+)
 from opengloss_generator.export.hf_schemas import REPOS, REPOS_BY_SLUG, resolve_repos
 from opengloss_generator.identity import edge_id
 from opengloss_generator.schema import Contrast as SchemaContrast
 from opengloss_generator.schema import (
     ContrastVerdict,
     Difficulty,
+    EntityType,
     Etymology,
     EtymologySegment,
     Example,
@@ -31,6 +38,7 @@ from opengloss_generator.schema import (
     Morphology,
     PartOfSpeech,
     POSEntry,
+    ProperNounInfo,
     Provenance,
     QAPair,
     Query,
@@ -1250,3 +1258,139 @@ def test_the_schemas_module_names_every_repo_exactly_once():
         hf_schemas.ALL_REPO_SLUGS
     )
     assert not hf_schemas.STORE_REPO_SLUGS & hf_schemas.DERIVED_REPO_SLUGS
+
+
+# --------------------------------------------------------------------------------------
+# D-81 — tier 6, entity types, aliases
+# --------------------------------------------------------------------------------------
+
+
+def _named_entity(
+    headword: str = "Abraham Lincoln",
+    *,
+    entity_type: EntityType = EntityType.PERSON,
+    wikidata_qid: str | None = "Q91",
+    aliases: list[str] | None = None,
+    relations: list[Relation] | None = None,
+) -> Lexeme:
+    """Return a proper-noun entry carrying an entity type, a QID and any aliases."""
+    return Lexeme.empty(
+        headword,
+        kind=LexemeKind.PROPER_NOUN,
+        proper_noun=ProperNounInfo(entity_type=entity_type, wikidata_qid=wikidata_qid),
+        aliases=aliases or [],
+        pos_entries=[
+            POSEntry(
+                pos=PartOfSpeech.NOUN,
+                senses=[
+                    _sense(
+                        0,
+                        "The sixteenth president of the United States.",
+                        relations=relations or [],
+                    )
+                ],
+                morphology=Morphology(),
+            )
+        ],
+    )
+
+
+def test_tier6_is_last_in_the_tier_files_so_an_earlier_list_wins(tmp_path):
+    # D-75's rule: a headword on two lists keeps the earlier tier, so ordering is the
+    # whole of the tier assignment and tier 6 must be appended, never inserted.
+    assert TIER_FILES[-1] == (TIER_TIER6, "tier6.tsv")
+    assert TIER_TIER6 in TIERS
+    assert TIER_DESCRIPTIONS[TIER_TIER6]
+
+    directory = _write_tier_files(tmp_path / "core")
+    (directory / "tier6.tsv").write_text(
+        "rank\tword\timportance_score\n1\tAbraham Lincoln\t157.7\n2\tridge\t60.0\n",
+        encoding="utf-8",
+    )
+    index = TierIndex.from_dir(directory)
+    assert index.tier_of("abraham_lincoln") == "tier6"
+    # "ridge" is on core_10k.tsv as well, and core is read first.
+    assert index.tier_of("ridge") == "core"
+
+
+def test_lexicon_carries_the_entity_type_the_qid_and_the_aliases(tmp_path):
+    result = _export(tmp_path, [_named_entity(aliases=["Honest Abe"])])
+    row = _read(result, "lexicon")[0]
+    assert row["entity_type"] == "person"
+    assert row["wikidata_qid"] == "Q91"
+    assert row["aliases"] == ["Honest Abe"]
+
+
+def test_a_common_noun_carries_a_null_entity_type_rather_than_other(tmp_path):
+    # The null is meaningful: a common noun has no entity type at all, while `other` on a
+    # proper noun is a real, if residual, answer.
+    result = _export(tmp_path, [_entry("ridge", [_sense(0, "A raised bank of earth.")])])
+    row = _read(result, "lexicon")[0]
+    assert row["entity_type"] is None
+    assert row["wikidata_qid"] is None
+    assert row["aliases"] == []
+
+
+def test_senses_carry_the_entity_type_of_their_entry(tmp_path):
+    result = _export(tmp_path, [_named_entity()])
+    assert _read(result, "senses")[0]["entity_type"] == "person"
+
+
+def test_an_alias_becomes_an_inflections_row_that_resolves_to_the_entry(tmp_path):
+    result = _export(tmp_path, [_named_entity(aliases=["Honest Abe"])])
+    rows = _read(result, "inflections")
+    by_relation = {row["relation"]: row for row in rows}
+    assert set(by_relation) == {"lemma", "alias"}
+    alias = by_relation["alias"]
+    assert alias["form"] == "Honest Abe"
+    assert alias["form_normalized"] == "honest abe"
+    assert alias["lexeme_id"] == "abraham_lincoln"
+    assert alias["pos"] == "noun"
+
+
+def test_an_alias_of_edge_exports_in_relations_like_any_other_type(tmp_path):
+    entry = _named_entity(
+        relations=[
+            Relation(
+                type=RelationType.ALIAS_OF,
+                target=RelationTarget(term="Lincoln", sense_id="lincoln:noun:0", confidence=0.9),
+                note="alias: lexeme_hygiene",
+            )
+        ]
+    )
+    result = _export(tmp_path, [entry, _entry("Lincoln", [_sense(0, "A president.")])])
+    rows = [row for row in _read(result, "relations", "relations") if row["type"] == "alias_of"]
+    assert len(rows) == 1
+    assert rows[0]["target_term"] == "Lincoln"
+    assert rows[0]["target_sense_id"] == "lincoln:noun:0"
+    assert rows[0]["resolved"] is True
+
+
+def test_the_v23_card_refuses_to_render_while_its_facts_are_unmeasured(tmp_path):
+    # The same guard D-80 put on V22, one release on: a `v2.3` card cannot ship with an
+    # invented number, and `DEFAULT_RELEASE` stays `v2.2` until every one is filled.
+    assert hf_schemas.DEFAULT_RELEASE == "v2.2"
+    for name in hf_cards._V23_PLACEHOLDERS:
+        assert getattr(hf_cards.V23, name) is None
+    with pytest.raises(ValueError, match=r"hf_cards\.V23 is not filled in"):
+        _export(tmp_path, [_named_entity()], release="v2.3")
+
+
+def test_the_v23_changelog_names_the_three_things_the_release_is(tmp_path, monkeypatch):
+    monkeypatch.setattr(hf_cards.V23, "TIER6_LEXEMES", 12_718)
+    monkeypatch.setattr(hf_cards.V23, "ENTITY_TYPED", 20_743)
+    monkeypatch.setattr(hf_cards.V23, "ALIAS_EDGES", 9_475)
+    monkeypatch.setattr(hf_cards.V23, "PRETRAIN_DOCS", 1_600_000)
+    monkeypatch.setattr(hf_cards.V23, "PRETRAIN_WORDS", 430_000_000)
+    monkeypatch.setattr(hf_cards.V23, "PRETRAIN_TOKENS", 610_000_000)
+    monkeypatch.setattr(hf_cards.V23, "JUDGE", "70.0 (test placeholder, not a real score)")
+
+    result = _export(tmp_path, [_named_entity()], release="v2.3")
+    text = (result.out_dir / "opengloss-v2.3-lexicon" / "README.md").read_text(encoding="utf-8")
+
+    assert "## What changed since v2.2" in text
+    # And the history is kept, not dropped (D-75's reproducibility promise).
+    assert "## What changed since v2.1" in text
+    assert "12,718" in text
+    assert "`alias_of`" in text
+    assert "nature.settlements" in text

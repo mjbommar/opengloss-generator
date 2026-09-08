@@ -25,6 +25,7 @@ from opengloss_generator.identity import sense_id
 from opengloss_generator.migrate import V2_MODEL, V13_MODEL
 from opengloss_generator.runner import RunSession
 from opengloss_generator.schema import (
+    EntityType,
     EntryStatus,
     LexemeKind,
     PartOfSpeech,
@@ -38,10 +39,14 @@ from opengloss_generator.wordnet_import import (
     PROVENANCE_FIELDS,
     WORDNET_MODEL,
     WORDNET_NOTE,
+    candidate_index,
     clean_definition,
     clean_examples,
+    entity_type_for_lexnames,
     entry_for,
+    iter_entries,
     lexname_domain,
+    read_candidate_rows,
     read_candidates,
     wordnet_kind,
 )
@@ -183,7 +188,13 @@ FLAG = _FakeSynset("flag.n.07", ["flag"], "a conspicuously marked tail")
 PACK = _FakeSynset("pack.n.06", ["pack"], "a group of hunting animals")
 BLOOD = _FakeSynset("blood.n.01", ["blood"], "the fluid that circulates")
 TRACK = _FakeSynset("track.v.01", ["track"], "carry on the feet and deposit")
-PHYSICIST = _FakeSynset("physicist.n.01", ["physicist"], "a scientist trained in physics")
+# `noun.person` is WordNet 3.0's own lexname for `physicist.n.01`, and it is spelled out
+# here rather than left to the fixture default because the instance hypernym's supersense
+# is now what types the entity (D-81): a default of `noun.artifact` would make this fake
+# say Einstein is a work.
+PHYSICIST = _FakeSynset(
+    "physicist.n.01", ["physicist"], "a scientist trained in physics", lexname="noun.person"
+)
 BAD = _FakeSynset("bad.a.01", ["bad"], "having undesirable qualities", lexname="adj.all")
 
 DOG_ANIMAL = _FakeSynset(
@@ -393,7 +404,9 @@ def test_capitalised_lemma_is_a_proper_noun(corpus):
 def test_instance_synset_is_a_proper_noun_block(corpus):
     entry = entry_for("einstein", corpus=corpus)
     assert entry.proper_noun is not None
-    assert entry.proper_noun.entity_type.value == "other"
+    # D-81: the instance hypernym's supersense types the entity, so this is `person`
+    # rather than the `other` placeholder D-12/D-18 used to write unconditionally.
+    assert entry.proper_noun.entity_type.value == "person"
 
 
 @pytest.mark.parametrize(
@@ -767,3 +780,126 @@ def test_real_import_is_byte_stable(real_corpus):
 def test_real_wordnet_casing(real_corpus):
     assert entry_for("a battery", corpus=real_corpus).headword == "A battery"
     assert entry_for("11 november", corpus=real_corpus).headword == "11 November"
+
+
+# --------------------------------------------------------------------------------------
+# D-81 — entity_type and wikidata_qid are written, not defaulted
+# --------------------------------------------------------------------------------------
+#
+# The store's 20,743 proper nouns all carried `entity_type = other` because D-12, D-18 and
+# this importer each wrote the placeholder and nothing ever replaced it. Two sources
+# replace it here, and the order between them is the point: a candidate list that *says*
+# what a name is beats WordNet's supersense, and WordNet's supersense beats the
+# placeholder.
+
+
+def _candidates_tsv(tmp_path: Path, rows: str, *, header: str | None = None) -> Path:
+    """Write a candidate TSV and return its path."""
+    columns = header or "name\tword\tentity_type\tsource\tqid\tnotes"
+    path = tmp_path / "candidates.tsv"
+    path.write_text(f"{columns}\n{rows}", encoding="utf-8")
+    return path
+
+
+def test_entity_type_and_qid_come_from_the_candidate_row(corpus):
+    entry = entry_for("einstein", corpus=corpus, entity_type=EntityType.PERSON, wikidata_qid="Q937")
+    assert entry.proper_noun is not None
+    assert entry.proper_noun.entity_type is EntityType.PERSON
+    assert entry.proper_noun.wikidata_qid == "Q937"
+
+
+def test_the_candidate_row_beats_the_instance_hypernyms_supersense(corpus):
+    # `physicist.n.01` is `noun.person`, so WordNet alone would say `person`; a list that
+    # says otherwise is a better source than a supersense and wins.
+    entry = entry_for("einstein", corpus=corpus, entity_type=EntityType.ORGANIZATION)
+    assert entry.proper_noun.entity_type is EntityType.ORGANIZATION
+
+
+def test_a_proper_noun_with_no_instance_hypernym_keeps_the_placeholder(corpus):
+    # "A battery" is capitalised, so `wordnet_kind` calls it a proper noun, but it has no
+    # instance hypernym at all — there is no supersense to read, and `other` stays the
+    # honest answer for the `entity_type` retrofit pass to buy.
+    entry = entry_for("a battery", corpus=corpus)
+    assert entry.proper_noun is not None
+    assert entry.proper_noun.entity_type is EntityType.OTHER
+    assert entry.proper_noun.wikidata_qid is None
+
+
+def test_entity_type_for_lexnames_maps_the_documented_supersenses():
+    assert entity_type_for_lexnames(["noun.person"]) is EntityType.PERSON
+    assert entity_type_for_lexnames(["noun.location"]) is EntityType.PLACE
+    assert entity_type_for_lexnames(["noun.group"]) is EntityType.ORGANIZATION
+    assert entity_type_for_lexnames(["noun.communication"]) is EntityType.WORK
+    assert entity_type_for_lexnames(["noun.artifact"]) is EntityType.WORK
+    assert entity_type_for_lexnames(["noun.act"]) is EntityType.EVENT
+    assert entity_type_for_lexnames(["noun.event"]) is EntityType.EVENT
+
+
+def test_entity_type_for_lexnames_is_none_rather_than_other_when_it_cannot_say():
+    # `None` is "this source has nothing to say", which the caller distinguishes from
+    # `other`, "this source says none of the seven fits".
+    assert entity_type_for_lexnames(["noun.substance", "verb.motion"]) is None
+    assert entity_type_for_lexnames([]) is None
+
+
+def test_entity_type_for_lexnames_breaks_a_tie_by_a_fixed_precedence():
+    # "Washington" is an instance of both a statesman and a national capital, and pointer
+    # order is WordNet's business, so the answer must not depend on it.
+    both = ["noun.location", "noun.person"]
+    assert entity_type_for_lexnames(both) is EntityType.PERSON
+    assert entity_type_for_lexnames(list(reversed(both))) is EntityType.PERSON
+
+
+def test_read_candidate_rows_reads_the_typed_columns(tmp_path):
+    path = _candidates_tsv(
+        tmp_path,
+        "Abraham Lincoln\tAbraham Lincoln\tperson\twordnet\tQ91\t"
+        "alias_of candidate: store has 'lincoln'; wn\n"
+        "Denver\tDenver\tplace\tname_seed\tQ16554\t\n",
+    )
+    rows = read_candidate_rows(path)
+    assert [row.lexeme_id for row in rows] == ["abraham_lincoln", "denver"]
+    assert rows[0].entity_type is EntityType.PERSON
+    assert rows[0].wikidata_qid == "Q91"
+    assert rows[0].alias_target == "lincoln"
+    assert rows[1].alias_target is None
+
+
+def test_read_candidate_rows_filters_by_source(tmp_path):
+    path = _candidates_tsv(
+        tmp_path,
+        "Abraham Lincoln\tAbraham Lincoln\tperson\twordnet\tQ91\t\n"
+        "Denver\tDenver\tplace\tname_seed\tQ16554\t\n",
+    )
+    assert [row.word for row in read_candidate_rows(path, source="wordnet")] == ["Abraham Lincoln"]
+
+
+def test_read_candidate_rows_drops_an_unknown_type_and_a_malformed_qid(tmp_path):
+    # A candidate list is an outside file: a widened builder must not be able to smuggle
+    # an out-of-vocabulary type or a bad join key into the store.
+    path = _candidates_tsv(tmp_path, "X\tX\tspaceship\tname_seed\tnot-a-qid\t\n")
+    row = read_candidate_rows(path)[0]
+    assert row.entity_type is None
+    assert row.wikidata_qid is None
+
+
+def test_read_candidate_rows_of_a_missing_file_is_empty(tmp_path):
+    # The tier lists are gitignored (D-75), so an absent file is an ordinary state of the
+    # tree and must make the readers a no-op rather than an error.
+    assert read_candidate_rows(tmp_path / "nope.tsv") == []
+    assert candidate_index(tmp_path / "nope.tsv") == {}
+
+
+def test_read_candidate_rows_needs_a_word_column(tmp_path):
+    path = _candidates_tsv(tmp_path, "x\n", header="name\tqid")
+    with pytest.raises(ValueError, match="no 'word' column"):
+        read_candidate_rows(path)
+
+
+def test_iter_entries_types_from_the_candidate_index(corpus, tmp_path):
+    path = _candidates_tsv(tmp_path, "Einstein\tEinstein\torganization\tname_seed\tQ937\t\n")
+    ((_, entry),) = list(
+        iter_entries(["einstein"], corpus=corpus, candidates=candidate_index(path))
+    )
+    assert entry.proper_noun.entity_type is EntityType.ORGANIZATION
+    assert entry.proper_noun.wikidata_qid == "Q937"
