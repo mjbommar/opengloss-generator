@@ -1804,3 +1804,15 @@ pilot to measure $/entry against the $0.0009 ceiling). `data/core/tier6.tsv` wri
 Chain after both land: import-wordnet (3,880) → seeded generate (11,120) →
 classify_kind / entity_type / tag_domain / spans → resolve → hygiene → alias pass →
 gloss/example/encyclopedia levels (no registers, no contrasts) → judge → audit → v2.3.
+
+**~18:00 — seeded `generate` merged (D-82).** `EntrySpec` seeds (`kind`, `entity_type`,
+`wikidata_qid`, `hypernym`) skip the overview call; a "what we already know" block in
+the senses prompt; `generate --seed-list`. Pilot on 100 names: **$0.00125/entry** (the
+$0.0009 ceiling missed on the long-form sections, not on entry creation — a name's
+etymology runs 600 output tokens), 4.0 calls/entry, 0 failures; a first prompt produced
+18/100 class-only glosses ("X is a city") and was fixed (0/100 after). Two attribution
+errors in eight encyclopedia paragraphs read; etymology declines to invent. **Seed
+quality is the risk**: 8/100 rows mis-typed in the TSV → 7 damaged glosses, and 604
+rows carry Wikipedia disambiguators. A seed-cleanup pass (D-83: strip disambiguators,
+nano retype with the cached P31 classes, per-row hypernym/domain hint) runs before
+stage 2; stage 2 revised to ≈ $14, tier ≈ $56.
