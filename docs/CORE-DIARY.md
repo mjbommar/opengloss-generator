@@ -1778,3 +1778,15 @@ tier where nothing hit a cap or a timeout. Audit: 0 cycles, reciprocity 99.9%/99
 `senses_zero_relations` 2,585, headword-initial 0.01%. Judge **81.0** (QA-DIARY it.
 20). Closing script running: validity census → reconcile → re-judge → store-wide audit
 → pretraining measurement → V22 fill → v2.2 export → push.
+
+## OpenGloss v2.2 published — 2026-09-08 15:10
+
+16 datasets under `mjbommar/opengloss-v2.2-*` (public, CC-BY 4.0 + WordNet notice),
+3.74 GB, 82 shards, verified 16/16 via the Hub API; `load_dataset` spot checks: the
+lexicon row for "databases" reads `retired=true, retired_reason="inflection_fold:
+database", source="opengloss-v1.3"`; WordNet-sourced senses carry `source=
+"wordnet-3.0"`. Closing: validity remainder 2 entries (no-op), reconcile converged,
+re-judge 81.3, store-wide audit (152,859 files; 0 cycles; reciprocity 94.2 / 94.3;
+4,524 senses without relations — the card constants updated before render). The 16
+v2.1 cards carry a "superseded by v2.2" pointer. Goal 5 complete: tier 5 $127.94 +
+fold $1.14 + closing $2 ≈ **$131**; total enrichment spend ≈ **$1,030**.

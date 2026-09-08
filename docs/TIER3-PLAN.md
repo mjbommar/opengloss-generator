@@ -191,3 +191,13 @@ comparatives of another lexeme; WordNet-as-lemma and a nano verdict decide keep 
 fold; folded entries become tombstones resolvable through `inflections`) and
 `fragments` (306 "is not"/"produce energy" headwords). After both: v2.2 export with an
 honest lemma count and a WordNet coverage figure that rises from 44% to ~74%.
+
+**Tier 5 execution log.** 2026-09-07 10:21 v1.3 subset migrated (5,126) → 11:04
+WordNet import (38,100) → 2026-09-08 13:47 `DONE-TIER5`, **$127.94** (caps $497) —
+every stage under cap, 0 failures. Judge **81.0 / 81.3** on the tier (QA-DIARY it.
+20). Fold pass (D-79) retired 4,377 inflected-form headwords and 172 fragments for
+$1.14. Released as **OpenGloss v2.2** 2026-09-08 15:10: 148,292 live lexemes (4,567
+retired, flagged), 288,304 live senses, pretraining corpus 1,458,684 docs /
+398.0M words / 565.4M cl100k tokens; 2.16B tokens across the 16 datasets as shipped.
+WordNet lemma coverage by construction ≈ 73%; the lemma count now exceeds WordNet's
+147,306 on a like-for-like basis.

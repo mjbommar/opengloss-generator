@@ -24,25 +24,27 @@ character span of the headword occurrence. See `docs/SCHEMA-V3.md` for the contr
 - Research log (verified versions, prices, API facts): [`docs/RESEARCH.md`](docs/RESEARCH.md)
 - Decision log: [`docs/DECISIONS.md`](docs/DECISIONS.md)
 
-## Published datasets — OpenGloss v2.1 (2026-09-07)
+## Published datasets — OpenGloss v2.2 (2026-09-08)
 
-The store this pipeline built — 109,633 lexemes, 250,003 live senses — is published on
-Hugging Face as a family of 16 datasets under CC-BY 4.0, all joinable on derived ids.
-Start with [`opengloss-v2.1-senses`](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-senses).
-(v2.0, the 54,724-lexeme release of 2026-09-05, stays published; its cards point here.)
+The store this pipeline built — 148,292 live lexemes, 288,304 live senses — is
+published on Hugging Face as a family of 16 datasets under CC-BY 4.0, all joinable on
+derived ids. 38,100 lexemes are derived from Princeton WordNet 3.0 (WordNet License,
+`LICENSES/WordNet.txt`); the `source` column and the `migrate` provenance records say
+which. Start with [`opengloss-v2.2-senses`](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-senses).
+(v2.0 and v2.1 stay published; their cards point here.)
 
 | Dataset | Grain |
 |---|---|
-| [lexicon](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-lexicon) · [senses](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-senses) | nested: one row per lexeme / per live sense |
-| [inflections](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-inflections) | flat form → lemma lookup (plural, past tense, comparative, derivations…) |
-| [definitions](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-definitions) · [examples](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-examples) · [encyclopedia](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-encyclopedia) · [etymology](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-etymology) | flat text views |
-| [relations](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-relations) · [contrasts](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-contrasts) | the sense graph, with tombstoned edges |
-| [queries](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-queries) · [qa-pairs](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-qa-pairs) | retrieval supervision per sense |
-| [retrieval-pairs](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-retrieval-pairs) · [retrieval-triples](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-retrieval-triples) · [qrels](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-qrels) · [pretrain](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-pretrain) | training sets: WiC pairs, MS MARCO-style triples, graded TREC qrels, pretraining documents |
-| [provenance](https://huggingface.co/datasets/mjbommar/opengloss-v2.1-provenance) | one row per generation call: model, tokens, cost |
+| [lexicon](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-lexicon) · [senses](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-senses) | nested: one row per lexeme (incl. retired ones, flagged) / per live sense |
+| [inflections](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-inflections) | flat form → lemma lookup (plural, past tense, comparative, derivations…) |
+| [definitions](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-definitions) · [examples](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-examples) · [encyclopedia](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-encyclopedia) · [etymology](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-etymology) | flat text views |
+| [relations](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-relations) · [contrasts](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-contrasts) | the sense graph, with tombstoned edges |
+| [queries](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-queries) · [qa-pairs](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-qa-pairs) | retrieval supervision per sense |
+| [retrieval-pairs](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-retrieval-pairs) · [retrieval-triples](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-retrieval-triples) · [qrels](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-qrels) · [pretrain](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-pretrain) | training sets: WiC pairs, MS MARCO-style triples, graded TREC qrels, a 565M-token pretraining corpus |
+| [provenance](https://huggingface.co/datasets/mjbommar/opengloss-v2.2-provenance) | one row per generation call or migration: source, model, tokens, cost |
 
-Regenerate with `uv run opengloss export-hf --store data/core-store --out data/hf --tiers-dir data/core --release v2.1`
-(add `--push` to upload; `--repos <name>` exports one dataset; peak memory ≈ 2 GB for the full store).
+Regenerate with `uv run opengloss export-hf --store data/core-store --out data/hf --tiers-dir data/core --release v2.2`
+(add `--push` to upload; `--repos <name>` exports one dataset; peak memory ≈ 2 GB).
 
 ## Quick start
 
