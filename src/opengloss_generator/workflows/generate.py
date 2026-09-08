@@ -6,6 +6,12 @@ Stage graph::
              │      └─► find_span (free) ──► spans[pos] (LLM, residue only)
              └─► etymology, encyclopedia, lexical_explanation (concurrent, optional)
 
+A **seeded** spec — one carrying both a ``kind`` and an ``entity_type``, as
+``generate --seed-list`` produces from a named-entity candidate row — skips the
+``overview`` box entirely: :func:`seeded_overview` synthesises the plan the call would
+have returned, from sources that already know the answer (D-82). Nothing else about the
+graph changes.
+
 The per-POS sense calls and the three long-form calls all run concurrently within one
 entry, bounded by the same rate limiter as everything else. A stage that fails does not
 abort the entry: the entry is written with ``status=partial`` and the failure is recorded,
@@ -22,6 +28,7 @@ place reach the ``spans`` model stage, in batches of 40.
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -35,6 +42,8 @@ from opengloss_generator.contracts import (
     DraftEtymology,
     DraftLexicalExplanation,
     DraftOverview,
+    DraftPOSPlan,
+    DraftProperNoun,
     DraftSense,
     DraftSenseSet,
     DraftSpanBatch,
@@ -64,10 +73,15 @@ from opengloss_generator.schema import (
 )
 
 if TYPE_CHECKING:
-    from opengloss_generator.contracts import DraftProperNoun
     from opengloss_generator.stages import StageRunner
 
-__all__ = ["EntrySpec", "GenerationOutcome", "entry_id_for", "generate_entry"]
+__all__ = [
+    "EntrySpec",
+    "GenerationOutcome",
+    "entry_id_for",
+    "generate_entry",
+    "seeded_overview",
+]
 
 _LOG = get_logger(__name__)
 
@@ -78,6 +92,24 @@ class EntrySpec:
 
     Every field except ``headword`` has a usable default, so the caller may specify as
     little as the word itself (FR-1.1).
+
+    The last four fields are the **seed**: what a source outside the pipeline already
+    knows about the headword. Setting both ``kind`` and ``entity_type`` makes
+    :func:`generate_entry` skip the ``overview`` call entirely and synthesise the plan
+    instead (D-82) — the overview would only re-derive, and could overrule, facts the
+    source already established. ``domain`` doubles as the seeded domain hint; it is
+    already the field the unseeded path passes to the senses prompt, so the seed needs no
+    field of its own for it.
+
+    Attributes:
+        kind: The lexeme's structural kind, when a source knows it.
+        entity_type: What kind of entity a proper noun names, when a source knows it.
+        wikidata_qid: The Wikidata item id behind the seed, stored on
+            :class:`~opengloss_generator.schema.ProperNounInfo` so the typing is
+            auditable and every later pass has a join key.
+        hypernym: What class of thing the entity belongs to, in ordinary words ("city",
+            "national park"). Passed to the senses prompt so the gloss takes WordNet's
+            shape rather than one the model invents.
     """
 
     headword: str
@@ -90,6 +122,10 @@ class EntrySpec:
     with_lexical_explanation: bool = True
     with_span_fallback: bool = True
     discovered_from: str | None = None
+    kind: LexemeKind | None = None
+    entity_type: EntityType | None = None
+    wikidata_qid: str | None = None
+    hypernym: str | None = None
 
 
 @dataclass(slots=True)
@@ -122,17 +158,25 @@ async def generate_entry(spec: EntrySpec, runner: StageRunner) -> GenerationOutc
 
     Raises:
         StageFailedError: Only if the overview stage fails, since nothing downstream can
-            proceed without a part-of-speech plan.
+            proceed without a part-of-speech plan. A seeded spec cannot raise it: its
+            plan is synthesised rather than called for.
         BudgetExceededError: If the run's ceiling is reached mid-entry.
     """
-    overview = await runner.run(
-        stage=StageName.OVERVIEW,
-        output_type=DraftOverview,
-        instructions=prompts.OVERVIEW_INSTRUCTIONS,
-        prompt=prompts.build_overview_prompt(spec.headword, spec.language),
-        prompt_version=prompts.PROMPT_VERSION,
-    )
-    plan = overview.output
+    seeded = seeded_overview(spec)
+    plan = seeded
+    cost = 0.0
+    calls = 0
+    if plan is None:
+        overview = await runner.run(
+            stage=StageName.OVERVIEW,
+            output_type=DraftOverview,
+            instructions=prompts.OVERVIEW_INSTRUCTIONS,
+            prompt=prompts.build_overview_prompt(spec.headword, spec.language),
+            prompt_version=prompts.PROMPT_VERSION,
+        )
+        plan = overview.output
+        cost = overview.cost_usd
+        calls = 1
     entry = Lexeme.empty(
         spec.headword,
         kind=plan.kind,
@@ -141,12 +185,17 @@ async def generate_entry(spec: EntrySpec, runner: StageRunner) -> GenerationOutc
         is_stopword=plan.is_stopword,
         discovered_from=spec.discovered_from,
     )
-    entry.add_provenance(overview.provenance)
+    if calls:
+        entry.add_provenance(overview.provenance)
     domain_hint = spec.domain or plan.domain
+    # Only a *seeded* entry gets the "what we already know" block. An unseeded headword
+    # the overview happened to call a proper noun has no source behind that judgement,
+    # so there is nothing to tell the senses call it did not already infer.
+    seeded_entity = seeded.proper_noun if seeded is not None else None
+    known_entity_type = seeded_entity.entity_type.value if seeded_entity is not None else None
+    known_hypernym = spec.hypernym if seeded_entity is not None else None
 
     failures: list[str] = []
-    cost = overview.cost_usd
-    calls = 1
 
     plans = _selected_plans(plan, spec)
     sense_results = await asyncio.gather(
@@ -160,6 +209,8 @@ async def generate_entry(spec: EntrySpec, runner: StageRunner) -> GenerationOutc
                     pos_plan.pos.value,
                     min(pos_plan.sense_count, spec.max_senses_per_pos),
                     domain_hint=domain_hint,
+                    entity_type=known_entity_type,
+                    hypernym=known_hypernym,
                 ),
                 prompt_version=prompts.PROMPT_VERSION,
             )
@@ -211,6 +262,50 @@ async def generate_entry(spec: EntrySpec, runner: StageRunner) -> GenerationOutc
 # --------------------------------------------------------------------------------------
 # Overview
 # --------------------------------------------------------------------------------------
+
+
+#: A Wikidata item id, as :attr:`~opengloss_generator.schema.ProperNounInfo.wikidata_qid`
+#: validates it. A seed carrying anything else drops the id rather than failing the entry
+#: over a field the rest of the entry does not depend on.
+_QID_RE = re.compile(r"^Q[1-9][0-9]*$")
+
+
+def seeded_overview(spec: EntrySpec) -> DraftOverview | None:
+    """Return the plan a seeded spec makes the ``overview`` call unnecessary for (D-82).
+
+    ``generate``'s first call asks the model what the headword *is* — its kind, its
+    entity type, its parts of speech, how many senses each needs. For a named entity
+    drawn from a curated list every one of those answers is already known from a better
+    source than a model guess, so paying for the call would buy a re-derivation and a
+    chance to overrule the source. This synthesises the answer instead: one noun plan
+    with one sense, and the entity block the caller supplied.
+
+    A seed is recognised by ``kind`` **and** ``entity_type`` both being set. Either one
+    alone is not enough to write the plan, so such a spec takes the ordinary path
+    unchanged, as does a spec with neither.
+
+    Args:
+        spec: The entry specification.
+
+    Returns:
+        The synthesised overview, or ``None`` if the spec is not seeded.
+    """
+    if spec.kind is None or spec.entity_type is None:
+        return None
+    qid = spec.wikidata_qid
+    if qid is not None and not _QID_RE.match(qid):
+        _LOG.warning("seed_qid_unusable", headword=spec.headword, qid=qid)
+        qid = None
+    return DraftOverview(
+        headword=spec.headword,
+        kind=spec.kind,
+        proper_noun=DraftProperNoun(entity_type=spec.entity_type, wikidata_qid=qid),
+        is_stopword=False,
+        domain=spec.domain,
+        # A name is monosemous in this pipeline by construction: the row that seeded it
+        # names one entity. A second sense of *Washington* is a different row.
+        pos_plans=[DraftPOSPlan(pos=PartOfSpeech.NOUN, sense_count=1)],
+    )
 
 
 def _proper_noun_block(kind: LexemeKind, draft: DraftProperNoun | None) -> ProperNounInfo | None:

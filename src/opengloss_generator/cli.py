@@ -63,6 +63,7 @@ from opengloss_generator.schema import (
     RelationType,
     StageName,
 )
+from opengloss_generator.seed_list import NAME_SEED_SOURCE, SeedRow, read_seed_list
 from opengloss_generator.store import LexemeStore
 from opengloss_generator.taxonomy import TAXONOMY_VERSION
 from opengloss_generator.wordnet_import import (
@@ -90,7 +91,7 @@ from opengloss_generator.workflows.enrich import (
 )
 from opengloss_generator.workflows.example_hygiene import run_example_hygiene
 from opengloss_generator.workflows.examples import plan_examples, run_examples
-from opengloss_generator.workflows.generate import EntrySpec, generate_entry
+from opengloss_generator.workflows.generate import EntrySpec, entry_id_for, generate_entry
 from opengloss_generator.workflows.graph_hygiene import run_graph_hygiene
 from opengloss_generator.workflows.lexeme_hygiene import (
     LexemeHygieneStep,
@@ -339,9 +340,118 @@ def _mean_confidence(store: LexemeStore, lexeme_ids: Sequence[str]) -> float | N
     return sum(confidences) / len(confidences)
 
 
+async def _generate_seeded(
+    session: RunSession,
+    rows: Sequence[SeedRow],
+    *,
+    language: str,
+    with_etymology: bool,
+    with_encyclopedia: bool,
+    force: bool,
+) -> dict[str, object]:
+    """Generate one entry per seed row under the run's worker pool (D-82).
+
+    Each row already carries its kind, entity type, Wikidata id and hypernym, so every
+    spec built here is seeded and every entry skips the ``overview`` call. No renditions
+    and no contrasts are produced: this path creates the entry and nothing more, because
+    a register rendition of a name is invention and a contrast between two names is a
+    geography question (NAMED-ENTITY-PLAN § 4f). The enrichment chain adds the reading
+    levels afterwards.
+
+    Args:
+        session: The active run session (store, stages, ledger, stop event).
+        rows: The seeds to generate, in order.
+        language: The store's language code.
+        with_etymology: Whether to write the etymology section.
+        with_encyclopedia: Whether to write the encyclopedia section.
+        force: Overwrite an entry already in the store instead of skipping it.
+
+    Returns:
+        Extra summary fields: the counts, the senses and edges written, and up to five
+        failure messages.
+    """
+    counts = dict.fromkeys(("generated", "partial", "skipped", "failed", "senses", "edges"), 0)
+    failures: list[str] = []
+
+    async def handle(row: SeedRow) -> None:
+        lexeme_id = entry_id_for(row.name)
+        if not force and session.store.exists(lexeme_id):
+            counts["skipped"] += 1
+            return
+        spec = EntrySpec(
+            headword=row.name,
+            language=language,
+            domain=row.domain_hint,
+            with_etymology=with_etymology,
+            with_encyclopedia=with_encyclopedia,
+            kind=LexemeKind.PROPER_NOUN,
+            entity_type=row.entity_type,
+            wikidata_qid=row.wikidata_qid,
+            hypernym=row.hypernym,
+        )
+        try:
+            result = await generate_entry(spec, session.stages)
+        except BudgetExceededError:
+            raise
+        except OpenGlossError as exc:
+            counts["failed"] += 1
+            if len(failures) < _MAX_REPORTED_FAILURES:
+                failures.append(f"{row.name}: {exc}")
+            return
+        async with session.store.locked(result.entry.lexeme_id):
+            session.store.write(result.entry)
+        counts["generated"] += 1
+        counts["partial"] += not result.complete
+        counts["senses"] += result.entry.sense_count()
+        counts["edges"] += len(result.entry.edges())
+        await session.emit(
+            session.record_for(
+                "generate",
+                result.entry.lexeme_id,
+                "ok" if result.complete else "partial",
+                cost_usd=result.cost_usd,
+            )
+        )
+
+    await run_pool(
+        rows, handle, workers=session.config.concurrency.workers, stop_event=session.stop_event
+    )
+    if session.stop_event.is_set() and session.stop_reason == "completed":
+        session.stop_reason = "budget"
+    return {"seeds": len(rows), **counts, "failures": failures}
+
+
 @app.command()
 def generate(
-    headword: Annotated[str, typer.Option("--headword", "-w", help="Word to generate.")],
+    headword: Annotated[
+        str | None, typer.Option("--headword", "-w", help="Word to generate.")
+    ] = None,
+    seed_list: Annotated[
+        Path | None,
+        typer.Option(
+            "--seed-list",
+            help=(
+                "Named-entity candidate TSV. Its `name`, `entity_type` and `qid` columns "
+                "seed one entry each, skipping the overview call."
+            ),
+        ),
+    ] = None,
+    source: Annotated[
+        str,
+        typer.Option(
+            "--source",
+            help=(
+                "With --seed-list, keep only rows whose `source` column is this. Pass an "
+                "empty string for a list with no `source` column."
+            ),
+        ),
+    ] = NAME_SEED_SOURCE,
+    limit: Annotated[
+        int | None, typer.Option("--limit", help="With --seed-list, generate at most N.")
+    ] = None,
+    offset: Annotated[
+        int, typer.Option("--offset", help="With --seed-list, skip the first N rows.")
+    ] = 0,
     config_path: _ConfigOpt = None,
     store: _StoreOpt = None,
     budget: _BudgetOpt = None,
@@ -351,8 +461,27 @@ def generate(
     no_etymology: Annotated[bool, typer.Option("--no-etymology")] = False,
     no_encyclopedia: Annotated[bool, typer.Option("--no-encyclopedia")] = False,
 ) -> None:
-    """Generate one entry from a specification."""
+    """Generate one entry from a specification, or one per row of a seed list."""
+    if (headword is None) == (seed_list is None):
+        raise typer.BadParameter("pass exactly one of --headword or --seed-list")
     cfg = _build_config(config_path, store, budget, concurrency, dry_run)
+
+    if seed_list is not None:
+        rows = _read_seed_rows(seed_list, source=source or None, limit=limit, offset=offset)
+        _echo_summary(
+            _run(
+                _generate_seed_list(
+                    cfg,
+                    rows,
+                    with_etymology=not no_etymology,
+                    with_encyclopedia=not no_encyclopedia,
+                    force=force,
+                )
+            )
+        )
+        return
+
+    assert headword is not None  # noqa: S101 - narrowed by the check above
     spec = EntrySpec(
         headword=headword,
         language=cfg.language,
@@ -388,6 +517,47 @@ def generate(
             ).as_dict()
 
     _echo_summary(_run(_main()))
+
+
+def _read_seed_rows(
+    seed_list: Path, *, source: str | None, limit: int | None, offset: int
+) -> list[SeedRow]:
+    """Read a seed list and apply the ``--offset``/``--limit`` window to it."""
+    if not seed_list.exists():
+        raise typer.BadParameter(f"--seed-list path does not exist: {seed_list}")
+    try:
+        rows = read_seed_list(seed_list, source=source)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    if offset:
+        rows = rows[offset:]
+    if limit is not None:
+        rows = rows[:limit]
+    return rows
+
+
+async def _generate_seed_list(
+    cfg: AppConfig,
+    rows: Sequence[SeedRow],
+    *,
+    with_etymology: bool,
+    with_encyclopedia: bool,
+    force: bool,
+) -> dict[str, object]:
+    """Generate an entry for every seed row that needs one, under one run session."""
+    async with RunSession(cfg, install_signal_handler=True) as session:
+        if cfg.dry_run:
+            session.stop_reason = "dry_run"
+            return session.summary(seeds=len(rows), written=False).as_dict()
+        extra = await _generate_seeded(
+            session,
+            rows,
+            language=cfg.language,
+            with_etymology=with_etymology,
+            with_encyclopedia=with_encyclopedia,
+            force=force,
+        )
+        return session.summary(**extra).as_dict()
 
 
 @app.command()
