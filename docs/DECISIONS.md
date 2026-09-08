@@ -6346,3 +6346,61 @@ and no existing `entity_type`, relation or domain value is rewritten until a swe
 **Left undone:** the `ALIASES_INSTRUCTIONS` edit the pilot's two false positives argue for;
 nothing writes `Lexeme.aliases` yet (the field is validated and exported, and the tier-6
 `generate` path is what will fill it); and stages 1-7 of the plan.
+
+**Amendment (2026-09-08) — `ALIASES_INSTRUCTIONS` names the head-noun trap the pilot's two
+false positives argue for.** The un-amended prompt already showed a compound-head worked
+example ("New York City" / "city") and the model still called *Albers-Schonberg disease* an
+alias of *disease* and *Alpine scurvy* an alias of *scurvy* — so the fix is not another
+example but a named rule: `alias_of` is redefined as *same referent, different surface form*
+(short/full name, initialism/expansion, leading article, transliteration or diacritic
+variant, nickname), a new "THE HEAD-NOUN TRAP" section states that a compound whose last
+word is the short headword is a hyponym or an unrelated term and is **never** `alias_of`
+("X disease" / "disease", "Alpine scurvy" / "scurvy", "Golden Horde" / "horde"), and the
+worked examples go from one positive/two negative to two positive ("Abraham Lincoln",
+"Franklin D. Roosevelt") and three negative (Albers-Schonberg disease, Alpine scurvy,
+World War II). The enum (`alias_of` | `see_also` | `none`) and the free paths are
+unchanged. `prompts.PROMPT_VERSION` moves `"8"` → `"9"`.
+
+Measured before/after on one frozen sample, same 131 pairs both runs: the pilot's original
+100 compound-head pairs (`scripts/build_sample_ner.py`, rebuilt fresh from the untouched
+production store — the earlier pilot's own copy had already been mutated by that run) plus
+31 pairs authored for this measurement (`scripts/_add_true_alias_pairs.py`), because tier
+6's own long-name entries still do not exist in the store (D-81's own finding) and the
+100-pair sample alone has no true `alias_of` to detect a recall regression against. The 31
+pairs each set a production store entry a reader already resolves correctly on its own — a
+person's surname (`darwin`, `einstein`, ...) or an organization's abbreviation (`nato`,
+`fbi`, ...) — against an invented long-form entry ("Charles Darwin", "North Atlantic
+Treaty Organization", ...) built for this pilot only.
+
+| | before (`"8"`) | after (`"9"`) |
+|---|---|---|
+| calls | 73 | 73 |
+| cost | $0.0098 | $0.0153 |
+| `alias_of` | 31 (22 free + 9 bought) | 31 (22 free + 9 bought) |
+| `see_also` | 46 | 57 |
+| `none` | 18 | 7 |
+| true-alias recall (31 pairs) | 31/31 | 31/31 |
+| compound-head `alias_of` false positives (100 pairs) | 0/100 | 0/100 |
+
+**Reading every `alias_of` answer in both runs**: the same 9 bought and 22 free pairs come
+back `alias_of` before and after — recall did not regress, including on the hardest bought
+cases ("Abraham Lincoln", "Joseph Stalin", "Aristotle of Stagira") where the sharper
+head-noun language could plausibly have made the model *too* conservative. Neither run
+produced an `alias_of` false positive on the 100 compound-head pairs, so this replicate did
+not reproduce the pilot's original two — `gpt-5.4-nano` at `reasoning_effort="low"` is not
+deterministic call to call, and a 2/64 (3%) rate is small enough not to reproduce on every
+independent run of the same 64 prompts. The fifteen verdicts that did change are all a
+`none` ↔ `see_also` swing, never touching `alias_of`, and the one directly relevant to this
+finding is **`"Alpine scurvy" -> "scurvy"`: `none` before, `see_also` after** — D-81's own
+false-positive pair, landing exactly on the answer the new prompt's own worked example
+gives it. The other fourteen swings (`"ACE inhibitor"`, `"Aleppo boil"`, `"Acapulco gold"`,
+`"Air National Guard"`, ...) move both directions between `none` and `see_also` and read as
+sharper calibration on "related but different" versus "coincidental," not a new failure
+mode. Total pilot cost: $0.0251 against the $0.50 budget.
+
+Tests: `test_aliases_instructions_are_byte_stable` (a freshly executed module produces the
+identical string, `PROMPT_VERSION == "9"`), `test_aliases_instructions_name_the_head_noun_trap`
+(the rule and all three named examples appear in the text), `test_the_alias_verdict_enum_is_unchanged`,
+and `test_a_head_noun_pair_gets_see_also_not_alias_of` (a fake-runner run on a fresh
+"Golden Horde" / "horde" pair writes `see_also`, never `alias_of`). `tests/test_generate_seeded.py`'s
+hardcoded `PROMPT_VERSION == "8"` assertion moves to `"9"` with it.
