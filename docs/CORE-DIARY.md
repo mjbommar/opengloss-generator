@@ -1816,3 +1816,15 @@ quality is the risk**: 8/100 rows mis-typed in the TSV → 7 damaged glosses, an
 rows carry Wikipedia disambiguators. A seed-cleanup pass (D-83: strip disambiguators,
 nano retype with the cached P31 classes, per-row hypernym/domain hint) runs before
 stage 2; stage 2 revised to ≈ $14, tier ≈ $56.
+
+**~19:30 — tier-6 schema merged (D-81):** taxonomy leaves `nature.settlements` +
+`law_government.polities` (version 3, 162 leaves); `entity_type`/`wikidata_qid` written
+by the importers and a `retrofit --only entity_type` pass (free from the candidate TSV,
+batched nano otherwise; ~$0.23 for all 20,743 proper nouns); `Lexeme.aliases` +
+`ALIAS_OF` (protected from reconcile/hygiene/graph-hygiene at projection time);
+`lexeme-hygiene --only aliases` (pilot on 100 store pairs: 2 `alias_of` — both false
+positives on compound heads — 42 `see_also`, 20 `none`; prompt fix in progress before
+the production sweep); export columns and `V23` placeholders. One merge left a
+conflict marker in `hf_cards.py` that reached `main` for four minutes before the checks
+caught it — fixed in the next commit; gotcha #10: run the four checks *before* pushing a
+merge, not after.
