@@ -363,8 +363,6 @@ class V22:
     JUDGE: str | None = (
         "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5)"  # fill at release
     )
-<<<<<<< HEAD
-=======
 
 
 class V23:
@@ -448,7 +446,6 @@ def _require_v23_filled() -> _V23Facts:
         )
     lexemes, typed, aliases, docs, words, tokens, judge = values
     return _V23Facts(lexemes, typed, aliases, docs, words, tokens, judge)
->>>>>>> tier6/schema
 
 
 #: :class:`V22` attributes that must be measured against the finished release before a
