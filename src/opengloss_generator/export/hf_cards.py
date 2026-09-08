@@ -347,7 +347,9 @@ class V22:
     PRETRAIN_DOCS: int | None = 1_458_684  # fill at release
     PRETRAIN_WORDS: int | None = 398_029_628  # fill at release
     PRETRAIN_TOKENS: int | None = 565_384_746  # fill at release, cl100k_base
-    JUDGE: str | None = "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5)"  # fill at release
+    JUDGE: str | None = (
+        "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5)"  # fill at release
+    )
 
 
 #: :class:`V22` attributes that must be measured against the finished release before a

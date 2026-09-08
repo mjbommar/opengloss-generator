@@ -59,6 +59,7 @@ __all__ = [
     "build_frontier_prompt",
     "build_headword_absent_feedback",
     "build_headword_initial_feedback",
+    "build_known_entity_block",
     "build_lexical_explanation_prompt",
     "build_near_copy_feedback",
     "build_overview_prompt",
@@ -791,12 +792,79 @@ def build_overview_prompt(headword: str, language: str = "en") -> str:
     return f"Headword: {headword}\nLanguage: {language}"
 
 
+#: How to say each :class:`~opengloss_generator.schema.EntityType` in words, article
+#: included, for the "what we already know" block. ``other`` is deliberately vague — the
+#: sources that produce it (a language, a script, an ethnic group, a deity) share no
+#: noun — so it says only that the headword names something rather than naming a class
+#: the model would then have to write around.
+_ENTITY_TYPE_IN_WORDS: dict[str, str] = {
+    "person": "a person",
+    "place": "a place",
+    "organization": "an organization",
+    "work": "a work",
+    "event": "an event",
+    "product": "a product",
+    "species": "a species",
+    "other": "a named thing",
+}
+
+
+def build_known_entity_block(
+    headword: str,
+    entity_type: str,
+    hypernym: str | None = None,
+) -> str:
+    """Return the "what we already know" block for a seeded named entity.
+
+    The block is *volatile* by construction — it names the headword — so it belongs in
+    the per-call prompt, after the byte-stable instructions, and never inside them
+    (module docstring, rule 1; D-25). Its content is the same trick D-17 plays with
+    ``domain_hint``: facts the sources already established, stated as given so the model
+    spends its call writing the sense rather than re-deriving the entity type.
+
+    The block also carries the one instruction that *contradicts*
+    :data:`SENSES_INSTRUCTIONS` — a name's gloss legitimately opens with the name, which
+    is why D-30 exempts proper nouns from the headword-initial rewrite — so it says so
+    explicitly rather than leaving the model to reconcile the two.
+
+    Args:
+        headword: The lexeme's surface form, in its display case.
+        entity_type: An :class:`~opengloss_generator.schema.EntityType` value.
+        hypernym: What class of thing the entity belongs to, as an ordinary noun phrase
+            ("city", "national park", "president of the United States"). Omitted when no
+            source offered one.
+
+    Returns:
+        The block, ready to append to the senses prompt.
+    """
+    in_words = _ENTITY_TYPE_IN_WORDS.get(entity_type, "a named thing")
+    facts = [f"it is a proper noun naming {in_words}"]
+    if hypernym:
+        facts.append(f"{headword} is a {hypernym}")
+    lines = [
+        "What is already known about this headword, from sources outside this call. "
+        "Treat it as given and do not contradict it:",
+        *(f"  - {fact}" for fact in facts),
+        "This entry is a name, so it is an exception to the rule above about not "
+        "beginning a gloss with the headword: open the gloss with the name itself and "
+        "say what the thing is, the way WordNet's name entries do. What is listed above "
+        "is the floor of the gloss, not the gloss: say what separates this one from "
+        "every other member of that class — where it is, when it was, what it is known "
+        "for — because a gloss that only repeats the class back identifies nothing. "
+        "Assert no date, place, number, or relationship you are not certain of; a "
+        "shorter gloss is better than an invented detail.",
+    ]
+    return "\n".join(lines)
+
+
 def build_senses_prompt(
     headword: str,
     pos: str,
     sense_count: int,
     *,
     domain_hint: str | None = None,
+    entity_type: str | None = None,
+    hypernym: str | None = None,
 ) -> str:
     """Return the volatile half of the sense-generation prompt.
 
@@ -807,6 +875,10 @@ def build_senses_prompt(
         domain_hint: The overview stage's free-text domain guess, if any. It steers the
             model towards the right corner of the taxonomy; the binding tag is still the
             enum-constrained ``domain`` field on each sense.
+        entity_type: For a seeded named entity, its
+            :class:`~opengloss_generator.schema.EntityType` value. Its presence is what
+            appends :func:`build_known_entity_block`.
+        hypernym: For a seeded named entity, what class of thing it is.
 
     Returns:
         The per-call prompt body.
@@ -818,6 +890,9 @@ def build_senses_prompt(
     ]
     if domain_hint:
         lines.append(f"Domain hint: {domain_hint}")
+    if entity_type:
+        lines.append("")
+        lines.append(build_known_entity_block(headword, entity_type, hypernym))
     return "\n".join(lines)
 
 

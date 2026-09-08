@@ -5959,3 +5959,164 @@ over `data/sample-300` (a read-only copy) or a number already recorded in D-76/D
 fresh Opus judge sample including tier 5, neither of which this decision produces. A real
 `--release v2.2` export against `data/core-store` will raise until a follow-up measures and
 fills those four.
+
+## D-82 (2026-09-08) — The seeded `generate` path: a name and a type instead of an `overview` call
+
+**Context.** `docs/NAMED-ENTITY-PLAN.md` § 5 designed but did not build a seeded entry
+point. `generate` opens every entry with an `overview` call that asks the model what the
+headword *is* — kind, entity type, parts of speech, sense count, domain. For a row of
+`data/core/tier6_candidates.tsv` all five answers are already decided by a better source
+than a model guess: the kind is `proper_noun`, the part of speech is `noun`, the sense
+count is 1, the entity type and the QID came from Wikidata, and § 4e wants a
+type-appropriate hypernym in the prompt so the gloss takes WordNet's shape. Paying for the
+call would buy a re-derivation *and* a chance for the model to overrule the source. The
+11,120 `name_seed` rows are this path's input; every one carries a QID.
+
+**Decision.** `EntrySpec` gains four seed fields — `kind`, `entity_type`, `wikidata_qid`,
+`hypernym` — all defaulting to `None`, and `domain` doubles as the seeded domain hint
+rather than gaining a fifth field, since it is already what the unseeded path passes to
+the senses prompt. When `kind` **and** `entity_type` are both set,
+`workflows/generate.py::seeded_overview` synthesises the `DraftOverview` the call would
+have returned — one `DraftPOSPlan(pos=noun, sense_count=1)` and a `DraftProperNoun` from
+the given values — and `generate_entry` skips the `overview` stage entirely, adding no
+provenance record and no cost for it. A QID that does not match
+`ProperNounInfo`'s own pattern is dropped with a warning rather than failing the entry.
+Either seed field alone is not a seed: such a spec, and every unseeded spec, takes today's
+path byte for byte (`tests/test_generate_seeded.py` asserts both directions).
+
+The senses prompt gains a **"what we already know" block** —
+`prompts.build_known_entity_block`: the entity type in words, `<name> is a <hypernym>`,
+and the instruction that this entry is the exception D-30 already carves out for proper
+nouns, so the gloss opens with the name as WordNet's do. It is appended to the *volatile*
+half of the prompt, after the byte-stable `SENSES_INSTRUCTIONS`, exactly as rule 1 of
+`prompts.py` and D-25 require — it names the headword, so it could never live in a cached
+prefix. `PROMPT_VERSION` therefore stays `"8"`: the stable block did not change, and a
+test pins that.
+
+`generate --seed-list <tsv> [--source name_seed] [--limit N] [--offset N]` reads the list
+through `seed_list.read_seed_list`, a header-driven, `source`-filtered reader mirroring
+`wordnet_import.read_candidates`, and drives `runner.run_pool`. It reads `name` (not
+`word`: `name` carries the display case, which `slugify` folds away and cannot return),
+`entity_type`, `qid` and `notes`. A row already in the store is skipped and counted.
+`--headword` and `--seed-list` are mutually exclusive and one is required.
+
+**The hypernym and the domain hint are derived, and crudely.** The TSV has no Wikidata
+`P31` class, so `seed_list.hypernym_for` returns the bare type noun — person → "person",
+work → "work" — sharpened only where a `us_list` token in `notes` names something more
+specific (`us_city_100k` → "city", `us_president` → "president of the United States").
+That token is present on about 800 of the 11,120 rows; the other ~10,300 get the bare
+noun. `domain_hint_for` is derived the same way and is free text under D-17.
+`nature.settlements` and `law_government.polities` (NAMED-ENTITY-PLAN § 4d, not yet in
+`DomainTag`) are referenced by string and fall back to
+`people_society.community_life` / `law_government.government_structure` until they land.
+
+**Per § 4f, this path creates the entry and nothing more**: senses, examples, spans,
+etymology, encyclopedia and lexical explanation — what `generate` produces today, no more
+and no less. No register rendition ("Abraham Lincoln, informally" is a nickname or an
+invention) and no contrast ("how do Denver and Boulder differ" is a geography question).
+The enrichment chain owns the reading levels.
+
+**Pilot.** 100 `name_seed` rows — every 111th, so the spread is by score band as well as
+type: 40 person, 19 place, 18 work, 16 organization, 5 event, 2 other, importance 55.4 to
+130.3 — generated into `data/sample-ner-gen` (an empty store; `data/core-store` was never
+opened) with `--budget 0.30 --concurrency 8`. 100/100 complete, 0 partial, 0 failed, 100
+senses, 325 edges, 100 QIDs written, 100 `proper_noun`, 0 renditions beyond the canonical
+one, 0 contrasts.
+
+| | measured |
+|---|---|
+| **cost per entry** | **$0.001246** (total $0.124591) |
+| calls per entry | 4.04 (senses, etymology, encyclopedia, explanation; 4 span calls over 100 entries) |
+| tokens per entry | 3,281 input (2,169 of them cached, 66%), 1,855 output |
+| per stage, $/call | senses 0.000433, etymology 0.000400, encyclopedia 0.000343, explanation 0.000068, spans 0.000062 |
+
+**The $0.0009 ceiling was missed, by 38%, and not where the plan expected.** Skipping the
+overview saved its modelled $0.000074, and the entry-creating half of the work —
+senses + spans — cost **$0.000435**, less than a third of the ceiling. The overrun is
+entirely in the three long-form sections, which cost $0.000811 together: COST-MODEL § 3
+models etymology at $0.000101 and this pilot measured $0.000400, because a name's
+etymology is a *naming* history with romanisation, an ethnonym or a feast day in it and
+runs 603 output tokens, not the ~150 the model assumed. The ceiling is reachable at
+`--no-etymology --no-encyclopedia`, but § 4f is explicit that a name's etymology is the
+content a dictionary carries and an encyclopedia does not, so the honest revision is the
+number, not the sections: **budget $0.00125/entry for a seeded name**, which puts the
+10,175-row stage 2 at ~$12.70 rather than ~$9 and the plan's ≈ $52 all-in at ≈ $56.
+
+**The read.** *Does the gloss say what the thing is?* — after one correction, yes. The
+first pilot run (same 100 rows, $0.114234) produced **18 degenerate glosses out of 100**:
+"Mil Mi-24 is the title of a work", "Shadhili is the name of an organization", "Corpus
+Christi, Texas is a city", three of which were also the sense's only example verbatim. The
+block as first written stated the class and the model returned the class. One sentence
+added to it — *what is listed above is the floor of the gloss, not the gloss; say what
+separates this one from every other member of that class* — took mean gloss length from
+12.9 to 20.3 words, degenerate glosses from 18 to **0**, gloss-equals-example from 3 to 0,
+relations from 2.2 to 3.2 per sense, and raised the fraction of senses that override the
+crude domain hint from 4% to 16%, for +$0.0001/entry. The numbers above are the corrected
+run.
+
+*Is the example natural?* Mostly, and thin: 1.40 examples per sense (44 senses got one, 45
+two, 2 three). **Nine senses got none**, and the cause is a contract gap this path only
+exposes: `DraftSense.examples` is `Field(min_length=1)` on the *list*, so `[""]` validates,
+and `_sense_from` drops the blank — a probe reproduced `examples=['']` for *Dean Smith*
+directly. Left undone: tightening that to `list[Annotated[str, Field(min_length=1)]]`
+changes the structured-output schema of every `senses` call in the project and wants its
+own decision; until then `enrich --fields examples` (D-53) backfills. Separately, a
+headword ending in a class noun makes an ungrammatical example — "She is learning West
+Frisian language" — and a Wikipedia disambiguator leaks straight through: "We watched
+Bonnie and Clyde (film) for our film studies class". **604 of the 11,120 rows (5.4%)
+carry a parenthetical disambiguator**, which needs stripping before the name becomes a
+headword.
+
+*Is the etymology the naming history?* Yes, and it is the best thing this path produces.
+*Corpus Christi* is traced to the feast and the bay, *Sundarbans* to Bengali সুন্দরবন via
+Sanskrit, *Gwangju* to 光州, *The Potato Eaters* to *De aardappeleters*, *United Nations*
+to the 1942 Declaration. It also declines to invent: *Lizzie Magie*'s reads "the origin of
+the surname Magie is not established here, so it is not assigned a speculative etymology."
+
+*Does the encyclopedia paragraph avoid inventing facts?* Largely. Checked in full across
+eight entries (Chien-Shiung Wu, Lizzie Magie, Corpus Christi, Sundarbans, United Nations,
+The Potato Eaters, Gwangju Uprising, West Frisian language), the dates, places and numbers
+are right — Wu's 1912–1997, cobalt-60, the 1957 Nobel to Lee and Yang, the National Medal
+of Science in 1975 and the Wolf Prize in 1978; Magie's 1904 patent, 1906 publication and
+1935 sale to Parker Brothers; the UN's 193 members and five vetoes; Van Gogh's April 1885
+in Nuenen; Gwangju's 18–27 May 1980. **Two errors found, both small and both attributions
+rather than fabrications**: Corpus Christi's "In 1839, the Republic of Texas established a
+trading post known as Kinney's Trading Post" (Henry Kinney was a private trader, not the
+Republic), and Wu's etymology asserting that *Chien-Shiung Wu* "places the given name
+before the surname in Chinese order" when that ordering is precisely the Western one.
+
+**The real hallucination risk is the seed, not the model.** Because the block says the
+type is given, a wrong `entity_type` in the TSV is written into the gloss and the model
+bends around it instead of correcting it: **8 of the 100 rows are mis-typed** and 7
+produced a damaged gloss — "Arianism is a named place identified by this distinctive
+name", "NGC 6302 is a named astronomical event associated with the Butterfly Nebula",
+"Mil Mi-24 is a work named after the Soviet-designed attack helicopter of the same name",
+"Antarctic Treaty System is a place in and around Antarctica". The model plainly knows
+better in every case; seeding removed its veto. A tested but **not shipped** escape hatch
+— appending *if a fact listed above is plainly wrong for this name, write the true gloss
+and ignore it* — repaired 4 of 6 probed cases (*Arianism* became the Christian doctrine,
+*NGC 6302* the planetary nebula, *Mil Mi-24* the helicopter gunship, *Permian–Triassic*
+the mass extinction) and left *Flag of Turkey* and *Chinese dragon* wrong. It is not
+shipped because it half-defeats the point of seeding; the right fix is upstream, in the
+`entity_type` retrofit NAMED-ENTITY-PLAN § 4a already schedules. **Stage 2 should not run
+before that retrofit does.**
+
+One more consequence of the crude derivation: 84 of 100 senses took the per-type domain
+hint verbatim, so `organization → business.general` tagged the *United Nations*, the
+*Church of England* and the *World Council of Churches* as business until the model
+overrode it (it did, for the UN). D-17 intends a hint the model writes around; on a
+one-sentence name entry it mostly does not. `retrofit --only tag_domain` is the backstop.
+
+**Consequence.** Added: `src/opengloss_generator/seed_list.py` (`SeedRow`,
+`read_seed_list`, `hypernym_for`, `domain_hint_for`, `NAME_SEED_SOURCE`). Modified:
+`workflows/generate.py` (four `EntrySpec` fields, `seeded_overview`, the conditional
+overview call, the seed passed to the senses prompt), `prompts.py`
+(`build_known_entity_block`, `_ENTITY_TYPE_IN_WORDS`, two new keyword arguments on
+`build_senses_prompt`; `SENSES_INSTRUCTIONS` and `PROMPT_VERSION` untouched), `cli.py`
+(`generate` gains `--seed-list/--source/--limit/--offset`, `--headword` becomes optional,
+`_read_seed_rows`, `_generate_seed_list`, `_generate_seeded`). One unrelated pre-existing
+`ruff format` violation in `export/hf_cards.py` is fixed so the checks pass. Tests: **+23**
+(19 in `tests/test_generate_seeded.py`, 4 in `tests/test_cli.py`); 1,387 pass (was 1,364),
+7 skipped. `uv run ruff check src tests`, `ruff format --check src tests`,
+`ty check src`, `pytest` all clean. Total pilot spend including the two probe runs and the
+discarded first pilot: **$0.248** against the $0.30 ceiling.

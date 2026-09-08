@@ -88,6 +88,76 @@ def test_generate_refuses_to_overwrite_without_force(tmp_path: Path):
     assert again["cost_usd"] == 0
 
 
+_SEED_TSV = "\n".join(
+    [
+        "name\tword\tentity_type\tsource\tqid\tnotes",
+        "Denver\tdenver\tplace\tname_seed\tQ16554\tus_list=us_city_100k",
+        "John F. Kennedy\tjohn f. kennedy\tperson\tname_seed\tQ9696\tus_list=us_president",
+        "abalone\tabalone\tother\twordnet\tQ1\t",
+    ]
+)
+
+
+def _seed_file(tmp_path: Path) -> str:
+    path = tmp_path / "tier6.tsv"
+    path.write_text(_SEED_TSV, encoding="utf-8")
+    return str(path)
+
+
+def test_generate_from_a_seed_list(tmp_path: Path):
+    # D-82: a name and a type per row, so no entry on this path pays for an overview call.
+    store = str(tmp_path / "store")
+    summary = _invoke(
+        "generate", "--seed-list", _seed_file(tmp_path), "--store", store, "--budget", "1"
+    )
+    assert summary["seeds"] == 2  # the `wordnet` row is not this path's work
+    assert summary["generated"] == 2
+    assert summary["skipped"] == 0
+    assert summary["failed"] == 0
+    assert summary["senses"] == 2  # one sense per name
+
+    shown = _invoke("show", "--headword", "John F. Kennedy", "--store", store)
+    assert shown["lexeme_id"] == "john_f_kennedy"
+    assert shown["headword"] == "John F. Kennedy"  # display case survives the slug
+    assert shown["kind"] == "proper_noun"
+    assert shown["proper_noun"] == {"entity_type": "person", "wikidata_qid": "Q9696"}
+
+
+def test_generate_from_a_seed_list_skips_what_the_store_already_has(tmp_path: Path):
+    store = str(tmp_path / "store")
+    seed_file = _seed_file(tmp_path)
+    _invoke("generate", "--seed-list", seed_file, "--store", store, "--limit", "1")
+    again = _invoke("generate", "--seed-list", seed_file, "--store", store)
+    assert again["skipped"] == 1
+    assert again["generated"] == 1
+
+
+def test_generate_seed_list_windows_and_filters(tmp_path: Path):
+    store = str(tmp_path / "store")
+    seed_file = _seed_file(tmp_path)
+    summary = _invoke(
+        "generate", "--seed-list", seed_file, "--store", store, "--offset", "1", "--limit", "1"
+    )
+    assert summary["generated"] == 1
+    assert _invoke("show", "--headword", "John F. Kennedy", "--store", store)["kind"] == (
+        "proper_noun"
+    )
+
+    every_row = _invoke(
+        "generate", "--seed-list", seed_file, "--source", "", "--store", store, "--dry-run"
+    )
+    assert every_row["seeds"] == 3
+
+
+def test_generate_needs_exactly_one_of_headword_and_seed_list(tmp_path: Path):
+    both = runner.invoke(
+        cli.app, ["generate", "--headword", "abseil", "--seed-list", _seed_file(tmp_path)]
+    )
+    assert both.exit_code != 0
+    neither = runner.invoke(cli.app, ["generate"])
+    assert neither.exit_code != 0
+
+
 def test_dry_run_costs_nothing(tmp_path: Path):
     summary = _invoke("generate", "--headword", "abseil", "--store", str(tmp_path), "--dry-run")
     assert summary["stop_reason"] == "dry_run"
