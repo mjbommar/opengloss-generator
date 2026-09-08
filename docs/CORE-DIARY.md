@@ -1761,3 +1761,9 @@ cap); graph-hygiene 23,445 entries; **sections** (etymology + encyclopedia + lex
 explanation for the 38,223 entries lacking them): 114,423 calls, **$29.24**, 4h17m, 0
 failures — $0.00077/entry, an order of magnitude under the $200 cap set for an
 unmeasured stage. Gloss levels started 21:43. Tier so far $40.73.
+
+**Tier 5 rendition stages (2026-09-07 21:43 → 09-08 09:48):** gloss × 4 levels
+194,331 renditions **$15.89** (2h55m); examples × 4 levels 194,334 renditions
+**$11.22** (2h34m); encyclopedia grade 5 + college 86,452 renditions **$29.52** (6h36m —
+half tier 4's pace, same unit cost). All completed under cap, 0 failures, 0 429s.
+Tier so far **$97.36**. Hygiene block started 09:48 (6-hour stage timeouts).
