@@ -6404,3 +6404,117 @@ identical string, `PROMPT_VERSION == "9"`), `test_aliases_instructions_name_the_
 and `test_a_head_noun_pair_gets_see_also_not_alias_of` (a fake-runner run on a fresh
 "Golden Horde" / "horde" pair writes `see_also`, never `alias_of`). `tests/test_generate_seeded.py`'s
 hardcoded `PROMPT_VERSION == "8"` assertion moves to `"9"` with it.
+
+## D-83 (2026-09-08) — Cleaning the tier-6 seed list before stage 2: retyping, disambiguators, and a domain hint that stops guessing
+
+**Context.** D-82's pilot found three problems in `data/core/tier6_candidates.tsv` upstream
+of the seeded `generate` path, and its own closing line was explicit: **"Stage 2 should not
+run before that retrofit does."** 8 of the pilot's 100 rows were mis-typed and 7 produced a
+damaged gloss (*"Arianism is a named place..."*, *"NGC 6302 is a named astronomical event..."*,
+*"Mil Mi-24 is a work..."*); 604 of 11,120 rows carry a Wikipedia disambiguator that leaks into
+examples (*"We watched Bonnie and Clyde (film) for our film studies class"*); and the per-type
+domain default tagged 84% of senses verbatim, wrongly for `organization` (the United Nations,
+the Church of England and the World Council of Churches all read as `business.general`).
+
+**Decision.** `scripts/clean_tier6_seeds.py` reads `tier6_candidates.tsv`'s 15,000 rows and
+writes `data/core/tier6_seeds.tsv` (gitignored, same shape as the input plus `headword`,
+`disambiguator`, `entity_type_final`, `type_source`, `domain_hint`, `hypernym`,
+`dropped_reason`), consumed by `seed_list.read_seed_list` with no reader change: the existing
+`name`/`entity_type` cells are overwritten in place (`name` = headword, `entity_type` =
+`entity_type_final`, or the sentinel `not_a_named_entity` for a dropped row — not a member of
+`EntityType`, so the reader's own `try: EntityType(...) except ValueError: continue` already
+skips it).
+
+1. **Disambiguator stripping**, every row: a trailing `" (...)"` becomes `headword` +
+   `disambiguator`. A stripped headword that collides — with a live store entry, or with
+   another row's own stripped headword — is kept, not dropped, and gets a `headword_collision`
+   note for `lexeme-hygiene --only aliases` (D-81 decision 4) to resolve once both sides exist.
+   112 intra-file collision groups (*"George Washington"* / *"George Washington (inventor)"*,
+   *"Julius Caesar"* / *"Julius Caesar (play)"*, ...) were found this way; `read_seed_list`'s
+   own pre-existing dedup-by-`name` then generates one side of each pair this round; the
+   collision note is what lets a later pass mean the other side did not name a distinct
+   headword slug in a one-entry-per-slug store, not that it was lost.
+2. **Retyping**: one `gpt-5.4-nano` call per 40 `name_seed` rows (`reasoning_effort="none"`,
+   matching `StageName.CLASSIFY_KIND`'s own policy — a strict-enum verdict, not prose — run
+   directly through `pydantic_ai` rather than `StageRunner`, since a one-off script over a TSV
+   needs neither D-47's idempotence markers nor a ledger), strict enum over `EntityType` plus
+   `not_a_named_entity`, given the headword, the TSV's type, up to three Wikidata P31 class
+   labels and the vital-article topic/section. `type_source` records more than whether the
+   verdict changed anything: `verdict` when the model overrode the TSV; `wikidata` when the
+   model agreed *and* a second, free recomputation from `class_types.json`'s own P31-to-category
+   resolution (the same signal `entity_type_of` uses at build time, run here with no model call)
+   independently agreed too; `tsv` when the model agreed with nothing to confirm it beyond the
+   TSV's own say-so.
+
+   **11,120 rows, 278 calls, $0.139 against the $2.00 ceiling.** Agreement with the TSV among
+   the 11,077 rows the model actually typed (11,120 minus the 43 drops): 89.5% (9,912/11,077,
+   the 11 rows a batch answered with no verdict this script could match back to a headword
+   counted as neither); 1,154 rows retyped. 43 dropped as `not_a_named_entity` (*Arianism*, a
+   doctrine Wikipedia capitalises, among them — its own pilot mis-type). Every one of D-82's own six
+   named examples came out right: *Arianism* dropped; *NGC 6302* → `other`/"planetary nebula";
+   *Mil Mi-24* → `product`/"aircraft family"; *Antarctic Treaty System* → `other`/"treaty"
+   (`law_government.international_law`); *Corpus Christi, Texas* stays `place`; *Shadhili* stays
+   `organization` (a Sufi order — the pilot's gloss was fine, only the bare hypernym was thin;
+   it now reads "tariqa"). A sample of the 1,154 total disagreements: *European Union*
+   place→organization, *Global Positioning System* event→product, *Big Bang* place→event,
+   *Sydney Opera House* place→work, *Palace of Westminster* work→place. Full table of 60 in the
+   run's own JSON report.
+3. **Hypernym and domain hint**, from the Wikidata P31 label when `class_labels.json` (fetched
+   here — the builder's own `class_types.json` resolves a class to a *bucket*, not a label — via
+   `wbgetentities`, 72 calls, no cost) has one, through a ~90-entry table:
+   city/town/village → `nature.settlements`; country/state/sovereign state → `law_government.
+   polities` (both D-81 leaves); university → `education.higher_education`; church/denomination
+   → `humanities.religion`; film/painting/novel/album → `arts.film`/`arts.visual_art`/
+   `humanities.literature`/`arts.music`. **`organization` and `place` get no per-type default at
+   all** — D-82's specific finding was that no single root fits a company, a church and a federal
+   agency, and D-81 means most tier-6 places are a settlement or a polity, not physical
+   geography, so neither guess is honest; both are left blank (22% of `name_seed` rows) for
+   `tag_domain` to decide with no bad prior to fight, rather than defaulted the way `seed_list.
+   hypernym_for`/`domain_hint_for` still default every other type. `person` keeps its default
+   (`history.historical_figures`), refined by occupation (`P106`, fetched separately — `wd_facts.
+   json` never queried it — for `person` rows only, 4,415 QIDs, then labelled the same way as
+   the P31 classes) toward `science.general`, the arts, `sports_recreation.general` or
+   `humanities.religion`. Occupation refinement checks a fixed domain-priority order, not P106's
+   own list order: Wikidata lists John F. Kennedy's occupations `[writer, politician,
+   statesperson, ...]` and Harry S. Truman's `[judge, captain, businessperson, politician, ...]`
+   — first-match-wins would have filed a president under literature or under courts, so holding
+   office is checked before any other occupation category. `event` keeps `history.general`,
+   refined toward `history.world_wars` by a battle/war label plus a year in the headword found in
+   1914–1945. Coverage: hypernym 99.6%, domain hint 77.8%.
+4. **Living-person and recency flags** are appended to `notes` (`living_person`,
+   `recent_creation`) from the same `wd_facts.json` dates and thresholds the builder's own
+   scoring already uses (`LIVING_BIRTH_YEAR=1935`, `RECENT_INCEPTION_YEAR=2015`) — carried
+   through, not filtered on: NAMED-ENTITY-PLAN's scoring penalises a recent or living subject, it
+   does not exclude one, and this script does not get to re-decide that.
+
+`source == wordnet` rows (3,880) pass through untouched beyond the headword/disambiguator
+split: `import-wordnet` already gives them a real, free hypernym, so this script does not paper
+over that with a guess, and their `entity_type_final`/`type_source`/`hypernym`/`domain_hint`
+stay `tsv`/blank.
+
+One incidental finding while fetching P106: `query.wikidata.org` (WDQS) was under an active,
+undocumented rate-limiting incident on 2026-09-08 ("Aggressively rate-limiting to 1 req/min -
+this rule was created during active wdqs outage"), intermittent rather than total — a retried
+request the same script issues seconds later succeeds. `fetch_occupations` retries with backoff
+and degrades to "no occupation data" (the plain `person` default, not a crash) rather than
+failing the run; `fetch_labels` (`wbgetentities`, a different MediaWiki endpoint) was unaffected
+throughout.
+
+**Consequence.** Added: `scripts/clean_tier6_seeds.py`, `tests/test_clean_tier6_seeds.py` (35
+tests: the disambiguator stripper, every mapping-table function including the occupation
+priority order, the Wikidata-only deterministic retype recomputation, collision annotation
+against a real `LexemeStore`, the TSV round trip, and one end-to-end `main()` run against a
+`FunctionModel` verifying the output is `seed_list.read_seed_list`-readable with no code
+change). `data/core/tier6_seeds.tsv` and the two label caches it adds under `tier6_cache/`
+(`class_labels.json`, `occupation_labels.json`, `occupations.json`) are gitignored data, not
+committed. `ruff check`/`format --check` clean on the new files (`scripts/` is linted; ty's
+`root` is `src` only, so `ty check scripts/clean_tier6_seeds.py tests/test_clean_tier6_seeds.py`
+is run explicitly and is clean too), full suite 1,483 passed (was 1,448), 7 skipped. Total spend
+for this decision: **$0.139** against the $2.00 ceiling.
+
+**Left undone.** The `organization`/`place` blank-domain rows (2,431 of 11,120) still want a
+verdict from somewhere — `tag_domain` is that somewhere, at generation time, not here. The
+112 intra-file collisions each generate exactly one side this round; the other side's row
+survives in `tier6_seeds.tsv` with its `headword_collision` note for a later pass to read, but
+nothing yet reads that note automatically. Stage 2 (running `generate --seed-list` over the
+10,996 `name_seed` rows `read_seed_list` can now see) is the next decision.
