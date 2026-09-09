@@ -1381,14 +1381,19 @@ def test_an_alias_of_edge_exports_in_relations_like_any_other_type(tmp_path):
     assert rows[0]["resolved"] is True
 
 
-def test_the_v23_card_refuses_to_render_while_its_facts_are_unmeasured(tmp_path):
+def test_the_v23_card_refuses_to_render_while_its_facts_are_unmeasured(tmp_path, monkeypatch):
     # The same guard D-80 put on V22, one release on: a `v2.3` card cannot ship with an
-    # invented number, and `DEFAULT_RELEASE` stays `v2.2` until every one is filled.
-    assert hf_schemas.DEFAULT_RELEASE == "v2.2"
-    for name in hf_cards._V23_PLACEHOLDERS:
-        assert getattr(hf_cards.V23, name) is None
+    # invented number. v2.3 shipped 2026-09-09 with every fact measured, so the guard is
+    # exercised by blanking one placeholder rather than by asserting the constants are None.
+    monkeypatch.setattr(hf_cards.V23, "JUDGE", None)
     with pytest.raises(ValueError, match=r"hf_cards\.V23 is not filled in"):
         _export(tmp_path, [_named_entity()], release="v2.3")
+
+
+def test_the_shipped_v23_facts_are_all_measured():
+    for name in hf_cards._V23_PLACEHOLDERS:
+        assert getattr(hf_cards.V23, name) is not None, name
+    assert hf_schemas.DEFAULT_RELEASE == "v2.3"
 
 
 def test_the_v23_changelog_names_the_three_things_the_release_is(tmp_path, monkeypatch):
