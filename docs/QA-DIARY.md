@@ -1040,3 +1040,11 @@ hallucination 5 across 74 senses — the 5 hallucination flags are the number to
 on generated names. Open items: an example-diversity check (free: n-gram overlap across
 a sense's examples, then one rewrite call), and a "known other senses" step for
 initialisms.
+
+## Iteration 23 — v2.3 post-upload QA (2026-09-09 04:30)
+
+16/16 public with README + parquet (3.92 GB). Live spot reads: named entities carry
+`entity_type`, `wikidata_qid`, `tier=tier6`, `source`; the pre-existing single-word
+"lincoln" is now `person`. Cards: both older changelog sections frozen, the
+v2.2 → v2.3 section rendered from measured facts, tier 6 in every tier table, licence
+section present, no placeholders. Pointers: v2.2 → v2.3 (16). Release QA closed.

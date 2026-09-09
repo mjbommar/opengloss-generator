@@ -1854,3 +1854,14 @@ encyclopedia $9.30, hygiene block $5.02, judge $2.44 → **$45.17** (plan ≈ $5
 $130); every stage under cap, 0 failures, 0 429s. Audit (tier 6): 0 cycles, reciprocity
 100% (few symmetric edges on names), `senses_zero_relations` 238, 11 entries without
 examples. Judge **73.3** (QA-DIARY it. 22). Closing script running toward v2.3.
+
+## OpenGloss v2.3 published — 2026-09-09 04:17
+
+16 datasets under `mjbommar/opengloss-v2.3-*` (public, CC-BY 4.0 + WordNet notice),
+3.92 GB, 84 shards, verified 16/16 via the Hub API; live rows: "Abraham Lincoln" =
+proper_noun / person / Q91 / tier6 / wordnet-3.0; "New York City" = place / Q60;
+"lincoln" (core) now typed person. Closing: 4-entry validity remainder (no-op),
+reconcile converged, re-judge 73.0, store-wide audit (165,291 files; 0 cycles;
+reciprocity 94.2 / 94.3; 4,722 senses without relations — constants filled by the
+closing script). The 16 v2.2 cards point at v2.3. **Goal 6 complete**: tier 6 $45.17 +
+pilots ≈ $1 + closing $2.50 ≈ **$49**; total enrichment spend ≈ **$1,080**.

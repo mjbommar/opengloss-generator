@@ -427,3 +427,24 @@ its own decision record.
 3. **Size** — 15,000 now, or 10,000 now and the rest after the judge sample?
 4. Should living public figures be excluded outright rather than penalised? 612 rows in
    the current 15,000 are living people.
+
+## 7. Execution log (2026-09-08 → 09-09)
+
+Decisions on § 6 recorded as D-81. Built: taxonomy leaves `nature.settlements` and
+`law_government.polities`; `entity_type`/`wikidata_qid` written by the importers and a
+`retrofit --only entity_type` pass; `Lexeme.aliases` + `ALIAS_OF` (protected);
+`lexeme-hygiene --only aliases` with a head-noun-safe prompt (D-81 amendment); the
+seeded `generate --seed-list` path (D-82, $0.00125/entry measured); a seed-cleanup
+script (D-83: 603 disambiguators stripped, 1,154 rows retyped, 43 dropped, $0.14).
+Chain 17:11 → 02:49: import-wordnet 2,543 (free) → seeded generate ~9,900 ($12.32) →
+entity_type over all 33,297 proper nouns ($0.23) → tag_domain ($2.27) → resolve ($2.43)
+→ sections ($2.07) → aliases: 522 `alias_of`, 2,397 `see_also` ($0.98) → gloss /
+example / encyclopedia levels ($17.16) → hygiene block ($5.02) → judge **73.3**
+(re-judge 73.0; QA-DIARY it. 22) → audit. **Tier total $45.17** against $130 of caps;
+every stage under cap, 0 failures. Released as **OpenGloss v2.3** 2026-09-09 04:17:
+160,724 live lexemes (12,078 new in tier 6), 300,787 live senses, 33,158 proper nouns
+of which 28,915 typed, 1,267 `alias_of` edges, pretraining corpus 1,560,030 docs /
+418.2M words / 594.2M cl100k tokens; 2.25B tokens across the 16 datasets as shipped.
+Open items from the judge: repetitive examples on monosemous names, missing
+abbreviation senses for initialisms, domain tags on abstract names; and the 81
+headword-collision twins ("Julius Caesar" the person vs the play) still unlinked.
