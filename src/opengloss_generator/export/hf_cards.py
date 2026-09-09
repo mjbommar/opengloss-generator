@@ -75,7 +75,7 @@ ANTONYM_RECIPROCITY = 0.943
 
 #: Senses left with no relation at all in that audit (of 137,314 live) — the largest
 #: known gap.
-SENSES_WITHOUT_RELATIONS = 4_524
+SENSES_WITHOUT_RELATIONS = 4_722
 
 PAPER_URL = "https://arxiv.org/abs/2511.18622"
 LICENSE_ID = "cc-by-4.0"
@@ -385,13 +385,13 @@ class V23:
     #: candidate list, before slugification and matching against the store.
     TIER6_CANDIDATES = 15_000
 
-    TIER6_LEXEMES: int | None = None  # fill at release: entries the tier actually added
-    ENTITY_TYPED: int | None = None  # fill at release: proper nouns given a real type
-    ALIAS_EDGES: int | None = None  # fill at release: `alias_of` edges written
-    PRETRAIN_DOCS: int | None = None  # fill at release
-    PRETRAIN_WORDS: int | None = None  # fill at release
-    PRETRAIN_TOKENS: int | None = None  # fill at release, cl100k_base
-    JUDGE: str | None = None  # fill at release
+    TIER6_LEXEMES: int | None = 12_078  # fill at release: entries the tier actually added
+    ENTITY_TYPED: int | None = 28_915  # fill at release: proper nouns given a real type
+    ALIAS_EDGES: int | None = 1_267  # fill at release: `alias_of` edges written
+    PRETRAIN_DOCS: int | None = 1_560_030  # fill at release
+    PRETRAIN_WORDS: int | None = 418_161_358  # fill at release
+    PRETRAIN_TOKENS: int | None = 594_154_612  # fill at release, cl100k_base
+    JUDGE: str | None = "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5), 73.0 (tier 6)"  # fill at release
 
 
 #: :class:`V23` attributes that must be measured against the finished release before a

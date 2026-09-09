@@ -45,7 +45,7 @@ __all__ = [
 #: The release label these repos publish under by default. Part of every repo name
 #: (D-72); overridable per export via ``--release`` (D-75) so an older label (``v2.0``)
 #: stays reproducible after the default moves on.
-DEFAULT_RELEASE = "v2.2"
+DEFAULT_RELEASE = "v2.3"
 
 #: The token a repo's own ``blurb``/``snippet`` text is authored with in place of a
 #: literal release, wherever it names *another* member of this same family. Rendering
