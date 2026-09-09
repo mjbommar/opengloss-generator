@@ -248,7 +248,7 @@ def test_every_field_is_documented_and_uniquely_named():
 
 def test_resolve_repos_is_registry_ordered_and_rejects_unknown_names():
     assert [spec.slug for spec in resolve_repos("senses,lexicon")] == ["lexicon", "senses"]
-    assert resolve_repos("opengloss-v2.2-queries")[0].slug == "queries"
+    assert resolve_repos(f"opengloss-{hf_schemas.DEFAULT_RELEASE}-queries")[0].slug == "queries"
     assert resolve_repos("opengloss-v2.0-queries", release="v2.0")[0].slug == "queries"
     assert len(resolve_repos("all")) == len(REPOS)
     with pytest.raises(ValueError, match="unknown repo"):
