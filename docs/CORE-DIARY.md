@@ -1846,3 +1846,11 @@ $2.07 (2,547 WordNet names) → **alias pass** $0.98: 8,912 candidate pairs, 3,7
 already linked, **522 `alias_of` written** (427 free on gloss evidence + 95 by verdict),
 2,397 `see_also`, 2,234 none, 0 attempts exhausted. Gloss levels started 21:53. Tier
 so far **$20.55**.
+
+**`DONE-TIER6` 2026-09-09 02:49.** 14,371 live tier-6 entries. Chain costs: seeded
+generate $12.32, structural $5.18 (entity_type $0.23, tag_domain $2.27, resolve $2.43,
+repair/spans/etc.), sections $2.07, aliases $0.98, gloss $5.25, examples $2.61,
+encyclopedia $9.30, hygiene block $5.02, judge $2.44 → **$45.17** (plan ≈ $56, caps
+$130); every stage under cap, 0 failures, 0 429s. Audit (tier 6): 0 cycles, reciprocity
+100% (few symmetric edges on names), `senses_zero_relations` 238, 11 entries without
+examples. Judge **73.3** (QA-DIARY it. 22). Closing script running toward v2.3.

@@ -1009,3 +1009,34 @@ second column (148,292 lexemes under a "v2.2 (2026-09-07)" header) instead of v2
 own; the template now freezes v2.1's counts (`V21` constants) and the 16 live cards
 were patched and re-uploaded (verified). Pointers: v2.1 cards → v2.2 (16), v2.0 cards →
 v2.1 (15), v1.3 cards → v2.1 (7). Release QA closed.
+
+## Iteration 22 — tier 6 judge sample (2026-09-09 02:49)
+
+37 judged of 40 sampled tier-6 entries (3 had no live sense at judge time), 74 senses,
+seed 7, Opus, $2.44. Named entities: ~9,900 seeded-generated, 2,543 WordNet-imported.
+
+| | tier 4 | tier 5 | **tier 6** |
+|---|---|---|---|
+| mean score | 67.0 | 81.3 | **73.3** |
+| entries 80+ / below 60 | 4 / 11 | 27 / 1 | 15 / 6 |
+| gloss_accurate defect | 29% | 5% | 20% |
+| distinct_from_other_senses | 36% | 0% | 19% |
+| examples_fit_sense | 38% | 15% | 32% |
+| examples_natural | 39% | 39% | 31% |
+| relations_valid | 65% | 24% | 47% |
+| domain_fits | 12% | 10% | 18% |
+
+**Read.** Between the LLM-generated tiers and the WordNet tier, as the mix predicts
+(80% generated from a seed, 20% curated). The judge's notes name three name-specific
+defects the chain does not target: (1) **repetitive examples** — "all five examples
+restate the same fact in slightly different wording" (3M, 2NE1, a company entry);
+the example generator has no diversity constraint across a sense's examples, which
+matters more for a monosemous name than for a word with several senses; (2) **missing
+abbreviation senses** — "BP" has the company sense but not blood pressure / boiling
+point (the seed said organization; the seeded path builds one sense by design); (3)
+**domain tags off on abstract names** (a religious concept tagged as time/quantity).
+Flags: awkward_style 18, terminology_error 17, missing_content 7, factual_error 5,
+hallucination 5 across 74 senses — the 5 hallucination flags are the number to watch
+on generated names. Open items: an example-diversity check (free: n-gram overlap across
+a sense's examples, then one rewrite call), and a "known other senses" step for
+initialisms.
