@@ -1836,3 +1836,13 @@ agreed with the TSV on 89.5% and retyped 1,154 — all six of D-82's mis-typed e
 now correct; hypernym coverage 99.6%, domain hint 77.8% (blank where no safe default
 exists). Alias prompt: 31/31 true aliases kept, 0/100 compound-head false positives
 after the rewrite. Chain caps $130, expected ≈ $60; monitors on `tier6_chain.log`.
+
+**Tier 6 chain (2026-09-08 17:11 →):** import-wordnet 2,543 (free) → seeded generate
+**$12.32** (39,634 calls, 1h46m, ~9,900 entries, 0 failures) → classify_kind $0.02 →
+**entity_type** $0.23 (33,297 proper nouns: 14,290 from the list, 18,566 by verdict) →
+hygiene $0.00 → tag_domain **$2.27** (35,088 senses) → repair $0.20 (6,388 examples) →
+spans $0.03 → resolve **$2.43** (29,761 calls, 1h01m) → graph-hygiene → sections
+$2.07 (2,547 WordNet names) → **alias pass** $0.98: 8,912 candidate pairs, 3,759
+already linked, **522 `alias_of` written** (427 free on gloss evidence + 95 by verdict),
+2,397 `see_also`, 2,234 none, 0 attempts exhausted. Gloss levels started 21:53. Tier
+so far **$20.55**.
