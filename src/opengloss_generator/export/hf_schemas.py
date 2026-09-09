@@ -486,6 +486,7 @@ print(grade5.head())""",
                 FieldSpec(
                     "aliases",
                     pa.list_(_STR),
+                    "Reserved: empty on every row in this release (no pass populates it yet). "
                     "Surface forms that resolve to this entry and have no entry of their "
                     'own — a leading-article form ("the Netherlands"), a diacritic or '
                     "transliteration variant, an initialism nothing else holds. Each one "

@@ -391,7 +391,9 @@ class V23:
     PRETRAIN_DOCS: int | None = 1_560_030  # fill at release
     PRETRAIN_WORDS: int | None = 418_161_358  # fill at release
     PRETRAIN_TOKENS: int | None = 594_154_612  # fill at release, cl100k_base
-    JUDGE: str | None = "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5), 73.0 (tier 6)"  # fill at release
+    JUDGE: str | None = (
+        "70.2 (core + tier 2), 66.7 (tier 3), 67.0 (tier 4), 81.3 (tier 5), 73.0 (tier 6)"  # fill at release
+    )
 
 
 #: :class:`V23` attributes that must be measured against the finished release before a
@@ -659,11 +661,12 @@ schema changes come with it:
   and `lexicon` gains `wikidata_qid`, the join key for reconciling an entry against
   Wikidata.
 - **Aliases.** A name has variants — *Lincoln* for *Abraham Lincoln*, *the Netherlands*
-  for *Netherlands*, *FDR*, *NASA* — and v2.2 had nowhere to put them. A variant with no
-  entry of its own is now a member of `lexicon`'s `aliases` column and an `alias` row in
-  `opengloss-v2.3-inflections`, so resolving any surface string stays one lookup; a
-  variant that *does* have an entry is an `alias_of` edge in `opengloss-v2.3-relations`
-  ({_n(facts.alias_edges)} of them). An `alias_of` edge is never demoted, pruned, capped
+  for *Netherlands*, *FDR*, *NASA* — and v2.2 had nowhere to put them. A variant that
+  *has* an entry of its own is now an `alias_of` edge in `opengloss-vX-relations`
+  ({_n(facts.alias_edges)} of them, written by a judged alias pass). The schema also
+  reserves a `lexicon.aliases` column and `alias` rows in `opengloss-vX-inflections` for
+  variants with no entry of their own, but **no pass populates them yet: `aliases` is
+  empty on every vX row.** An `alias_of` edge is never demoted, pruned, capped
   or re-judged by the hygiene passes, unlike every other relation type.
 - **Two new domain leaves.** `nature.settlements` (cities, towns, villages,
   neighbourhoods) and `law_government.polities` (countries, states, provinces, empires,

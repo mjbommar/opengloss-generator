@@ -28,7 +28,7 @@ character span of the headword occurrence. See `docs/SCHEMA-V3.md` for the contr
 
 The store this pipeline built — 160,724 live lexemes, 300,787 live senses — including 33,158 typed named entities with Wikidata ids and alias links — is
 published on Hugging Face as a family of 16 datasets under CC-BY 4.0, all joinable on
-derived ids. 38,100 lexemes are derived from Princeton WordNet 3.0 (WordNet License,
+derived ids. 40,643 lexemes are derived from Princeton WordNet 3.0 (tiers 5 and 6) (WordNet License,
 `LICENSES/WordNet.txt`); the `source` column and the `migrate` provenance records say
 which. Start with [`opengloss-v2.3-senses`](https://huggingface.co/datasets/mjbommar/opengloss-v2.3-senses).
 The whole family is listed in the [OpenGloss 2.x collection](https://huggingface.co/collections/mjbommar/opengloss-2x-6aa132577f2cd0ca0c15745e); the v1.x releases are in [OpenGloss 1.x](https://huggingface.co/collections/mjbommar/opengloss-1x-69304505fa0ddaaad8a3ca28).
