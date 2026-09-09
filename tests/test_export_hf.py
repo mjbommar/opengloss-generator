@@ -1231,7 +1231,7 @@ def test_push_creates_each_repo_then_uploads_its_folder(tmp_path):
     ]
     assert (
         pushed[0]["url"]
-        == "https://huggingface.co/datasets/acme/opengloss-{hf_schemas.DEFAULT_RELEASE}-senses"
+        == f"https://huggingface.co/datasets/acme/opengloss-{hf_schemas.DEFAULT_RELEASE}-senses"
     )
 
 
