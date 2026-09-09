@@ -1226,8 +1226,8 @@ def test_push_creates_each_repo_then_uploads_its_folder(tmp_path):
     assert all(call["private"] is True for call in api.created)
     assert all(call["exist_ok"] is True for call in api.created)
     assert [Path(call["folder_path"]).name for call in api.uploaded] == [
-        "opengloss-{hf_schemas.DEFAULT_RELEASE}-senses",
-        "opengloss-{hf_schemas.DEFAULT_RELEASE}-queries",
+        f"opengloss-{hf_schemas.DEFAULT_RELEASE}-senses",
+        f"opengloss-{hf_schemas.DEFAULT_RELEASE}-queries",
     ]
     assert (
         pushed[0]["url"]
