@@ -1872,3 +1872,17 @@ the paper, the original and v1.1/v1.3 datasets) renamed **OpenGloss 1.x**; a new
 paper. Needed the token's *collections* permission (the fine-grained token had only
 repo read/write until the author added it); descriptions are capped at 150 characters.
 `scripts/hf_collections.py` re-runs after each release.
+
+**2026-09-09 ~07:30 — paper review G (v2.3 delta) findings acted on.** (1) The cards
+described `lexicon.aliases` and `inflections` alias rows as populated; nothing writes
+them yet (`aliases` is `[]` on all 165,291 rows; the 1,267 `alias_of` edges are the only
+alias links) — template, field description and all 16 live cards now say so. Open item:
+an alias-population pass (disambiguator variants, leading-article forms, initialisms).
+(2) WordNet-derived lexemes are **40,643** (tier 5's 38,100 + tier 6's 2,543), not
+38,100 — README fixed; the cards were already right. (3) Reviewer's measurements to
+carry into the paper: WordNet lemma coverage **68.2% as shipped, 40.6% excluding
+WordNet-derived entries**; shared lemmas 100,436 (complementarity claim retired);
+wamerican 64.8% as headwords / 98.8% resolvable; `senses_zero_relations` regressed to
+4,722 (tiers 5–6 are sparse) — a regen pass (~$2) is the fix. (4) The tier-5 judge
+ablation (81.3 on a curated inventory vs 66.7–70.2 on generated ones, with the two
+"what the model invents" checks moving 36 and 42 points) is the paper's strongest result.
