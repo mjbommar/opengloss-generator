@@ -1219,17 +1219,20 @@ def test_push_creates_each_repo_then_uploads_its_folder(tmp_path):
         result.out_dir, resolve_repos("senses,queries"), owner="acme", private=True, api=api
     )
     assert [call["repo_id"] for call in api.created] == [
-        "acme/opengloss-v2.2-senses",
-        "acme/opengloss-v2.2-queries",
+        f"acme/opengloss-{hf_schemas.DEFAULT_RELEASE}-senses",
+        f"acme/opengloss-{hf_schemas.DEFAULT_RELEASE}-queries",
     ]
     assert all(call["repo_type"] == "dataset" for call in api.created)
     assert all(call["private"] is True for call in api.created)
     assert all(call["exist_ok"] is True for call in api.created)
     assert [Path(call["folder_path"]).name for call in api.uploaded] == [
-        "opengloss-v2.2-senses",
-        "opengloss-v2.2-queries",
+        "opengloss-{hf_schemas.DEFAULT_RELEASE}-senses",
+        "opengloss-{hf_schemas.DEFAULT_RELEASE}-queries",
     ]
-    assert pushed[0]["url"] == "https://huggingface.co/datasets/acme/opengloss-v2.2-senses"
+    assert (
+        pushed[0]["url"]
+        == "https://huggingface.co/datasets/acme/opengloss-{hf_schemas.DEFAULT_RELEASE}-senses"
+    )
 
 
 def test_export_does_not_push_by_itself(tmp_path):
