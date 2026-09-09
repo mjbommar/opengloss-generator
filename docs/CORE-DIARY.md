@@ -1865,3 +1865,10 @@ reconcile converged, re-judge 73.0, store-wide audit (165,291 files; 0 cycles;
 reciprocity 94.2 / 94.3; 4,722 senses without relations — constants filled by the
 closing script). The 16 v2.2 cards point at v2.3. **Goal 6 complete**: tier 6 $45.17 +
 pilots ≈ $1 + closing $2.50 ≈ **$49**; total enrichment spend ≈ **$1,080**.
+
+**2026-09-09 06:30 — Hub collections.** The existing "OpenGloss" collection (13 items:
+the paper, the original and v1.1/v1.3 datasets) renamed **OpenGloss 1.x**; a new
+**OpenGloss 2.x** collection created with the 16 v2.3 datasets (senses first) and the
+paper. Needed the token's *collections* permission (the fine-grained token had only
+repo read/write until the author added it); descriptions are capped at 150 characters.
+`scripts/hf_collections.py` re-runs after each release.

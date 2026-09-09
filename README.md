@@ -31,6 +31,7 @@ published on Hugging Face as a family of 16 datasets under CC-BY 4.0, all joinab
 derived ids. 38,100 lexemes are derived from Princeton WordNet 3.0 (WordNet License,
 `LICENSES/WordNet.txt`); the `source` column and the `migrate` provenance records say
 which. Start with [`opengloss-v2.3-senses`](https://huggingface.co/datasets/mjbommar/opengloss-v2.3-senses).
+The whole family is listed in the [OpenGloss 2.x collection](https://huggingface.co/collections/mjbommar/opengloss-2x-6aa132577f2cd0ca0c15745e); the v1.x releases are in [OpenGloss 1.x](https://huggingface.co/collections/mjbommar/opengloss-1x-69304505fa0ddaaad8a3ca28).
 (v2.0, v2.1 and v2.2 stay published; their cards point here.)
 
 | Dataset | Grain |
