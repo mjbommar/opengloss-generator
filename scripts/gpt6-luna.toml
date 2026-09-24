@@ -1,0 +1,196 @@
+# Every generating stage on gpt-6-luna, flex, reasoning "low"; no writer rotation.
+# Derived from scripts/luna-only.toml 2026-09-23 for the post-v2.3 fill round
+# (docs/FILL-ROUND-V2.4.md). The judge (`qa`) policy is unchanged: it is a different model
+# family on purpose and is not run by the fill chain.
+
+[policies.overview]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 2048
+expected_output_tokens = 200
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.senses]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 8192
+expected_output_tokens = 600
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.renditions]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 8192
+expected_output_tokens = 400
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.examples]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 8192
+expected_output_tokens = 1200
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.sense_check]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 2048
+expected_output_tokens = 100
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.etymology]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 2048
+expected_output_tokens = 400
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.encyclopedia]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 8192
+expected_output_tokens = 1600
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.lexical_explanation]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 1024
+expected_output_tokens = 150
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.classify_kind]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 2048
+expected_output_tokens = 100
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.hygiene]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 2048
+expected_output_tokens = 300
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.tag_domain]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 2048
+expected_output_tokens = 100
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.resolve]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 2048
+expected_output_tokens = 100
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.spans]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 2048
+expected_output_tokens = 100
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.frontier]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 2048
+expected_output_tokens = 200
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.queries]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 4096
+expected_output_tokens = 400
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.contrasts]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 4096
+expected_output_tokens = 500
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.qa_pairs]
+model = "gpt-6-luna"
+service_tier = "flex"
+reasoning_effort = "low"
+max_tokens = 8192
+expected_output_tokens = 510
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+[policies.qa]
+model = "claude-opus-5"
+service_tier = "default"
+max_tokens = 8192
+expected_output_tokens = 800
+timeout_seconds = 900.0
+max_attempts = 6
+writer_seed = 0
+
+# Account limits for gpt-6-luna on 2026-09-23: 30,000 RPM, 180M TPM (response headers).
+# Twelve chain processes share them, so each gets a twelfth with headroom. Flex calls take
+# ~5-30 s, so throughput comes from workers, not from the limiter. `max_flex_429s` is
+# set high on purpose: this round is flex-only by instruction, so a capacity 429 is retried
+# (and, if still short, left for the next idempotent pass) instead of downgrading to `auto`.
+[concurrency]
+workers = 256
+requests_per_minute = 2400
+tokens_per_minute = 14000000
+max_flex_429s = 1000000
+backoff_base_seconds = 2.0
+backoff_max_seconds = 120.0
