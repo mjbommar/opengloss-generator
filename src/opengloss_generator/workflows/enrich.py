@@ -164,6 +164,8 @@ class RenditionField(StrEnum):
     EXAMPLES = "examples"
     ENCYCLOPEDIA = "encyclopedia"
     EXPLANATION = "explanation"
+    #: A contrast paragraph's leveled renditions (docs/LEVELED-PRETRAIN-PLAN.md § 3.2).
+    CONTRAST = "contrast"
 
 
 @dataclass(slots=True)
@@ -472,6 +474,53 @@ def _entry_work(entry: Lexeme, request: RenditionRequest) -> _Work | None:
     )
 
 
+def _contrast_works(entry: Lexeme, request: RenditionRequest) -> list[_Work]:
+    """Return one work item per stored contrast that lacks a requested rendition.
+
+    The source shown to the model is the canonical paragraph behind a one-line header
+    naming the related term and the stored verdict, so a rewrite keeps both ends of the
+    pair and the same judgement about them (docs/LEVELED-PRETRAIN-PLAN.md § 3.2). The
+    headword-absent check applies (see :func:`_checks_headword_absent`), with the
+    headword's own forms, because a leveled contrast that stops naming its headword has
+    stopped contrasting it with anything.
+
+    Args:
+        entry: The entry whose contrasts are rendered.
+        request: The contrast rendition request.
+
+    Returns:
+        The work items, in the entry's contrast order.
+    """
+    terms = _edge_terms(entry)
+    forms = list(spans.generate_forms(entry.headword))
+    works: list[_Work] = []
+    for contrast in entry.contrasts:
+        missing = contrast.text.missing(request.targets())
+        if not missing:
+            continue
+        term = terms.get(contrast.edge_id) or contrast.edge_id.rsplit("->", 1)[-1]
+        header = (
+            f"(Related term: {term}. Stored verdict on the relation: {contrast.verdict.value}.) "
+        )
+        works.append(
+            _Work(
+                field=RenditionField.CONTRAST,
+                label=contrast.edge_id,
+                source=header + strip_markdown(contrast.canonical_text()),
+                renditions=contrast.text,
+                targets=missing,
+                existing=_existing_view(contrast.text),
+                forms=forms,
+            )
+        )
+    return works
+
+
+def _edge_terms(entry: Lexeme) -> dict[str, str]:
+    """Return ``edge_id -> target surface term`` for every relation edge on the entry."""
+    return {edge.edge_id: edge.target for edge in entry.edges()}
+
+
 def _plan(entry: Lexeme, spec: EnrichmentSpec) -> list[_Work]:
     """Return one work item per ``(owner, field)`` that has missing targets."""
     plan: list[_Work] = []
@@ -483,6 +532,8 @@ def _plan(entry: Lexeme, spec: EnrichmentSpec) -> list[_Work]:
                 work = _sense_work(entry, pos_entry, sense, sense_id, request)
                 if work is not None:
                     plan.append(work)
+        elif request.field is RenditionField.CONTRAST:
+            plan.extend(_contrast_works(entry, request))
         else:
             work = _entry_work(entry, request)
             if work is not None:
@@ -599,7 +650,10 @@ def _checks_headword_absent(work: _Work, policy: ReadabilityConfig) -> bool:
     Returns:
         Whether to measure and act on the check for this work item.
     """
-    return policy.headword_absent_retry and work.field is RenditionField.EXAMPLES
+    return policy.headword_absent_retry and work.field in {
+        RenditionField.EXAMPLES,
+        RenditionField.CONTRAST,
+    }
 
 
 def _checks_near_copy(work: _Work, policy: ReadabilityConfig) -> bool:
@@ -669,7 +723,7 @@ async def _render(
         prompt=prompts.build_renditions_prompt(
             headword, work.field.value, work.source, work.existing, work.targets
         ),
-        prompt_version=prompts.PROMPT_VERSION,
+        prompt_version=prompts.renditions_prompt_version(work.field.value, work.targets),
         writer_key=work.label,
     )
     produced = _measure(
@@ -840,7 +894,7 @@ async def _retry_renditions(
                 failing,
                 feedback=feedback,
             ),
-            prompt_version=prompts.PROMPT_VERSION,
+            prompt_version=prompts.renditions_prompt_version(work.field.value, failing),
             writer_key=work.label,
         )
     except StageFailedError as exc:

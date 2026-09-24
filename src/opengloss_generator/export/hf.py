@@ -792,6 +792,7 @@ def _export_pretrain(
                 "level_used": record.level_used,
                 "text": record.text,
                 "n_words": record.n_words,
+                "sections_at_level": record.sections_at_level,
                 "tier": _tier_of(stats, lexeme_id),
             },
         )

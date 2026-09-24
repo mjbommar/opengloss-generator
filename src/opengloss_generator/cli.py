@@ -793,7 +793,9 @@ def enrich(
     registers: Annotated[str | None, typer.Option("--registers")] = None,
     fields: Annotated[
         str | None,
-        typer.Option("--fields", help="Comma list: gloss,examples,encyclopedia,explanation."),
+        typer.Option(
+            "--fields", help="Comma list: gloss,examples,encyclopedia,explanation,contrast."
+        ),
     ] = None,
     sections: Annotated[
         str | None,
@@ -2271,6 +2273,13 @@ def export_pretrain_cmd(
     from_list: Annotated[
         Path | None, typer.Option("--from-list", help="Restrict to these headwords.")
     ] = None,
+    allow_duplicates: Annotated[
+        bool,
+        typer.Option(
+            "--allow-duplicates",
+            help="Drop and count duplicate documents instead of failing (diagnosis only).",
+        ),
+    ] = False,
     store: _StoreOpt = None,
     config_path: _ConfigOpt = None,
 ) -> None:
@@ -2304,6 +2313,7 @@ def export_pretrain_cmd(
         per_entry=per_entry,
         seed=seed,
         lexeme_ids=lexeme_ids,
+        allow_duplicates=allow_duplicates,
     )
     _echo_summary({"out": str(out), **summary.as_dict()})
 

@@ -15,10 +15,14 @@ import pytest
 from opengloss_generator import prompts, spans
 from opengloss_generator.contracts import DraftRendition
 from opengloss_generator.hygiene import is_headword_initial, is_near_copy
+from opengloss_generator.identity import edge_id, sense_id
 from opengloss_generator.readability import flesch_kincaid_grade, grade_band
 from opengloss_generator.runner import RunSession
 from opengloss_generator.schema import (
+    Contrast,
+    ContrastVerdict,
     EntityType,
+    Lexeme,
     LexemeKind,
     ProperNounInfo,
     Provenance,
@@ -1058,3 +1062,104 @@ def test_a_retry_that_still_copies_never_displaces_one_that_does_not():
     )
     assert enrich_module._is_better(also_copy, copy, check_initial=False, check_near_copy=True)
     assert not enrich_module._is_better(copy, also_copy, check_initial=False, check_near_copy=True)
+
+
+# --------------------------------------------------------------------------------------
+# Leveled contrasts and level x register crossing (docs/LEVELED-PRETRAIN-PLAN.md)
+# --------------------------------------------------------------------------------------
+
+
+def _with_contrast(entry: Lexeme) -> Lexeme:
+    entry.contrasts.append(
+        Contrast(
+            edge_id=edge_id(sense_id(entry.lexeme_id, "verb", 0), "synonym", "rappel"),
+            text=Renditions[str](
+                root=[canonical_rendition(f"{entry.headword} and rappel name one descent.")]
+            ),
+            verdict=ContrastVerdict.RELATED_AS_TYPED,
+        )
+    )
+    return entry
+
+
+def _contrast_spec() -> EnrichmentSpec:
+    return EnrichmentSpec(
+        renditions=[
+            RenditionRequest(
+                field=RenditionField.CONTRAST,
+                levels=[ReadingLevel.GRADE_5, ReadingLevel.COLLEGE],
+            )
+        ]
+    )
+
+
+async def test_contrast_renditions_are_added_at_each_requested_level(session):
+    entry = _with_contrast(make_entry())
+    result = await enrich_entry(entry, _contrast_spec(), session.stages)
+
+    assert result.renditions_added == 2
+    contrast = entry.contrasts[0]
+    levels = {r.reading_level for r in contrast.text if not r.is_canonical}
+    assert levels == {ReadingLevel.GRADE_5, ReadingLevel.COLLEGE}
+    assert contrast.canonical_text() == "abseil and rappel name one descent."
+    calls = [p for p in entry.provenance.values() if p.stage is StageName.RENDITIONS]
+    assert len(calls) == 1
+    assert calls[0].prompt_version == prompts.LEVELED_PROMPT_VERSION
+
+
+async def test_contrast_renditions_are_idempotent(session):
+    entry = _with_contrast(make_entry())
+    await enrich_entry(entry, _contrast_spec(), session.stages)
+    again = await enrich_entry(entry, _contrast_spec(), session.stages)
+    assert again.renditions_added == 0
+    assert again.cost_usd == 0.0
+
+
+def test_contrast_plan_is_one_work_item_per_contrast():
+    entry = _with_contrast(make_entry())
+    plan = plan_renditions(entry, _contrast_spec())
+    assert plan == [(entry.contrasts[0].edge_id, "contrast", 2)]
+
+
+def test_contrast_source_names_the_related_term_and_the_verdict():
+    entry = _with_contrast(make_entry())
+    (work,) = enrich_module._contrast_works(entry, _contrast_spec().renditions[0])
+    assert "Related term: rappel" in work.source
+    assert "related_as_typed" in work.source
+
+
+async def test_a_contrast_rendition_missing_the_headword_is_retried_and_flagged(session):
+    entry = _with_contrast(make_entry(ABSENT_HEADWORD))
+    result = await enrich_entry(entry, _contrast_spec(), session.stages)
+    assert result.renditions_added == 2
+    # The first answer never names the headword; the single retry (recognised by the
+    # headword-absent feedback) does, so both renditions come from it and none is flagged.
+    calls = [p for p in entry.provenance.values() if p.stage is StageName.RENDITIONS]
+    assert len(calls) == 1
+    assert result.calls == 2
+    leveled = [r for r in entry.contrasts[0].text if not r.is_canonical]
+    assert all(QAFlag.OG_HEADWORD_ABSENT not in r.assessment.qa_flags for r in leveled)
+    assert all(ABSENT_HEADWORD in r.content for r in leveled)
+
+
+def test_crossed_level_and_register_targets_get_the_leveled_prompt_and_version():
+    crossed = [(ReadingLevel.GRADE_5, Register.TECHNICAL)]
+    neutral = [(ReadingLevel.NEUTRAL, Register.TECHNICAL)]
+    prompt = prompts.build_renditions_prompt("abseil", "gloss", "source", [], crossed)
+    assert "school science or civics textbook" in prompt
+    assert prompts.renditions_prompt_version("gloss", crossed) == prompts.LEVELED_PROMPT_VERSION
+    plain = prompts.build_renditions_prompt("abseil", "gloss", "source", [], neutral)
+    assert "school science" not in plain
+    assert prompts.renditions_prompt_version("gloss", neutral) == prompts.PROMPT_VERSION
+
+
+def test_leveled_explanation_targets_get_the_explanation_guidance():
+    targets = [(ReadingLevel.GRADE_5, Register.PLAIN)]
+    prompt = prompts.build_renditions_prompt("abseil", "explanation", "source", [], targets)
+    assert "Field note (explanation, leveled)" in prompt
+    assert prompts.renditions_prompt_version("explanation", targets) == (
+        prompts.LEVELED_PROMPT_VERSION
+    )
+    neutral = [(ReadingLevel.NEUTRAL, Register.PLAIN)]
+    plain = prompts.build_renditions_prompt("abseil", "explanation", "source", [], neutral)
+    assert "Field note" not in plain

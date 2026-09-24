@@ -27,18 +27,21 @@ project (D-1): a consumer holding only the JSONL can recompute what produced a r
 
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from opengloss_generator.errors import StoreError
+from opengloss_generator.errors import DuplicateDocumentError, StoreError
 from opengloss_generator.readability import word_count
 from opengloss_generator.schema import (
     CANONICAL_KEY,
+    Contrast,
     Etymology,
     Example,
     Lexeme,
+    QAFlag,
     ReadingLevel,
     Register,
     RelationType,
@@ -220,7 +223,55 @@ def _etymology_prose(etymology: Etymology) -> str:
     return " ".join(parts)
 
 
-def _render_dictionary(entry: Lexeme, level: ReadingLevel) -> tuple[str, bool] | None:
+@dataclass(slots=True)
+class _Doc:
+    """One rendered document before it becomes a record.
+
+    ``at_level`` counts the leveled sections (a gloss, an example group, an overview, an
+    explanation, a register line, a contrast note) whose text was written at the
+    requested level; ``fallback`` counts those that fell back to neutral text. At
+    ``neutral`` nothing falls back. A non-neutral document with ``at_level == 0`` carries
+    no text of its own and is never emitted (docs/LEVELED-PRETRAIN-PLAN.md § 4).
+    """
+
+    text: str
+    at_level: int = 0
+    fallback: int = 0
+
+
+class _Tally:
+    """Accumulates one document's leveled-section counts while it is rendered."""
+
+    __slots__ = ("at_level", "fallback")
+
+    def __init__(self) -> None:
+        self.at_level = 0
+        self.fallback = 0
+
+    def note(self, used_fallback: bool) -> None:
+        """Count one leveled section by whether it fell back."""
+        if used_fallback:
+            self.fallback += 1
+        else:
+            self.at_level += 1
+
+    def doc(self, lines: list[str]) -> _Doc:
+        """Return the finished document."""
+        return _Doc("\n".join(lines), self.at_level, self.fallback)
+
+
+def _join_sentences(bits: list[str]) -> str:
+    """Join labelled register lines with ``; `` without doubling their end punctuation."""
+    trimmed = [bit.rstrip().rstrip(".;") for bit in bits]
+    return "; ".join(trimmed) + "."
+
+
+def _sense_heading(pos_value: str, number: int, gloss: str) -> str:
+    """Return the ``## <Pos> sense <n>: <gloss>`` heading shared by two templates."""
+    return f"## {pos_value.capitalize()} sense {number}: {gloss}"
+
+
+def _render_dictionary(entry: Lexeme, level: ReadingLevel) -> _Doc | None:
     """Render the dictionary-entry template: headword, POS blocks, numbered senses.
 
     Args:
@@ -228,11 +279,10 @@ def _render_dictionary(entry: Lexeme, level: ReadingLevel) -> tuple[str, bool] |
         level: The requested reading level.
 
     Returns:
-        ``(text, used_fallback)``, or ``None`` if no part-of-speech entry has a live
-        sense to show.
+        The document, or ``None`` if no part-of-speech entry has a live sense to show.
     """
     lines: list[str] = [f"# {entry.headword}"]
-    used_fallback = False
+    tally = _Tally()
     added = False
 
     for pos_entry in entry.pos_entries:
@@ -264,66 +314,99 @@ def _render_dictionary(entry: Lexeme, level: ReadingLevel) -> tuple[str, bool] |
             if gloss_pick is None:
                 continue
             gloss_text, gloss_fallback = gloss_pick
-            used_fallback = used_fallback or gloss_fallback
+            tally.note(gloss_fallback)
             lines.append(f"{number}. {gloss_text}")
             example_texts, example_fallback = _pick_examples(sense.examples, level)
-            used_fallback = used_fallback or example_fallback
+            if example_texts:
+                tally.note(example_fallback)
             for example_text in example_texts:
                 lines.append(f'   - "{example_text}"')
             added = True
 
     if not added:
         return None
-    return "\n".join(lines), used_fallback
+    return tally.doc(lines)
 
 
-def _render_thesaurus(entry: Lexeme, level: ReadingLevel) -> tuple[str, bool] | None:
-    """Render the thesaurus-entry template: per-sense synonyms/antonyms/hypernyms/see-also.
+def _contrasts_by_sense(entry: Lexeme) -> dict[str, list[Contrast]]:
+    """Group the entry's contrasts under the sense id their edge starts from.
 
-    Relation targets are surface forms, not leveled text, so this template never falls
-    back — ``level`` is accepted only so every template shares one call signature.
+    ``identity.edge_id`` builds ``"<source_sense_id>-<relation>-><target>"``, so the
+    source sense id is everything before the relation segment of the edge id.
+    """
+    grouped: dict[str, list[Contrast]] = {}
+    for contrast in entry.contrasts:
+        head = contrast.edge_id.rsplit("->", 1)[0]
+        source_sense = head.rsplit("-", 1)[0]
+        grouped.setdefault(source_sense, []).append(contrast)
+    return grouped
+
+
+def _render_thesaurus(entry: Lexeme, level: ReadingLevel) -> _Doc | None:
+    """Render the thesaurus-entry template: relation lists plus "choosing between them".
+
+    Per live sense with any listed relation or contrast: a heading carrying the sense's
+    gloss at ``level``, the synonym/antonym/broader/see-also lists, and one "Choosing
+    between them" note per stored contrast of that sense, at ``level``
+    (docs/LEVELED-PRETRAIN-PLAN.md § 4.3). The heading gloss and each contrast note are
+    leveled sections; the lists are surface forms and are not.
 
     Args:
         entry: The entry to render.
-        level: Unused; present for signature parity with the other renderers.
+        level: The requested reading level.
 
     Returns:
-        ``(text, False)``, or ``None`` if no live sense has any of the four relation
-        types this template lists.
+        The document, or ``None`` if no live sense has a listed relation or a contrast.
     """
     lines: list[str] = [f"# {entry.headword}"]
+    tally = _Tally()
     added = False
+    contrasts = _contrasts_by_sense(entry)
+    terms = {edge.edge_id: edge.target for edge in entry.edges()}
 
-    for pos_entry in entry.pos_entries:
-        for sense in pos_entry.senses:
-            if sense.retired:
+    for pos_entry, sense, sid in entry.iter_senses():
+        if sense.retired:
+            continue
+        synonyms = sense.relations_of(RelationType.SYNONYM)
+        antonyms = sense.relations_of(RelationType.ANTONYM)
+        hypernyms = sense.relations_of(RelationType.HYPERNYM)
+        see_also = sense.relations_of(RelationType.SEE_ALSO)
+        notes: list[str] = []
+        for contrast in contrasts.get(sid, []):
+            pick = _pick_text(contrast.text, level)
+            if pick is None:
                 continue
-            synonyms = sense.relations_of(RelationType.SYNONYM)
-            antonyms = sense.relations_of(RelationType.ANTONYM)
-            hypernyms = sense.relations_of(RelationType.HYPERNYM)
-            see_also = sense.relations_of(RelationType.SEE_ALSO)
-            if not (synonyms or antonyms or hypernyms or see_also):
-                continue
-            lines.append(
-                f"## {pos_entry.pos.value.capitalize()} sense {sense.index + 1}: "
-                f"{sense.canonical_gloss()}"
-            )
-            if synonyms:
-                lines.append("Synonyms: " + ", ".join(r.target.term for r in synonyms) + ".")
-            if antonyms:
-                lines.append("Antonyms: " + ", ".join(r.target.term for r in antonyms) + ".")
-            if hypernyms:
-                lines.append("Broader terms: " + ", ".join(r.target.term for r in hypernyms) + ".")
-            if see_also:
-                lines.append("See also: " + ", ".join(r.target.term for r in see_also) + ".")
-            added = True
+            text, fallback = pick
+            tally.note(fallback)
+            target = terms.get(contrast.edge_id) or _parse_edge_target(contrast.edge_id)
+            notes.append(f"{entry.headword} or {target or 'a related term'}? {text}")
+        if not (synonyms or antonyms or hypernyms or see_also or notes):
+            continue
+        gloss_pick = _pick_text(sense.gloss, level)
+        gloss = sense.canonical_gloss()
+        if gloss_pick is not None:
+            gloss, gloss_fallback = gloss_pick
+            tally.note(gloss_fallback)
+        lines.append(_sense_heading(pos_entry.pos.value, sense.index + 1, gloss))
+        if synonyms:
+            lines.append("Synonyms: " + ", ".join(r.target.term for r in synonyms) + ".")
+        if antonyms:
+            lines.append("Antonyms: " + ", ".join(r.target.term for r in antonyms) + ".")
+        if hypernyms:
+            lines.append("Broader terms: " + ", ".join(r.target.term for r in hypernyms) + ".")
+        if see_also:
+            lines.append("See also: " + ", ".join(r.target.term for r in see_also) + ".")
+        if notes:
+            lines.append("Choosing between them:")
+            lines.extend(notes)
+        added = True
 
     if not added:
         return None
-    return "\n".join(lines), False
+    return tally.doc(lines)
 
 
-def _render_encyclopedia(entry: Lexeme, level: ReadingLevel) -> tuple[str, bool] | None:
+def _render_encyclopedia(entry: Lexeme, level: ReadingLevel) -> _Doc | None:
     """Render the encyclopedia-article template: encyclopedia text, etymology, explanation.
 
     Args:
@@ -331,17 +414,16 @@ def _render_encyclopedia(entry: Lexeme, level: ReadingLevel) -> tuple[str, bool]
         level: The requested reading level.
 
     Returns:
-        ``(text, used_fallback)``, or ``None`` if the entry has none of the three
-        sections.
+        The document, or ``None`` if the entry has none of the three sections.
     """
     lines: list[str] = [f"# {entry.headword}"]
-    used_fallback = False
+    tally = _Tally()
     added = False
 
     overview = _pick_text(entry.encyclopedia, level)
     if overview is not None:
         text, fallback = overview
-        used_fallback = used_fallback or fallback
+        tally.note(fallback)
         lines.append("## Overview")
         lines.append(text)
         added = True
@@ -356,76 +438,97 @@ def _render_encyclopedia(entry: Lexeme, level: ReadingLevel) -> tuple[str, bool]
     explanation = _pick_text(entry.lexical_explanation, level)
     if explanation is not None:
         text, fallback = explanation
-        used_fallback = used_fallback or fallback
+        tally.note(fallback)
         lines.append("## Why This Word")
         lines.append(text)
         added = True
 
     if not added:
         return None
-    return "\n".join(lines), used_fallback
+    return tally.doc(lines)
 
 
-def _render_usage_note(entry: Lexeme, level: ReadingLevel) -> tuple[str, bool] | None:
-    """Render the usage-note template: register variants side by side, plus contrasts.
+#: Generation-time flags that keep a leveled register rendition out of the usage note.
+_EXCLUDING_FLAGS = frozenset(
+    {
+        QAFlag.OG_READABILITY_MISS,
+        QAFlag.OG_HEADWORD_INITIAL,
+        QAFlag.OG_NEAR_COPY,
+        QAFlag.OG_HARD_VOCABULARY,
+    }
+)
+
+
+def _flagged(renditions: Renditions[str], level: ReadingLevel, register: Register) -> bool:
+    """Whether the rendition at ``(level, register)`` still carries an excluding flag."""
+    rendition = renditions.get(level, register)
+    if rendition is None or rendition.assessment is None:
+        return False
+    return bool(_EXCLUDING_FLAGS.intersection(rendition.assessment.qa_flags))
+
+
+def _render_usage_note(entry: Lexeme, level: ReadingLevel) -> _Doc | None:
+    """Render the usage-note template: one sense's register variants side by side.
+
+    At ``neutral`` every register the sense has is listed. At any other level only the
+    registers written *at that level* are listed: a neutral register line under a grade-5
+    document would be copied text (docs/LEVELED-PRETRAIN-PLAN.md § 4.4). Contrast
+    paragraphs belong to the thesaurus template, not here, so no paragraph appears in two
+    templates of one entry.
 
     Args:
         entry: The entry to render.
         level: The requested reading level.
 
     Returns:
-        ``(text, used_fallback)``, or ``None`` if no live sense has a register variant
-        and the entry has no contrasts either.
+        The document, or ``None`` if no live sense has a register variant at ``level``.
     """
     lines: list[str] = [f"# {entry.headword}"]
-    used_fallback = False
+    tally = _Tally()
     added = False
 
-    for pos_entry in entry.pos_entries:
-        for sense in pos_entry.senses:
-            if sense.retired:
-                continue
-            variant_bits: list[str] = []
-            for register in _USAGE_NOTE_REGISTERS:
-                pick = _pick_register_text(sense.gloss, level, register)
-                if pick is None:
-                    continue
-                text, fallback = pick
-                used_fallback = used_fallback or fallback
-                variant_bits.append(f"{_REGISTER_LABEL[register]}: {text}")
-            if variant_bits:
-                lines.append(
-                    f"## {pos_entry.pos.value.capitalize()} sense {sense.index + 1}: "
-                    f"{sense.canonical_gloss()}"
-                )
-                lines.append("; ".join(variant_bits) + ".")
-                added = True
-
-    contrast_lines: list[str] = []
-    for contrast in entry.contrasts:
-        pick = _pick_text(contrast.text, level)
-        if pick is None:
+    for pos_entry, sense, _sid in entry.iter_senses():
+        if sense.retired:
             continue
-        text, fallback = pick
-        used_fallback = used_fallback or fallback
-        target = _parse_edge_target(contrast.edge_id) or "a related term"
-        contrast_lines.append(f"Compared to {target}: {text}")
-    if contrast_lines:
-        lines.append("## Related Terms")
-        lines.extend(contrast_lines)
+        variant_bits: list[str] = []
+        for register in _USAGE_NOTE_REGISTERS:
+            pick = _pick_register_text(sense.gloss, level, register)
+            if pick is None:
+                continue
+            text, fallback = pick
+            if fallback:
+                continue
+            if level is not ReadingLevel.NEUTRAL and _flagged(sense.gloss, level, register):
+                # A leveled line still flagged after its retry stays in the store for
+                # lookup but is kept out of the corpus (LEVELED-PRETRAIN-PLAN § 6, L1).
+                continue
+            tally.note(used_fallback=False)
+            variant_bits.append(f"{_REGISTER_LABEL[register]}: {text}")
+        if not variant_bits:
+            continue
+        gloss_pick = _pick_text(sense.gloss, level)
+        gloss = gloss_pick[0] if gloss_pick is not None else sense.canonical_gloss()
+        lines.append(_sense_heading(pos_entry.pos.value, sense.index + 1, gloss))
+        lines.append(_join_sentences(variant_bits))
         added = True
 
     if not added:
         return None
-    return "\n".join(lines), used_fallback
+    return tally.doc(lines)
 
 
-_RENDER_FUNCS: dict[str, Callable[[Lexeme, ReadingLevel], tuple[str, bool] | None]] = {
+_RENDER_FUNCS: dict[str, Callable[[Lexeme, ReadingLevel], _Doc | None]] = {
     "dictionary": _render_dictionary,
     "thesaurus": _render_thesaurus,
     "encyclopedia": _render_encyclopedia,
     "usage_note": _render_usage_note,
 }
+
+#: ``level_used`` for a non-neutral document some of whose leveled sections fell back to
+#: neutral text (docs/LEVELED-PRETRAIN-PLAN.md § 4.2). A document all of whose leveled
+#: sections are at its level reports the level itself; ``neutral`` documents report
+#: ``neutral``.
+MIXED_LEVEL = "mixed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -439,6 +542,8 @@ class PretrainRecord:
     level_used: str
     text: str
     n_words: int
+    #: Leveled sections written at ``level`` (docs/LEVELED-PRETRAIN-PLAN.md § 4.2).
+    sections_at_level: int = 0
 
     def as_dict(self) -> dict[str, object]:
         """Return the JSONL row, field order matching ``docs/RETRIEVAL-DATA-PLAN.md``."""
@@ -450,6 +555,7 @@ class PretrainRecord:
             "level_used": self.level_used,
             "text": self.text,
             "n_words": self.n_words,
+            "sections_at_level": self.sections_at_level,
         }
 
 
@@ -503,6 +609,11 @@ def _select_templates(
     return [name for name in available if name in chosen]
 
 
+def _normalized(text: str) -> str:
+    """Return the duplicate-comparison key for a document: casefolded, whitespace-collapsed."""
+    return " ".join(text.casefold().split())
+
+
 def documents_for_entry(
     entry: Lexeme,
     *,
@@ -510,6 +621,7 @@ def documents_for_entry(
     levels: Sequence[ReadingLevel] = (ReadingLevel.NEUTRAL,),
     per_entry: int | None = None,
     seed: int = 0,
+    on_skip: Callable[[str, ReadingLevel], None] | None = None,
 ) -> list[PretrainRecord]:
     """Render every requested pretraining document for one entry, deterministically.
 
@@ -522,33 +634,52 @@ def documents_for_entry(
             every available one. When the cap is below what is available, the chosen
             subset is drawn deterministically from ``seed`` and the entry's id.
         seed: The mixing seed (see :func:`_select_templates`).
+        on_skip: Called with ``(template, level)`` for every non-neutral document that
+            was not emitted because it carried no text of its own at that level.
 
     Returns:
         One :class:`PretrainRecord` per ``(chosen template, level)`` pair that actually
-        has content, in template-then-level order.
+        has content of its own, in template-then-level order. A retired lexeme (no live
+        sense) returns nothing.
     """
+    if not any(not sense.retired for _, sense, _ in entry.iter_senses()):
+        # A lexeme with no live sense is retired; it renders nothing in any template.
+        return []
     available = _available_templates(entry, templates)
     chosen = _select_templates(entry, available, per_entry, seed)
 
     records: list[PretrainRecord] = []
     for template in chosen:
         render = _RENDER_FUNCS[template]
+        neutral = render(entry, ReadingLevel.NEUTRAL)
+        neutral_key = _normalized(neutral.text) if neutral is not None else None
         for level in levels:
-            result = render(entry, level)
-            if result is None:
+            doc = neutral if level is ReadingLevel.NEUTRAL else render(entry, level)
+            if doc is None:
+                if neutral is not None and on_skip is not None:
+                    # The template renders at neutral but has nothing at this level.
+                    on_skip(template, level)
                 continue
-            text, used_fallback = result
-            level_used = ReadingLevel.NEUTRAL.value if used_fallback else level.value
-            doc_id = f"{entry.lexeme_id}#pretrain-{template}-{level.value}"
+            if level is ReadingLevel.NEUTRAL:
+                level_used = level.value
+            else:
+                # No fallback copies (docs/LEVELED-PRETRAIN-PLAN.md § 4.1): a non-neutral
+                # document must carry text written at its level and differ from neutral.
+                if doc.at_level == 0 or _normalized(doc.text) == neutral_key:
+                    if on_skip is not None:
+                        on_skip(template, level)
+                    continue
+                level_used = level.value if doc.fallback == 0 else MIXED_LEVEL
             records.append(
                 PretrainRecord(
-                    id=doc_id,
+                    id=f"{entry.lexeme_id}#pretrain-{template}-{level.value}",
                     headword=entry.headword,
                     template=template,
                     level=level.value,
                     level_used=level_used,
-                    text=text,
-                    n_words=word_count(text),
+                    text=doc.text,
+                    n_words=word_count(doc.text),
+                    sections_at_level=doc.at_level,
                 )
             )
     return records
@@ -565,9 +696,18 @@ class ExportSummary:
     words_by_template: dict[str, int] = field(default_factory=dict)
     documents_by_level: dict[str, int] = field(default_factory=dict)
     words_by_level: dict[str, int] = field(default_factory=dict)
-    documents_by_fallback: dict[str, int] = field(
-        default_factory=lambda: {"exact": 0, "fallback": 0}
-    )
+    documents_by_fallback: dict[str, int] = field(default_factory=lambda: {"exact": 0, "mixed": 0})
+    #: Non-neutral documents not emitted because they had no text of their own at the
+    #: level, keyed ``"<template>/<level>"`` (docs/LEVELED-PRETRAIN-PLAN.md § 4.1).
+    documents_skipped_no_level_content: dict[str, int] = field(default_factory=dict)
+    #: Documents dropped by the duplicate gate when duplicates are allowed (§ 4.6).
+    documents_duplicate: int = 0
+
+    def skip(self, template: str, level: ReadingLevel) -> None:
+        """Count one non-neutral document skipped for having no leveled text."""
+        key = f"{template}/{level.value}"
+        skipped = self.documents_skipped_no_level_content
+        skipped[key] = skipped.get(key, 0) + 1
 
     def record(self, doc: PretrainRecord) -> None:
         """Fold one written record's counts into the summary."""
@@ -581,7 +721,7 @@ class ExportSummary:
         by_level[doc.level] = by_level.get(doc.level, 0) + 1
         words_by_level = self.words_by_level
         words_by_level[doc.level] = words_by_level.get(doc.level, 0) + doc.n_words
-        bucket = "exact" if doc.level_used == doc.level else "fallback"
+        bucket = "exact" if doc.level_used == doc.level else "mixed"
         self.documents_by_fallback[bucket] += 1
 
     def as_dict(self) -> dict[str, object]:
@@ -595,6 +735,10 @@ class ExportSummary:
             "documents_by_level": dict(sorted(self.documents_by_level.items())),
             "words_by_level": dict(sorted(self.words_by_level.items())),
             "documents_by_fallback": dict(self.documents_by_fallback),
+            "documents_skipped_no_level_content": dict(
+                sorted(self.documents_skipped_no_level_content.items())
+            ),
+            "documents_duplicate": self.documents_duplicate,
         }
 
 
@@ -607,6 +751,7 @@ def export_pretrain(
     per_entry: int | None = None,
     seed: int = 0,
     lexeme_ids: Sequence[str] | None = None,
+    allow_duplicates: bool = False,
 ) -> ExportSummary:
     """Write one pretraining-document JSONL file for every entry in ``store``.
 
@@ -622,6 +767,7 @@ def export_pretrain(
         seed: The mixing seed for ``per_entry`` selection.
         lexeme_ids: Restrict to these headwords/ids, when given; otherwise every entry
             in the store.
+        allow_duplicates: Drop and count duplicates instead of failing (diagnosis only).
 
     Returns:
         Counts of what was written.
@@ -637,6 +783,7 @@ def export_pretrain(
             seed=seed,
             lexeme_ids=lexeme_ids,
             summary=summary,
+            allow_duplicates=allow_duplicates,
         ):
             handle.write(json.dumps(doc.as_dict(), ensure_ascii=False))
             handle.write("\n")
@@ -683,6 +830,7 @@ def iter_pretrain(
     seed: int = 0,
     lexeme_ids: Sequence[str] | None = None,
     summary: ExportSummary | None = None,
+    allow_duplicates: bool = False,
 ) -> Iterator[PretrainRecord]:
     """Yield every pretraining document the store supports, in :func:`export_pretrain` order.
 
@@ -699,16 +847,39 @@ def iter_pretrain(
         lexeme_ids: Restrict to these headwords/ids, when given.
         summary: Filled in as records are yielded, when given. Its counts are complete
             only once the iterator is exhausted.
+        allow_duplicates: When ``False`` (the default) the duplicate gate is fatal; when
+            ``True`` a duplicate is dropped and counted instead, for diagnosis only.
 
     Yields:
         One :class:`PretrainRecord` per rendered document.
+
+    Raises:
+        DuplicateDocumentError: If two distinct documents share normalized text and
+            ``allow_duplicates`` is ``False`` (docs/LEVELED-PRETRAIN-PLAN.md § 4.6).
     """
+    seen: dict[bytes, str] = {}
+    on_skip = summary.skip if summary is not None else None
     for entry in _entries_in_id_order(store, lexeme_ids):
         if summary is not None:
             summary.entries_scanned += 1
         for doc in documents_for_entry(
-            entry, templates=templates, levels=levels, per_entry=per_entry, seed=seed
+            entry,
+            templates=templates,
+            levels=levels,
+            per_entry=per_entry,
+            seed=seed,
+            on_skip=on_skip,
         ):
+            key = hashlib.blake2b(_normalized(doc.text).encode(), digest_size=12).digest()
+            first = seen.setdefault(key, doc.id)
+            if first != doc.id:
+                if not allow_duplicates:
+                    raise DuplicateDocumentError(
+                        f"pretraining documents {first} and {doc.id} have the same text"
+                    )
+                if summary is not None:
+                    summary.documents_duplicate += 1
+                continue
             if summary is not None:
                 summary.record(doc)
             yield doc

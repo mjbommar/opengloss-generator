@@ -21,12 +21,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from opengloss_generator.contracts import QA_MAX_SENSES
+from opengloss_generator.schema import ReadingLevel, Register
 from opengloss_generator.taxonomy import TAXONOMY_PROMPT_BLOCK
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from opengloss_generator.schema import Lexeme, ReadingLevel, Register
+    from opengloss_generator.schema import Lexeme
 
 __all__ = [
     "CLASSIFY_KIND_INSTRUCTIONS",
@@ -34,6 +35,7 @@ __all__ = [
     "ETYMOLOGY_INSTRUCTIONS",
     "EXAMPLES_INSTRUCTIONS",
     "FRONTIER_INSTRUCTIONS",
+    "LEVELED_PROMPT_VERSION",
     "LEXICAL_EXPLANATION_INSTRUCTIONS",
     "OVERVIEW_INSTRUCTIONS",
     "PROMPT_VERSION",
@@ -72,6 +74,7 @@ __all__ = [
     "build_spans_prompt",
     "build_tag_domain_prompt",
     "build_vocabulary_feedback",
+    "renditions_prompt_version",
 ]
 
 PROMPT_VERSION = "9"
@@ -910,7 +913,10 @@ def build_renditions_prompt(
     Args:
         headword: The lexeme's surface form.
         field: Which field is being rewritten (``gloss``, ``examples``,
-            ``encyclopedia``, ``explanation``).
+            ``encyclopedia``, ``explanation``, ``contrast``). A ``contrast`` field, and any
+            target crossing a non-neutral level with a non-plain register, adds a short
+            guidance block (docs/LEVELED-PRETRAIN-PLAN.md); see
+            :func:`renditions_prompt_version`.
         source: The canonical text to rewrite. Markdown is stripped from it by the
             caller, so the model is never shown emphasis markers it might imitate.
         existing: ``(reading_level, register, text)`` triples already present, shown so
@@ -927,6 +933,7 @@ def build_renditions_prompt(
         f"Field: {field}",
         f"Source: {source}",
     ]
+    lines.extend(_leveled_guidance(field, targets))
     if existing:
         lines.append("Rewrites that already exist (do not repeat these targets):")
         lines.extend(f"  - {level} / {style}: {text}" for level, style, text in existing)
@@ -936,6 +943,71 @@ def build_renditions_prompt(
         lines.append("")
         lines.append(feedback)
     return "\n".join(lines)
+
+
+#: Provenance tag for a rendition call whose per-call prompt carries the leveled-pretrain
+#: guidance below (docs/LEVELED-PRETRAIN-PLAN.md). ``RENDITIONS_INSTRUCTIONS`` itself is
+#: unchanged, so ``PROMPT_VERSION`` does not move (D-25); this tag marks the volatile half.
+LEVELED_PROMPT_VERSION = f"{PROMPT_VERSION}-leveled-2"
+
+_CONTRAST_GUIDANCE = (
+    "Field note (contrast): the source is a paragraph explaining how the headword differs "
+    "from one related term. Each rewrite must name both the headword and that related term, "
+    "keep the same judgement about how the two are related (near-synonyms stay "
+    "near-synonyms, opposites stay opposites, a pair the source calls only loosely related "
+    "stays loosely related), and keep the points that tell them apart. At grade_5 make the "
+    "difference concrete with one everyday situation where you would choose one word over "
+    "the other; at college keep the full nuance. Do not add facts the source does not state."
+)
+
+_CROSSED_GUIDANCE = (
+    "Target note: a target that names both a reading level other than neutral and a "
+    "register other than plain must satisfy both at once. The reading level's sentence and "
+    "vocabulary limits bind; the register sets the voice within them. grade_5 informal is "
+    "how you would tell a ten-year-old friend; grade_5 formal is a children's reference book; "
+    "grade_5 technical is the precise wording of a school science or civics textbook, still "
+    "within grade_5's limits. college informal is a well-read friend; college formal is a "
+    "scholarly reference work; college technical is the field's own terminology."
+)
+
+
+_EXPLANATION_GUIDANCE = (
+    "Field note (explanation, leveled): the source is a usage note that defines the headword "
+    "and says how it differs from nearby terms. Keep the core definition exactly, and keep "
+    "every distinction the source draws; do not invent a new relation between terms, and do "
+    "not call one term a kind of another unless the source says so. At college keep roughly "
+    "the source's length and every fact in it. At grade_5 you may shorten, but the core "
+    "definition and the single most important distinction must survive intact."
+)
+
+
+def _leveled_guidance(field: str, targets: Sequence[tuple[ReadingLevel, Register]]) -> list[str]:
+    """Return the per-call guidance lines for contrast, explanation and crossed targets."""
+    lines: list[str] = []
+    if field == "contrast":
+        lines.append(_CONTRAST_GUIDANCE)
+    if field == "explanation" and any(level is not ReadingLevel.NEUTRAL for level, _ in targets):
+        lines.append(_EXPLANATION_GUIDANCE)
+    if any(
+        level is not ReadingLevel.NEUTRAL and register is not Register.PLAIN
+        for level, register in targets
+    ):
+        lines.append(_CROSSED_GUIDANCE)
+    return lines
+
+
+def renditions_prompt_version(field: str, targets: Sequence[tuple[ReadingLevel, Register]]) -> str:
+    """Return the provenance prompt version for one rendition call.
+
+    Args:
+        field: The field being rewritten.
+        targets: The targets requested in the call.
+
+    Returns:
+        :data:`LEVELED_PROMPT_VERSION` when the call's prompt carries leveled guidance,
+        otherwise :data:`PROMPT_VERSION`.
+    """
+    return LEVELED_PROMPT_VERSION if _leveled_guidance(field, targets) else PROMPT_VERSION
 
 
 def build_examples_prompt(

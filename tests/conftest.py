@@ -306,7 +306,7 @@ def _rendition_set_payload(prompt: str) -> dict[str, Any]:
             return BOTH_RENDITION.format(headword=headword)
         if not retrying and headword == INITIAL_HEADWORD:
             return INITIAL_RENDITION.format(headword=headword)
-        if not retrying and headword == ABSENT_HEADWORD and field == "examples":
+        if not retrying and headword == ABSENT_HEADWORD and field in {"examples", "contrast"}:
             return ABSENT_RENDITION
         if (
             not retrying
@@ -317,7 +317,9 @@ def _rendition_set_payload(prompt: str) -> dict[str, Any]:
             return _field(prompt, "Source") or ""
         if headword == MARKDOWN_HEADWORD:
             return MARKDOWN_RENDITION.format(source=_field(prompt, "Source") or "")
-        template = SIMPLE_EXAMPLE if field == "examples" else SIMPLE_RENDITION
+        # A contrast rewrite must name its headword (docs/LEVELED-PRETRAIN-PLAN.md), so it
+        # is scripted from the headword-bearing template, as an example is.
+        template = SIMPLE_EXAMPLE if field in {"examples", "contrast"} else SIMPLE_RENDITION
         return template.format(level=level, register=register, field=field, headword=headword)
 
     return {

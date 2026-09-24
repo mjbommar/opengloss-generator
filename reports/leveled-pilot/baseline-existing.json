@@ -1,0 +1,1857 @@
+{
+ "judge": "claude-opus-5",
+ "items": 100,
+ "cost_usd": 1.0476,
+ "by": {
+  "all": {
+   "n": 100,
+   "meaning_preserved": 0.88,
+   "level_appropriate": 0.98,
+   "register_appropriate": 0.92,
+   "unparsed": 0
+  },
+  "gloss": {
+   "n": 100,
+   "meaning_preserved": 0.88,
+   "level_appropriate": 0.98,
+   "register_appropriate": 0.92,
+   "unparsed": 0
+  },
+  "gloss/college/plain": {
+   "n": 20,
+   "meaning_preserved": 0.85,
+   "level_appropriate": 1.0,
+   "register_appropriate": 0.65,
+   "unparsed": 0
+  },
+  "gloss/grade_5/plain": {
+   "n": 20,
+   "meaning_preserved": 0.75,
+   "level_appropriate": 0.95,
+   "register_appropriate": 1.0,
+   "unparsed": 0
+  },
+  "gloss/neutral/formal": {
+   "n": 20,
+   "meaning_preserved": 0.85,
+   "level_appropriate": 1.0,
+   "register_appropriate": 0.95,
+   "unparsed": 0
+  },
+  "gloss/neutral/informal": {
+   "n": 20,
+   "meaning_preserved": 0.95,
+   "level_appropriate": 0.95,
+   "register_appropriate": 1.0,
+   "unparsed": 0
+  },
+  "gloss/neutral/technical": {
+   "n": 20,
+   "meaning_preserved": 1.0,
+   "level_appropriate": 1.0,
+   "register_appropriate": 1.0,
+   "unparsed": 0
+  }
+ },
+ "results": [
+  {
+   "field": "gloss",
+   "owner": "julius_erving:noun:0",
+   "headword": "Julius Erving",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A basketball player from the United States, born in 1950, who played forward.",
+   "source": "United States basketball forward (born in 1950)",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple words, one clear sentence; all facts kept."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple words, one clear sentence; all facts kept.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "amortized:adjective:1",
+   "headword": "amortized",
+   "level": "college",
+   "register": "plain",
+   "text": "In computer science, describing a per-operation cost obtained by distributing the total cost of a sequence across its operations.",
+   "source": "In computer science, relating to analysis that determines the average cost per operation over a sequence of operations.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurately conveys averaging cost over a sequence; precise, plain college-level phrasing."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurately conveys averaging cost over a sequence; precise, plain college-level phrasing.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "rushed:adjective:0",
+   "headword": "rushed",
+   "level": "neutral",
+   "register": "formal",
+   "text": "Completed swiftly, with insufficient time for thorough review.",
+   "source": "Done quickly and with little time for careful checking.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate formal gloss; 'insufficient' slightly stronger than 'little' but acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate formal gloss; 'insufficient' slightly stronger than 'little' but acceptable.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "paste:verb:0",
+   "headword": "paste",
+   "level": "college",
+   "register": "plain",
+   "text": "To insert clipboard contents into a document or input field at the current cursor position.",
+   "source": "In computing, to insert content that has been copied to the system clipboard into a target document or field at the current cursor position.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Concise and precise; drops explicit domain label but 'clipboard' implies computing context."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Concise and precise; drops explicit domain label but 'clipboard' implies computing context.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "google_search:noun:0",
+   "headword": "Google Search",
+   "level": "neutral",
+   "register": "informal",
+   "text": "Looking for something online? Google's search tool can point you to pages, pictures, news, and more.",
+   "source": "Google Search is Google's web search service, known for helping users find webpages, images, news, and other online information.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Conversational hook fits informal voice; core meaning and examples all retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Conversational hook fits informal voice; core meaning and examples all retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "river_habitat:noun:2",
+   "headword": "river habitat",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A survey label for the places where plants and animals live in a river.",
+   "source": "An ecological category used in surveys to describe where organisms live within the river.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple, accurate; 'organisms' aptly rendered as plants and animals; 'survey label' stays clear and plain."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, accurate; 'organisms' aptly rendered as plants and animals; 'survey label' stays clear and plain.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "river_habitat:adjective:0",
+   "headword": "river habitat",
+   "level": "neutral",
+   "register": "formal",
+   "text": "Pertaining to environments bordering rivers that furnish conditions for wildlife and maintain ecosystem functions.",
+   "source": "Relating to habitats found along rivers that support and sustain wildlife and ecological processes.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Formal phrasing preserves sense; 'furnish conditions' slightly weaker but acceptable; level neutral-to-elevated."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Formal phrasing preserves sense; 'furnish conditions' slightly weaker but acceptable; level neutral-to-elevated.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "hundredfold:noun:0",
+   "headword": "hundredfold",
+   "level": "college",
+   "register": "plain",
+   "text": "A multiplicative factor of one hundred applied to a baseline value, denoting orders-of-magnitude increases in datasets, population metrics, or physical measurements. The term emphasizes the dramatic character of such scaling effects and is employed primarily in technical and scientific contexts to highlight nonlinear growth or amplification.",
+   "source": "The quantity that is one hundred times as large as a base amount, used to describe large increases in data or measurements.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": false,
+    "verdict_consistent": null,
+    "note": "Adds unsupported claims (nonlinear growth, usage domains); jargon-heavy voice violates plain register."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Adds unsupported claims (nonlinear growth, usage domains); jargon-heavy voice violates plain register.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "emmenthal:noun:0",
+   "headword": "emmenthal",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A pale yellow Swiss cheese from the Emmental area has small holes. It is firm and used in fondue, grated dishes, and sandwiches.",
+   "source": "A firm to semi-hard Swiss cheese from the Emmental region of Switzerland, typically pale yellow with characteristic holes formed during aging, and used in fondue, gratings, and sandwiches.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Adds inaccurate \"small\" holes, drops semi-hard and aging; phrasing reads as statement, not gloss."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Adds inaccurate \\\"small\\\" holes, drops semi-hard and aging; phrasing reads as statement, not gloss.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "remarry:verb:0",
+   "headword": "remarry",
+   "level": "neutral",
+   "register": "informal",
+   "text": "To get married again after your earlier marriage ends because of divorce or your spouse’s death.",
+   "source": "To marry again after the termination of a prior marriage, whether by divorce or the death of a spouse.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Both ending causes kept; plain second-person phrasing suits informal, neutral-level gloss."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Both ending causes kept; plain second-person phrasing suits informal, neutral-level gloss.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "dining:verb:0",
+   "headword": "dining",
+   "level": "neutral",
+   "register": "informal",
+   "text": "Eating the main meal of the day, usually with other people or on a special occasion.",
+   "source": "Present participle of dine: to eat the main meal of the day, especially in a social or formal setting",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Faithful; 'especially'→'usually' slightly overstates, and 'formal setting'→'special occasion' is a mild shift."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Faithful; 'especially'\\u2192'usually' slightly overstates, and 'formal setting'\\u2192'special occasion' is a mild shift.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "unit_square:noun:0",
+   "headword": "unit square",
+   "level": "neutral",
+   "register": "technical",
+   "text": "A planar square whose four congruent sides each have unit length, serving as a canonical geometric reference figure.",
+   "source": "A square in the plane whose side length is exactly one unit used as a standard geometric figure.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate; 'four congruent sides' redundant but harmless; diction fits technical register."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; 'four congruent sides' redundant but harmless; diction fits technical register.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "distention:noun:0",
+   "headword": "distention",
+   "level": "college",
+   "register": "plain",
+   "text": "Enlargement of a hollow viscus or anatomical region caused by elevated internal pressure, typically from accumulated gas, fluid, or tissue.",
+   "source": "The swelling or enlargement of a hollow organ or region due to internal pressure, often from gas, fluid, or tissue accumulation.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": false,
+    "verdict_consistent": null,
+    "note": "\"hollow viscus\" and \"anatomical region\" shift the voice to technical, not plain."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"\\\"hollow viscus\\\" and \\\"anatomical region\\\" shift the voice to technical, not plain.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "lubber:noun:1",
+   "headword": "lubber",
+   "level": "neutral",
+   "register": "formal",
+   "text": "An inexperienced or unskilled mariner, particularly one unfamiliar with conditions aboard a ship.",
+   "source": "A person lacking skill or experience in seafaring, especially one unaccustomed to life at sea.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Mariner\" wrongly implies a sailor; source says merely a person lacking seafaring skill."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Mariner\\\" wrongly implies a sailor; source says merely a person lacking seafaring skill.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "monteverdi:noun:0",
+   "headword": "monteverdi",
+   "level": "neutral",
+   "register": "technical",
+   "text": "An Italian composer (1567–1643), Monteverdi was a principal early Baroque figure whose innovations helped establish opera as a major musical form.",
+   "source": "Claudio Monteverdi, an Italian composer (1567–1643), central figure in early Baroque music and pivotal to the development of opera.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate; drops given name 'Claudio', a minor identifying detail, otherwise faithful and suitably technical."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; drops given name 'Claudio', a minor identifying detail, otherwise faithful and suitably technical.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "schools:noun:0",
+   "headword": "schools",
+   "level": "neutral",
+   "register": "technical",
+   "text": "Institutions that deliver formal education through structured curricula, instructional programs, and dedicated learning environments across primary, secondary, and tertiary levels.",
+   "source": "Educational institutions providing formal instruction and learning environments for students, typically at primary and secondary levels and including higher education.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate technical gloss; drops the 'typically' hedge but scope remains equivalent."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate technical gloss; drops the 'typically' hedge but scope remains equivalent.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "trouped:verb:0",
+   "headword": "trouped",
+   "level": "neutral",
+   "register": "formal",
+   "text": "Assembled performers or participants into a company for collective performance.",
+   "source": "To organize performers or participants into a performing company.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate formal paraphrase; tense shifts to past but matches headword form."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate formal paraphrase; tense shifts to past but matches headword form.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "sternutatory:noun:0",
+   "headword": "sternutatory",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A chemical substance that makes you sneeze, cough, and cry.",
+   "source": "a chemical substance that causes sneezing and coughing and crying",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Short, simple sentence; all three effects kept; 'chemical substance' is still clear enough."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Short, simple sentence; all three effects kept; 'chemical substance' is still clear enough.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "historical_account:noun:0",
+   "headword": "historical account",
+   "level": "college",
+   "register": "plain",
+   "text": "A narrative or documentary representation of a subject’s past, arranged chiefly in temporal sequence to preserve and communicate factual historical information.",
+   "source": "A narrative or documentary record describing past events, typically organized chronologically and intended to preserve factual information about a subject's history.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": false,
+    "verdict_consistent": null,
+    "note": "\"arranged chiefly in temporal sequence\" is ornate; plain register would say \"organized chronologically\"."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"\\\"arranged chiefly in temporal sequence\\\" is ornate; plain register would say \\\"organized chronologically\\\".\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "alfred_tarski:noun:0",
+   "headword": "Alfred Tarski",
+   "level": "neutral",
+   "register": "formal",
+   "text": "A mathematician and logician of Polish-American identity, he made major contributions to the rigorous study of logical systems, their models, and truth.",
+   "source": "Alfred Tarski was a Polish-American logician and mathematician known for foundational work on mathematical logic, model theory, and formal theories of truth.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Foundational\" weakened to \"major\"; \"Polish-American identity\" is clumsy but formal; name omitted."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Foundational\\\" weakened to \\\"major\\\"; \\\"Polish-American identity\\\" is clumsy but formal; name omitted.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "dining:verb:1",
+   "headword": "dining",
+   "level": "neutral",
+   "register": "technical",
+   "text": "Providing food or a meal to another person, especially within a hospitality or entertainment context.",
+   "source": "Present participle of dine: to provide food or a meal to someone, especially as a form of hospitality or entertainment",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops explicit 'present participle of dine' label, but -ing form and sense are retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops explicit 'present participle of dine' label, but -ing form and sense are retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "routes:verb:1",
+   "headword": "routes",
+   "level": "neutral",
+   "register": "informal",
+   "text": "To figure out where to go and map out the trip, usually by picking roads or stops.",
+   "source": "To determine or plan a course of travel, often by selecting a path or itinerary.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Casual and clear; \"where to go\" slightly hints at destination, but \"map out the trip\" saves it."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Casual and clear; \\\"where to go\\\" slightly hints at destination, but \\\"map out the trip\\\" saves it.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "tungsten:noun:2",
+   "headword": "tungsten",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "An ore is rock that has tungsten in it. Scheelite and wolframite are two kinds of ore.",
+   "source": "Mineral ores, especially scheelite and wolframite, from which the metal is extracted.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Extraction of the metal only implied; 'kinds of ore' loses tungsten-specific link slightly."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Extraction of the metal only implied; 'kinds of ore' loses tungsten-specific link slightly.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "brazenness:noun:0",
+   "headword": "brazenness",
+   "level": "neutral",
+   "register": "technical",
+   "text": "A behavioral or rhetorical disposition characterized by overt norm violation without shame or deference to social sanction.",
+   "source": "Shamelessly defiant conduct or speech that disregards accepted social norms.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Dense but accurate; 'disposition' slightly abstracts conduct/speech, core sense intact."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Dense but accurate; 'disposition' slightly abstracts conduct/speech, core sense intact.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "regularly:adverb:2",
+   "headword": "regularly",
+   "level": "neutral",
+   "register": "informal",
+   "text": "In the usual way, following the normal rules or expectations.",
+   "source": "In a way that is standard or typical, following normal procedures or expectations.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Everyday wording keeps sense; 'rules' slightly narrows 'procedures' but acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Everyday wording keeps sense; 'rules' slightly narrows 'procedures' but acceptable.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "centre_of_curvature:noun:0",
+   "headword": "centre of curvature",
+   "level": "neutral",
+   "register": "formal",
+   "text": "The point serving as the center of the circle that locally approximates a curve.",
+   "source": "the center of the circle of curvature",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Unpacks 'circle of curvature' as osculating circle; accurate, though point of tangency left implicit."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Unpacks 'circle of curvature' as osculating circle; accurate, though point of tangency left implicit.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "reaction_dynamics:noun:1",
+   "headword": "reaction dynamics",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Patterns show how people or groups respond to events over time, from beginning to settling.",
+   "source": "In social science, the study of how people or groups respond to events over time, including the onset, escalation, feedback, and stabilization of those responses.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops 'study of' (recasts as patterns) and omits escalation and feedback stages."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops 'study of' (recasts as patterns) and omits escalation and feedback stages.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "marijuana_cigarette:noun:0",
+   "headword": "marijuana cigarette",
+   "level": "neutral",
+   "register": "technical",
+   "text": "A combustible cigarette comprising marijuana in a paper wrapper, intended for inhalation of the resulting smoke.",
+   "source": "marijuana leaves rolled into a cigarette for smoking",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense retained; 'leaves' generalized but acceptable; diction suitably technical and neutral in difficulty."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense retained; 'leaves' generalized but acceptable; diction suitably technical and neutral in difficulty.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "industrial_arts:noun:0",
+   "headword": "industrial arts",
+   "level": "neutral",
+   "register": "informal",
+   "text": "A practical school class that shows you how to work with tools and machines.",
+   "source": "a course in the methods of using tools and machinery as taught in secondary schools and technical schools",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops secondary/technical school detail, but core sense and tone hold up."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops secondary/technical school detail, but core sense and tone hold up.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "ionia:noun:0",
+   "headword": "ionia",
+   "level": "neutral",
+   "register": "formal",
+   "text": "A coastal region of ancient Anatolia, Ionia was inhabited by Ionian Greeks and included the city-states of Miletus, Ephesus, and Smyrna.",
+   "source": "An ancient geographical region on the western coast of Anatolia inhabited by Ionian Greeks, comprising major city states such as Miletus Ephesus and Smyrna.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Omits 'western' coast and turns open-ended 'such as' list into an exhaustive one."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Omits 'western' coast and turns open-ended 'such as' list into an exhaustive one.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "caliginous:adjective:2",
+   "headword": "caliginous",
+   "level": "college",
+   "register": "plain",
+   "text": "Characterized by an atmosphere or emotional state of gloom, somberness, and oppressive darkness.",
+   "source": "Relating to a gloom-filled atmosphere or mood; somber or oppressive.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate; slightly wordy nominal style, and 'and' narrows the source's 'or', but acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; slightly wordy nominal style, and 'and' narrows the source's 'or', but acceptable.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "foetor:noun:0",
+   "headword": "foetor",
+   "level": "college",
+   "register": "plain",
+   "text": "A distinctly offensive odor produced by the decomposition or putrefaction of organic matter.",
+   "source": "A strong, unpleasant odor arising from decomposition or putrefaction; a malodorous scent.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate and precise; 'strong' becomes 'distinctly offensive'; wording slightly formal but acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and precise; 'strong' becomes 'distinctly offensive'; wording slightly formal but acceptable.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "gavel:verb:2",
+   "headword": "gavel",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "To strike the gavel when an auction ends and a buyer wins.",
+   "source": "In auctions, to strike a small ceremonial hammer to finalize the sale of an item and declare the winning bid.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Circular (defines gavel with 'gavel'); strike now merely coincides with, not finalizes, the sale."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Circular (defines gavel with 'gavel'); strike now merely coincides with, not finalizes, the sale.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "university_community:noun:1",
+   "headword": "university community",
+   "level": "neutral",
+   "register": "formal",
+   "text": "The campus climate and accepted expectations that influence conduct among members of a university.",
+   "source": "The social environment and shared norms that guide behavior within a university.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Faithful paraphrase; 'campus climate' slightly narrows 'social environment' but remains accurate and formal."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Faithful paraphrase; 'campus climate' slightly narrows 'social environment' but remains accurate and formal.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "anglo_dutch:adjective:0",
+   "headword": "anglo-dutch",
+   "level": "neutral",
+   "register": "informal",
+   "text": "It’s about England and the Netherlands dealing with each other, often over government, diplomacy, or business.",
+   "source": "Relating to or involving both England (or the English) and the Netherlands (or the Dutch), especially in political, diplomatic, or economic contexts.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Casual but accurate; \"dealing with each other\" slightly narrows scope, still acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Casual but accurate; \\\"dealing with each other\\\" slightly narrows scope, still acceptable.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "hundredfold:adjective:1",
+   "headword": "hundredfold",
+   "level": "neutral",
+   "register": "informal",
+   "text": "It gives a describing word or comparison a much bigger feel.",
+   "source": "Used as an intensifier indicating a very large degree, often before adjectives or comparatives.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": false,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Describing word\" is grade-school phrasing; neutral level could say adjective/comparison plainly."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": false, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Describing word\\\" is grade-school phrasing; neutral level could say adjective/comparison plainly.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "mats:noun:0",
+   "headword": "mats",
+   "level": "neutral",
+   "register": "technical",
+   "text": "Flat floor coverings designed to protect underlying surfaces, absorb moisture, or remove soil from footwear, commonly at entrances and in workspaces.",
+   "source": "A mat is a flat piece of material placed on a floor to protect surfaces, absorb moisture, or wipe feet; it is commonly used at entrances and in workspaces.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise technical gloss; all three functions and typical contexts retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise technical gloss; all three functions and typical contexts retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "stratums:noun:1",
+   "headword": "stratums",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A group of people with a similar place or rank in society.",
+   "source": "A hierarchical level in a society, regarded as a social class or rank.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Shifts 'level' to 'group of people' but sense of social rank layer is kept."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Shifts 'level' to 'group of people' but sense of social rank layer is kept.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "adobe_photoshop:noun:0",
+   "headword": "Adobe Photoshop",
+   "level": "college",
+   "register": "plain",
+   "text": "Adobe Photoshop is a raster-graphics editor for manipulating digital images through retouching, compositing, and other pixel-based transformations.",
+   "source": "Adobe Photoshop is a raster-graphics editing software application known for retouching, compositing, and otherwise manipulating digital images.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate and concise; 'pixel-based transformations' slightly technical but fits college plain prose."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and concise; 'pixel-based transformations' slightly technical but fits college plain prose.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "grinch:noun:0",
+   "headword": "grinch",
+   "level": "neutral",
+   "register": "formal",
+   "text": "A grinch is a fictional character created by Dr. Seuss who attempts to take Christmas from Whoville.",
+   "source": "The Grinch is a fictional character created by Dr. Seuss who attempts to steal Christmas in Whoville.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"A grinch\" genericizes a specific named character; definite proper-noun reference lost."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"A grinch\\\" genericizes a specific named character; definite proper-noun reference lost.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "quarterly:adverb:0",
+   "headword": "quarterly",
+   "level": "neutral",
+   "register": "technical",
+   "text": "Describing an event or action with a recurrence interval of approximately three months, corresponding to four occurrences per calendar year.",
+   "source": "An adverb indicating that an action or event occurs at intervals of approximately three months, i.e., four times per year; used to describe frequency, timing, or publication schedules in academic and professional contexts.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense intact; drops usage contexts and adverbial framing, but interval/frequency and technical voice preserved."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense intact; drops usage contexts and adverbial framing, but interval/frequency and technical voice preserved.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "tic:noun:0",
+   "headword": "tic",
+   "level": "neutral",
+   "register": "formal",
+   "text": "A sudden, rapid body movement or vocalization that recurs involuntarily and without a regular rhythm.",
+   "source": "A sudden, rapid, recurrent, nonrhythmic motor movement or vocalization that is involuntary.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "All features retained; 'involuntarily' modifies recurrence slightly, but sense intact; tone suitably formal."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"All features retained; 'involuntarily' modifies recurrence slightly, but sense intact; tone suitably formal.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "gian_carlo_menotti:noun:0",
+   "headword": "Gian Carlo Menotti",
+   "level": "neutral",
+   "register": "technical",
+   "text": "An American composer of operas, born in Italy in 1911.",
+   "source": "United States composer (born in Italy) of operas (born in 1911)",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise definitional gloss; nationality, genre, birthplace and year all retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise definitional gloss; nationality, genre, birthplace and year all retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "unit_square:noun:0",
+   "headword": "unit square",
+   "level": "college",
+   "register": "plain",
+   "text": "A square region in the Euclidean plane whose side length is one unit, serving as a standard geometric reference figure.",
+   "source": "A square in the plane whose side length is exactly one unit used as a standard geometric figure.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": false,
+    "verdict_consistent": null,
+    "note": "Accurate and college-level, but 'Euclidean plane' and 'reference figure' drift toward technical register."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Accurate and college-level, but 'Euclidean plane' and 'reference figure' drift toward technical register.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "presentations:noun:1",
+   "headword": "presentations",
+   "level": "neutral",
+   "register": "technical",
+   "text": "A coordinated set of presentation materials, including slides, handouts, and visual aids, prepared to support oral delivery or live demonstration to an audience.",
+   "source": "The set of materials prepared to accompany a talk or demonstration for presentation to an audience, including slides, handouts, and visual elements.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate and precise; slight circularity using 'presentation' in gloss of 'presentations'."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and precise; slight circularity using 'presentation' in gloss of 'presentations'.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "mats:noun:0",
+   "headword": "mats",
+   "level": "neutral",
+   "register": "informal",
+   "text": "Flat pieces you put on the floor to keep it clean, dry, or protected, especially by doors and in work areas.",
+   "source": "A mat is a flat piece of material placed on a floor to protect surfaces, absorb moisture, or wipe feet; it is commonly used at entrances and in workspaces.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Covers protection, moisture, and foot-wiping plus typical locations; plain informal phrasing fits."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Covers protection, moisture, and foot-wiping plus typical locations; plain informal phrasing fits.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "cob:noun:0",
+   "headword": "cob",
+   "level": "college",
+   "register": "plain",
+   "text": "The central axis of a maize ear, to which the kernels are attached, forms the dry core left after the kernels have been removed.",
+   "source": "The central axis of an ear of maize to which kernels are attached; the dry core remaining after kernels are removed.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Both senses retained, though fused into an assertion rather than a noun-phrase gloss."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Both senses retained, though fused into an assertion rather than a noun-phrase gloss.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "grand_coulee_dam:noun:0",
+   "headword": "Grand Coulee Dam",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Grand Coulee Dam is a huge dam on the Columbia River in Washington. It makes a great deal of power from moving water. Workers finished building it in 1942.",
+   "source": "Grand Coulee Dam is a large hydroelectric dam on the Columbia River in Washington State, completed in 1942 and known for its enormous power-generating capacity.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Clear and accurate; \"a great deal of\" slightly formal, \"a lot of\" would fit better."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Clear and accurate; \\\"a great deal of\\\" slightly formal, \\\"a lot of\\\" would fit better.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "genital_phase:noun:0",
+   "headword": "genital phase",
+   "level": "neutral",
+   "register": "informal",
+   "text": "In psychoanalysis, it’s the teen-years stretch when sex and relationships take center stage.",
+   "source": "(psychoanalysis) the fifth sexual and social stage in a person's development occurring during adolescence; interest focuses on sexual activity",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops that it's the fifth developmental stage; 'stretch' blurs the stage concept."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops that it's the fifth developmental stage; 'stretch' blurs the stage concept.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "albigensian:noun:0",
+   "headword": "albigensian",
+   "level": "neutral",
+   "register": "formal",
+   "text": "An adherent of Catharism, particularly in Languedoc, southern France, during the twelfth and thirteenth centuries.",
+   "source": "A member of the Cathar religious movement, especially in the Languedoc region of southern France during the 12th to 13th centuries.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise, formal; 'adherent of Catharism' faithfully renders source sense and period."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise, formal; 'adherent of Catharism' faithfully renders source sense and period.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "norodom_sihanouk:noun:0",
+   "headword": "Norodom Sihanouk",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A king and leader from Cambodia, Norodom Sihanouk helped shape his country during the nineteen hundreds.",
+   "source": "Norodom Sihanouk was a Cambodian monarch and political leader who played a central role in Cambodia's twentieth-century history.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Helped shape\" slightly weakens \"central role\"; fronted appositive is a bit advanced but readable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Helped shape\\\" slightly weakens \\\"central role\\\"; fronted appositive is a bit advanced but readable.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "sleeps:verb:0",
+   "headword": "sleeps",
+   "level": "neutral",
+   "register": "technical",
+   "text": "To occupy a normal physiological state of reduced responsiveness and temporarily suspended consciousness.",
+   "source": "To be in a state of natural rest with consciousness temporarily suspended.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate technical gloss; 'occupy a state' slightly awkward but meaning intact."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate technical gloss; 'occupy a state' slightly awkward but meaning intact.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "otter:noun:1",
+   "headword": "otter",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A river-dwelling member of the otter family that lives in freshwater rivers and streams. In North America, it usually means Lontra canadensis.",
+   "source": "Any semiaquatic mustelid species that inhabits freshwater rivers and streams, especially Lontra canadensis in North America.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Otter family\" is circular and wrong; mustelid means weasel family, and semiaquatic is dropped."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Otter family\\\" is circular and wrong; mustelid means weasel family, and semiaquatic is dropped.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "unprofitability:noun:2",
+   "headword": "unprofitability",
+   "level": "neutral",
+   "register": "informal",
+   "text": "What keeps a business from making a steady profit, such as weak pricing choices, customers who cut back when prices rise, or heavy expenses.",
+   "source": "Factors or causes underlying persistent lack of profitability, including price discipline, demand elasticity, or cost structure.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Renders elasticity and cost structure plainly; 'steady profit' slightly softens 'persistent lack of profitability'."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Renders elasticity and cost structure plainly; 'steady profit' slightly softens 'persistent lack of profitability'.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "natural_languages:adjective:0",
+   "headword": "natural languages",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Describes human languages as people really speak and write them.",
+   "source": "Relating to human languages as they occur naturally in speech and writing.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple wording keeps 'naturally occurring' sense via 'really speak and write'; clear and plain."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple wording keeps 'naturally occurring' sense via 'really speak and write'; clear and plain.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "strict_standards:noun:0",
+   "headword": "strict standards",
+   "level": "neutral",
+   "register": "informal",
+   "text": "A tough bar for how students perform and behave at school.",
+   "source": "An expectation of high, uncompromising requirements used to judge quality or conduct in school settings.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Captures high, uncompromising expectations for school performance and conduct; casual tone fits."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures high, uncompromising expectations for school performance and conduct; casual tone fits.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "etruscan:adjective:0",
+   "headword": "etruscan",
+   "level": "college",
+   "register": "plain",
+   "text": "Pertaining to the ancient Etruscan civilization of central Italy, including its language, cultural practices, material culture, and archaeology.",
+   "source": "Of or relating to the ancient Etruscan civilization in central Italy, including its language, culture, artifacts, and archaeology.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": false,
+    "verdict_consistent": null,
+    "note": "\"Pertaining to\" and \"material culture\" read formal/technical rather than plain."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"\\\"Pertaining to\\\" and \\\"material culture\\\" read formal/technical rather than plain.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "shopping:verb:0",
+   "headword": "shopping",
+   "level": "neutral",
+   "register": "formal",
+   "text": "The activity of selecting and purchasing goods or services from retail businesses.",
+   "source": "To engage in the act of purchasing goods or services from retailers, typically as part of consumer activity.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Shifts from verbal to nominal gloss; core sense and retail context retained, 'selecting' a fair addition."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Shifts from verbal to nominal gloss; core sense and retail context retained, 'selecting' a fair addition.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "presentations:noun:2",
+   "headword": "presentations",
+   "level": "neutral",
+   "register": "informal",
+   "text": "A scheduled part of a conference or seminar that includes one or more talks or demonstrations.",
+   "source": "An organized unit of programming at a conference or seminar comprising one or more talks or demonstrations.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Scheduled part\" and \"includes\" capture the sense plainly; tone fits neutral, informal gloss."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Scheduled part\\\" and \\\"includes\\\" capture the sense plainly; tone fits neutral, informal gloss.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "strangers:noun:0",
+   "headword": "strangers",
+   "level": "college",
+   "register": "plain",
+   "text": "Individuals unknown to a particular observer or outside that person’s social circle.",
+   "source": "A person who is not known to a particular observer or group; an individual outside one's social circle.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops \"or group,\" slightly narrowing scope, but core sense intact; plural fits headword."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops \\\"or group,\\\" slightly narrowing scope, but core sense intact; plural fits headword.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "amphibolite:noun:0",
+   "headword": "amphibolite",
+   "level": "college",
+   "register": "plain",
+   "text": "A metamorphic rock consisting predominantly of amphibole and plagioclase, typically formed under amphibolite-facies conditions.",
+   "source": "a metamorphic rock composed chiefly of amphibole and plagioclase",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": false,
+    "note": "Adds unsourced facies claim; 'amphibolite-facies' is circular technical jargon, not plain register."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": false, \"note\": \"Adds unsourced facies claim; 'amphibolite-facies' is circular technical jargon, not plain register.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "ionia:noun:0",
+   "headword": "ionia",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "This ancient region lay on Anatolia’s western coast. Ionian Greeks lived there and governed important cities. Miletus, Ephesus, and Smyrna were among them.",
+   "source": "An ancient geographical region on the western coast of Anatolia inhabited by Ionian Greeks, comprising major city states such as Miletus Ephesus and Smyrna.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Clear, short sentences; \"governed\" and \"lay\" slightly advanced but city-state sense is kept."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Clear, short sentences; \\\"governed\\\" and \\\"lay\\\" slightly advanced but city-state sense is kept.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "paste:noun:0",
+   "headword": "paste",
+   "level": "neutral",
+   "register": "technical",
+   "text": "A viscoelastic adhesive material applied between surfaces to create a bonded joint.",
+   "source": "A sticky, pliable adhesive substance used to bond surfaces.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Technical phrasing fits; 'viscoelastic' slightly shifts 'sticky, pliable' but core adhesive sense retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Technical phrasing fits; 'viscoelastic' slightly shifts 'sticky, pliable' but core adhesive sense retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "mercury_chloride:noun:0",
+   "headword": "mercury chloride",
+   "level": "college",
+   "register": "plain",
+   "text": "A white, poisonous, water-soluble crystalline sublimate of mercury, formerly used as a pesticide, antiseptic, and wood preservative.",
+   "source": "a white poisonous soluble crystalline sublimate of mercury; used as a pesticide or antiseptic or wood preservative",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Adds 'formerly' and 'water-soluble', asserting obsolescence and solvent not stated in source."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Adds 'formerly' and 'water-soluble', asserting obsolescence and solvent not stated in source.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "alfred_tarski:noun:0",
+   "headword": "Alfred Tarski",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Alfred Tarski was a Polish-American thinker who helped build number studies and rules for finding truth.",
+   "source": "Alfred Tarski was a Polish-American logician and mathematician known for foundational work on mathematical logic, model theory, and formal theories of truth.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Thinker\" and \"number studies\" blur logic/math; model theory and truth theories distorted."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Thinker\\\" and \\\"number studies\\\" blur logic/math; model theory and truth theories distorted.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "progressive_rock:noun:0",
+   "headword": "progressive rock",
+   "level": "neutral",
+   "register": "formal",
+   "text": "A listening-oriented rock genre that took shape in the 1970s, it sought to unite rock with jazz and other musical traditions rather than serve as dance music.",
+   "source": "a style of rock music that emerged in the 1970s; associated with attempts to combine rock with jazz and other forms; intended for listening and not dancing",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate and formal; slightly awkward appositive-plus-pronoun syntax, and intent stated more strongly than source."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and formal; slightly awkward appositive-plus-pronoun syntax, and intent stated more strongly than source.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "gavel:verb:0",
+   "headword": "gavel",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "To strike a small wooden hammer to begin a meeting or hearing.",
+   "source": "To strike a small ceremonial hammer to begin or call a formal meeting or proceeding to order.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple and accurate; slight loss of 'formal' and 'call to order' nuance, but acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple and accurate; slight loss of 'formal' and 'call to order' nuance, but acceptable.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "etruscan:noun:1",
+   "headword": "etruscan",
+   "level": "neutral",
+   "register": "formal",
+   "text": "An extinct language of the Etruscans, documented by inscriptions discovered in central Italy.",
+   "source": "The Etruscan language, the language of the ancient Etruscan civilization, attested in inscriptions from central Italy and now extinct.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Extinction, inscriptional attestation, and central Italy retained; concise formal phrasing suits a neutral gloss."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Extinction, inscriptional attestation, and central Italy retained; concise formal phrasing suits a neutral gloss.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "pads:noun:0",
+   "headword": "pads",
+   "level": "college",
+   "register": "plain",
+   "text": "A pad is a stack of paper sheets bound along one edge for writing, drawing, note-taking, and drafting in academic or professional settings.",
+   "source": "A pad of paper bound at one edge used for writing or drawing; a stack of sheets intended for note taking and drafting in academic or professional contexts.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, compact merge of both source clauses; precise plain diction suits college readers."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, compact merge of both source clauses; precise plain diction suits college readers.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "strict_standards:adjective:0",
+   "headword": "strict standards",
+   "level": "neutral",
+   "register": "technical",
+   "text": "Educational criteria of this kind are enforced with minimal allowance for nonconformity.",
+   "source": "Standards described as strict are applied with little tolerance for deviation in an educational setting.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate; \"of this kind\" is vaguer than \"described as strict\" but gloss context supplies referent."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; \\\"of this kind\\\" is vaguer than \\\"described as strict\\\" but gloss context supplies referent.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "sequence_data:noun:0",
+   "headword": "sequence data",
+   "level": "neutral",
+   "register": "technical",
+   "text": "A data representation comprising one or more ordered sequences whose element indices are semantically significant for analysis, modeling, or interpretation.",
+   "source": "Data consisting of one or more ordered lists of elements, where the position of each element in the list is meaningful for analysis, modeling, or interpretation.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate and technical, though slightly circular ('sequence data' defined via 'ordered sequences') and nominalization-heavy."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and technical, though slightly circular ('sequence data' defined via 'ordered sequences') and nominalization-heavy.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "pantheist:noun:0",
+   "headword": "pantheist",
+   "level": "neutral",
+   "register": "informal",
+   "text": "Someone who thinks the universe itself is divine, with divinity in every part.",
+   "source": "A person who regards the divine reality as identical with the universe and as present throughout all things.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Captures identity of God and universe plus immanence; plain, casual phrasing fits."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures identity of God and universe plus immanence; plain, casual phrasing fits.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "coats:noun:0",
+   "headword": "coats",
+   "level": "neutral",
+   "register": "formal",
+   "text": "An outer garment worn over the torso, generally featuring sleeves and a front opening, provides warmth or protection.",
+   "source": "An outer garment worn on the torso, typically with sleeves and a front opening, used for warmth or protection.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": false,
+    "verdict_consistent": null,
+    "note": "Recast as a full sentence, breaking noun-phrase gloss convention; otherwise sense intact."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Recast as a full sentence, breaking noun-phrase gloss convention; otherwise sense intact.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "strict_standards:noun:2",
+   "headword": "strict standards",
+   "level": "neutral",
+   "register": "informal",
+   "text": "It tells you how closely schoolwork has to stick to expectations.",
+   "source": "A phrase used to describe how stringently something must be done in educational contexts.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Slight narrowing of 'educational contexts' to 'schoolwork', but core sense and tone hold."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Slight narrowing of 'educational contexts' to 'schoolwork', but core sense and tone hold.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "representative:noun:0",
+   "headword": "representative",
+   "level": "college",
+   "register": "plain",
+   "text": "A person selected or elected to represent a group in expressing its views, interests, or decisions.",
+   "source": "A person chosen or elected to act or speak for a group.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Circular: defines 'representative' with 'represent'; also slightly narrows 'act' to expressing views."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Circular: defines 'representative' with 'represent'; also slightly narrows 'act' to expressing views.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "otter:noun:0",
+   "headword": "otter",
+   "level": "neutral",
+   "register": "informal",
+   "text": "A meat-eating mammal that splits its time between land and water, with a sleek body, webbed feet, and thick fur that keeps it dry.",
+   "source": "A semiaquatic carnivorous mammal of the subfamily Lutrinae within the Mustelidae family, adapted to aquatic life with a streamlined body, webbed feet, and dense waterproof fur.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Taxonomy (weasel family) dropped, but core traits and semiaquatic habit clearly conveyed informally."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Taxonomy (weasel family) dropped, but core traits and semiaquatic habit clearly conveyed informally.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "wrapper:noun:1",
+   "headword": "wrapper",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A person or machine that wraps or covers things, often for shipping.",
+   "source": "An agent such as a person or machine that wraps or encloses objects, typically in packaging or handling operations.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Clear and simple; 'for shipping' slightly narrows 'packaging or handling' but core sense holds."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Clear and simple; 'for shipping' slightly narrows 'packaging or handling' but core sense holds.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "adjustment:noun:0",
+   "headword": "adjustment",
+   "level": "neutral",
+   "register": "formal",
+   "text": "A modification made to improve the fit or performance of something.",
+   "source": "A change or modification intended to improve fit or function.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate gloss; 'performance' slightly narrows 'function' but core sense intact; formal, neutral reading level."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate gloss; 'performance' slightly narrows 'function' but core sense intact; formal, neutral reading level.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "dead_centre:noun:0",
+   "headword": "dead centre",
+   "level": "neutral",
+   "register": "formal",
+   "text": "This is the crank position at which the crank and connecting rod lie on the same line, resulting in no torque.",
+   "source": "the position of a crank when it is in line with the connecting rod and not exerting torque",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate collinearity and zero-torque sense retained; formal, clear phrasing suitable for neutral readers."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate collinearity and zero-torque sense retained; formal, clear phrasing suitable for neutral readers.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "daily_cycle:noun:2",
+   "headword": "daily cycle",
+   "level": "college",
+   "register": "plain",
+   "text": "An endogenous biological timing system that coordinates recurring physiological and behavioral processes over approximately twenty-four-hour intervals.",
+   "source": "An internal biological clock regulating recurring 24-hour patterns in organisms.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": false,
+    "verdict_consistent": null,
+    "note": "Accurate and college-level, but 'endogenous'/'physiological' jargon overshoots the plain register."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Accurate and college-level, but 'endogenous'/'physiological' jargon overshoots the plain register.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "presentations:noun:0",
+   "headword": "presentations",
+   "level": "neutral",
+   "register": "technical",
+   "text": "Structured oral or demonstrative communications delivered to an audience to convey results, methodologies, or conceptual material, typically supported by visual aids.",
+   "source": "A formal talk or demonstration delivered to an audience to convey information, typically introducing results, methods, or concepts, often accompanied by visual aids.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense intact; hedge shifted from 'often' to 'typically' for visual aids—minor strengthening."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense intact; hedge shifted from 'often' to 'typically' for visual aids\\u2014minor strengthening.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "indian_cuisine:noun:0",
+   "headword": "Indian cuisine",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "The cooking of India includes many regional dishes. Cooks often use fragrant spices, which add strong smells and flavors. They also prepare vegetables, grains, beans, and dairy foods in many ways.",
+   "source": "Indian cuisine is the diverse culinary tradition of India, known for its regional dishes, aromatic spices, and varied use of vegetables, grains, legumes, and dairy.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "All elements kept; 'fragrant' glossed, 'beans' for legumes; short plain sentences fit grade 5."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"All elements kept; 'fragrant' glossed, 'beans' for legumes; short plain sentences fit grade 5.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "quiddity:noun:2",
+   "headword": "quiddity",
+   "level": "neutral",
+   "register": "technical",
+   "text": "In argumentative or descriptive discourse, a quiddity is a low-salience distinction whose treatment has little effect on the substance of the account.",
+   "source": "A minor or trivial detail or nicety in argument or description, often of little substantive consequence.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate technical rendering; 'distinction' slightly narrows 'detail', and gloss redundantly restates headword."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate technical rendering; 'distinction' slightly narrows 'detail', and gloss redundantly restates headword.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "stillborn:adjective:1",
+   "headword": "stillborn",
+   "level": "neutral",
+   "register": "informal",
+   "text": "Used for an idea, plan, or project that never really gets off the ground.",
+   "source": "Figurative use describing an idea, plan, or project that fails to develop or come to fruition.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Idiom captures failure to develop; figurative sense implicit and clear; tone suitably casual."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Idiom captures failure to develop; figurative sense implicit and clear; tone suitably casual.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "presentations:noun:1",
+   "headword": "presentations",
+   "level": "college",
+   "register": "plain",
+   "text": "A coordinated collection of slides, handouts, and other visual materials prepared to accompany an oral presentation or live demonstration before an audience.",
+   "source": "The set of materials prepared to accompany a talk or demonstration for presentation to an audience, including slides, handouts, and visual elements.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate gloss; \"coordinated\" adds minor nuance but register and level fit."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate gloss; \\\"coordinated\\\" adds minor nuance but register and level fit.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "seaboards:noun:1",
+   "headword": "seaboards",
+   "level": "neutral",
+   "register": "formal",
+   "text": "A coastal zone in which adjoining states or provinces are regarded as a single political or economic unit.",
+   "source": "A political or economic region comprising coastal states or provinces.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Adds 'adjoining' but core sense of a unified coastal political/economic region retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Adds 'adjoining' but core sense of a unified coastal political/economic region retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "steep:adjective:2",
+   "headword": "steep",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Describing a task that takes much time and effort to learn well.",
+   "source": "Describing a task or process that is difficult to learn or master quickly; demanding substantial time or effort.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; short, plain wording fits a ten-year-old reader."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; short, plain wording fits a ten-year-old reader.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "dairying:noun:0",
+   "headword": "dairying",
+   "level": "neutral",
+   "register": "technical",
+   "text": "An agricultural enterprise encompassing milk production and the manufacture of derived dairy commodities, commonly based on farm operations.",
+   "source": "The activity or business of producing milk and dairy products, typically on a farm.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate and technical; 'enterprise' slightly narrows 'activity', but sense and farm basis retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and technical; 'enterprise' slightly narrows 'activity', but sense and farm basis retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "michel:noun:1",
+   "headword": "michel",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Michel is a family name that comes from France and is used in French-speaking countries.",
+   "source": "A surname of French origin used as a family name in Francophone countries.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple, clear, faithful; 'comes from France' slightly shifts 'French origin' but acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, clear, faithful; 'comes from France' slightly shifts 'French origin' but acceptable.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "international_committee_of_the_red_cross:noun:0",
+   "headword": "International Committee of the Red Cross",
+   "level": "college",
+   "register": "plain",
+   "text": "Founded in 1863 and based in Geneva, Switzerland, this humanitarian organization protects people affected by armed conflict, advances international humanitarian law, and is a Nobel Peace Prize recipient.",
+   "source": "International Committee of the Red Cross is a humanitarian organization founded in 1863 and headquartered in Geneva, Switzerland, known for protecting victims of armed conflict, promoting international humanitarian law, and receiving the Nobel Peace Prize.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise gloss; adult-level plain phrasing; all key facts retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise gloss; adult-level plain phrasing; all key facts retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "representative:noun:0",
+   "headword": "representative",
+   "level": "neutral",
+   "register": "formal",
+   "text": "An individual selected or elected to speak or act on behalf of a group.",
+   "source": "A person chosen or elected to act or speak for a group.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate paraphrase; formal diction, neutral difficulty, order of 'speak or act' harmless."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate paraphrase; formal diction, neutral difficulty, order of 'speak or act' harmless.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "stable_base:adjective:1",
+   "headword": "stable base",
+   "level": "college",
+   "register": "plain",
+   "text": "A reference base held constant across studies provides a consistent standard for valid comparison.",
+   "source": "Describing a reference base that stays constant to ensure fair comparisons across studies.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate gloss; 'valid' slightly shifts 'fair' but sense holds; plain, adult-level phrasing."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate gloss; 'valid' slightly shifts 'fair' but sense holds; plain, adult-level phrasing.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "spiders:verb:0",
+   "headword": "spiders",
+   "level": "neutral",
+   "register": "informal",
+   "text": "To have a program roam around the web, grabbing pages so it can build a search list or collect information.",
+   "source": "To systematically traverse the World Wide Web using an automated agent to retrieve pages for indexing or data extraction.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Informal and clear; \"roam around\" slightly loses the \"systematic\" nuance, but core sense holds."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Informal and clear; \\\"roam around\\\" slightly loses the \\\"systematic\\\" nuance, but core sense holds.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "etruscan:noun:0",
+   "headword": "etruscan",
+   "level": "neutral",
+   "register": "technical",
+   "text": "A person identified with the Etruscan polity and culture of Etruria, in north-central Italy, before Roman hegemony.",
+   "source": "A member of the ancient Etruscan civilization that occupied Etruria in north‑central Italy prior to Roman dominance.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate; 'polity'/'hegemony' suit technical register; loss of 'ancient' offset by temporal clause."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; 'polity'/'hegemony' suit technical register; loss of 'ancient' offset by temporal clause.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "magical:adjective:1",
+   "headword": "magical",
+   "level": "neutral",
+   "register": "informal",
+   "text": "So amazing and surprising that it feels like something from a fairy tale.",
+   "source": "Having the power to inspire awe or wonder; extraordinary or marvelous in effect or appearance.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Captures awe/wonder; 'surprising' is slight drift but overall faithful and suitably casual."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures awe/wonder; 'surprising' is slight drift but overall faithful and suitably casual.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "commissions:noun:1",
+   "headword": "commissions",
+   "level": "neutral",
+   "register": "technical",
+   "text": "Constituted bodies vested with defined functions, powers, or jurisdiction under an enabling authority.",
+   "source": "A formal body or group entrusted with a task, authority, or jurisdiction; an authorized organization formed to carry out a function.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Dense but accurate; captures formal constitution, delegated powers, and jurisdiction."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Dense but accurate; captures formal constitution, delegated powers, and jurisdiction.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "hedge:verb:0",
+   "headword": "hedge",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "To surround an area with a planted row of bushes or trees that you maintain.",
+   "source": "To enclose or border an area with a row of shrubs or trees planted and maintained along its boundary.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": false,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"maintain\" and \"planted row\" are too advanced/compressed for a ten-year-old reader."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": false, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"maintain\\\" and \\\"planted row\\\" are too advanced/compressed for a ten-year-old reader.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "serve:verb:2",
+   "headword": "serve",
+   "level": "neutral",
+   "register": "formal",
+   "text": "To provide a useful benefit to a person, group, purpose, or thing.",
+   "source": "To be useful or beneficial to someone or something.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Slight shift from stative 'be useful' to active 'provide', but core sense intact; formal, neutral."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Slight shift from stative 'be useful' to active 'provide', but core sense intact; formal, neutral.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "michel:noun:0",
+   "headword": "michel",
+   "level": "neutral",
+   "register": "technical",
+   "text": "A masculine anthroponym of French origin, derived from Michael and widely attested in Francophone naming practices.",
+   "source": "A male given name of French origin, derived from Michael and widely used in Francophone contexts.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate; 'anthroponym' slightly blurs 'given name' specificity, but technical register justifies the terminology."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; 'anthroponym' slightly blurs 'given name' specificity, but technical register justifies the terminology.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "indian_cuisine:noun:0",
+   "headword": "Indian cuisine",
+   "level": "neutral",
+   "register": "informal",
+   "text": "Across India, cooking takes many forms: local dishes bring together fragrant spices, vegetables, grains, beans, and dairy foods.",
+   "source": "Indian cuisine is the diverse culinary tradition of India, known for its regional dishes, aromatic spices, and varied use of vegetables, grains, legumes, and dairy.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Covers diversity, spices, staples; colon phrasing slightly writerly but still plain and accessible."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Covers diversity, spices, staples; colon phrasing slightly writerly but still plain and accessible.\"}"
+  }
+ ]
+}

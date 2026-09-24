@@ -1,0 +1,2064 @@
+{
+ "pilot_entries": 300,
+ "renditions": 4424,
+ "cells": {
+  "contrast/college/plain": {
+   "n": 365,
+   "names_both": 1.0,
+   "names_headword": 1.0,
+   "names_target": 1.0,
+   "near_copy_of_source": 0.0
+  },
+  "contrast/grade_5/plain": {
+   "n": 365,
+   "names_both": 1.0,
+   "names_headword": 1.0,
+   "names_target": 1.0,
+   "near_copy_of_source": 0.0,
+   "og.readability_miss": 0.0055
+  },
+  "explanation/college/plain": {
+   "n": 287,
+   "near_copy_of_source": 0.0
+  },
+  "explanation/grade_5/plain": {
+   "n": 287,
+   "near_copy_of_source": 0.0,
+   "og.readability_miss": 0.0105
+  },
+  "gloss/college/formal": {
+   "n": 520,
+   "near_copy_of_source": 0.0,
+   "og.headword_initial": 0.0173
+  },
+  "gloss/college/informal": {
+   "n": 520,
+   "near_copy_of_source": 0.0,
+   "og.headword_initial": 0.0173
+  },
+  "gloss/college/technical": {
+   "n": 520,
+   "near_copy_of_source": 0.0,
+   "og.headword_initial": 0.0269
+  },
+  "gloss/grade_5/formal": {
+   "n": 520,
+   "near_copy_of_source": 0.0,
+   "og.hard_vocabulary": 0.0269,
+   "og.headword_initial": 0.0135,
+   "og.readability_miss": 0.1577
+  },
+  "gloss/grade_5/informal": {
+   "n": 520,
+   "near_copy_of_source": 0.0,
+   "og.headword_initial": 0.0096,
+   "og.readability_miss": 0.0346
+  },
+  "gloss/grade_5/technical": {
+   "n": 520,
+   "near_copy_of_source": 0.0,
+   "og.hard_vocabulary": 0.0481,
+   "og.headword_initial": 0.0154,
+   "og.readability_miss": 0.175
+  }
+ },
+ "level_pairs": 2212,
+ "level_pair_near_copy_share": 0.0,
+ "judge": {
+  "judge": "claude-opus-5",
+  "items": 100,
+  "cost_usd": 1.1674,
+  "by": {
+   "all": {
+    "n": 100,
+    "meaning_preserved": 0.86,
+    "level_appropriate": 0.98,
+    "register_appropriate": 0.9,
+    "verdict_consistent": 1.0,
+    "unparsed": 0
+   },
+   "contrast": {
+    "n": 20,
+    "meaning_preserved": 1.0,
+    "level_appropriate": 1.0,
+    "register_appropriate": 1.0,
+    "verdict_consistent": 1.0,
+    "unparsed": 0
+   },
+   "contrast/college/plain": {
+    "n": 10,
+    "meaning_preserved": 1.0,
+    "level_appropriate": 1.0,
+    "register_appropriate": 1.0,
+    "verdict_consistent": 1.0,
+    "unparsed": 0
+   },
+   "contrast/grade_5/plain": {
+    "n": 10,
+    "meaning_preserved": 1.0,
+    "level_appropriate": 1.0,
+    "register_appropriate": 1.0,
+    "verdict_consistent": 1.0,
+    "unparsed": 0
+   },
+   "explanation": {
+    "n": 20,
+    "meaning_preserved": 0.8,
+    "level_appropriate": 1.0,
+    "register_appropriate": 0.95,
+    "unparsed": 0
+   },
+   "explanation/college/plain": {
+    "n": 10,
+    "meaning_preserved": 0.9,
+    "level_appropriate": 1.0,
+    "register_appropriate": 0.9,
+    "unparsed": 0
+   },
+   "explanation/grade_5/plain": {
+    "n": 10,
+    "meaning_preserved": 0.7,
+    "level_appropriate": 1.0,
+    "register_appropriate": 1.0,
+    "unparsed": 0
+   },
+   "gloss": {
+    "n": 60,
+    "meaning_preserved": 0.8333,
+    "level_appropriate": 0.9667,
+    "register_appropriate": 0.85,
+    "unparsed": 0
+   },
+   "gloss/college/formal": {
+    "n": 10,
+    "meaning_preserved": 0.8,
+    "level_appropriate": 1.0,
+    "register_appropriate": 1.0,
+    "unparsed": 0
+   },
+   "gloss/college/informal": {
+    "n": 10,
+    "meaning_preserved": 0.9,
+    "level_appropriate": 0.9,
+    "register_appropriate": 1.0,
+    "unparsed": 0
+   },
+   "gloss/college/technical": {
+    "n": 10,
+    "meaning_preserved": 1.0,
+    "level_appropriate": 1.0,
+    "register_appropriate": 0.9,
+    "unparsed": 0
+   },
+   "gloss/grade_5/formal": {
+    "n": 10,
+    "meaning_preserved": 0.8,
+    "level_appropriate": 0.9,
+    "register_appropriate": 0.9,
+    "unparsed": 0
+   },
+   "gloss/grade_5/informal": {
+    "n": 10,
+    "meaning_preserved": 1.0,
+    "level_appropriate": 1.0,
+    "register_appropriate": 1.0,
+    "unparsed": 0
+   },
+   "gloss/grade_5/technical": {
+    "n": 10,
+    "meaning_preserved": 0.5,
+    "level_appropriate": 1.0,
+    "register_appropriate": 0.3,
+    "unparsed": 0
+   }
+  },
+  "results": [
+   {
+    "field": "contrast",
+    "owner": "adjustment:noun:2-synonym->offset",
+    "headword": "adjustment",
+    "target": "offset",
+    "verdict": "related_as_typed",
+    "level": "college",
+    "register": "plain",
+    "text": "Adjustment and offset are related terms in measurement correction, but they denote different aspects of it. An adjustment is the operation or resulting correction applied to data, readings, or a system to bring it into line with a standard or remove a known bias. An offset is the displacement or difference itself, commonly measured between values, positions, or reference points. For example, correcting a five-point difference between predicted and actual results requires an adjustment to address the offset. Use adjustment for the correction and offset for the gap being measured or compensated for.",
+    "source": "Adjustment and offset can both concern correcting a measurement or difference, but they point to different things. An adjustment is the action or resulting correction applied to data, readings, or a system so that it matches a standard or removes a known bias. An offset is the amount of displacement or difference itself, often measured between two values, positions, or reference points. You might make an adjustment to correct a five-point offset between predicted and actual results. Use adjustment for the correction; use offset for the gap being measured or compensated for.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Accurate; example slightly circular but distinction and related-as-typed verdict intact."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Accurate; example slightly circular but distinction and related-as-typed verdict intact.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "ricky_nelson",
+    "headword": "Ricky Nelson",
+    "level": "college",
+    "register": "plain",
+    "text": "Use Ricky Nelson for the American singer and actor whose television success and recordings established him as a major early rock-and-roll and country performer. The full name distinguishes him from other Nelsons and from his musician sons, Gunnar and Matthew.",
+    "source": "Use “Ricky Nelson” when referring to the American singer and actor whose television fame and recordings made him a major early rock-and-roll and country performer. Specify the full name to distinguish him from other people named Nelson and from his sons, musicians Gunnar and Matthew Nelson.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate, concise; imperative softened to statement but guidance and disambiguation intact."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise; imperative softened to statement but guidance and disambiguation intact.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "sternutatory:noun:0",
+    "headword": "sternutatory",
+    "level": "college",
+    "register": "informal",
+    "text": "It’s a chemical that sets off your body’s sneeze, cough, and tear responses.",
+    "source": "a chemical substance that causes sneezing and coughing and crying",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate, conversational phrasing; retains all three effects with adult-level precision."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, conversational phrasing; retains all three effects with adult-level precision.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "page:noun:3",
+    "headword": "page",
+    "level": "college",
+    "register": "formal",
+    "text": "An online document accessible through a browser, containing text and one or more forms of multimedia.",
+    "source": "A document on the web that can be viewed in a browser, containing text and multimedia.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate, precise phrasing; 'online' adequately conveys 'on the web'; suitably formal for college readers."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, precise phrasing; 'online' adequately conveys 'on the web'; suitably formal for college readers.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "audiocassette:noun:0",
+    "headword": "audiocassette",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "It’s a little case with tape inside, so you can record songs or play them.",
+    "source": "a cassette for audiotape",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Captures audio tape in a case; 'songs' slightly narrows sound, but acceptable for kids."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures audio tape in a case; 'songs' slightly narrows sound, but acceptable for kids.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "hundredfold:adjective:1-antonym->slight",
+    "headword": "hundredfold",
+    "target": "slight",
+    "verdict": "related_as_typed",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "A hundredfold change is very big; slight means small. If a toy works much better, you might call it a hundredfold improvement. If it works only a little better, you might call it a slight improvement. Some changes are in between, so these words are not exact opposites. You can say “a slight breeze,” but hundredfold usually describes how much something changed.",
+    "source": "These meet at opposite ends of a scale of degree, but they are not exact antonyms in every use. Hundredfold marks an exceptionally large factor, as in a hundredfold improvement; slight describes a small degree, as in a slight improvement. There is ample room between them for a moderate or substantial change, and a hundredfold does not simply mean “not slight.” The contrast is useful when judging scale, but the words also differ grammatically: slight can describe a breeze directly, while hundredfold generally modifies a comparison or measured change.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Keeps scale contrast, non-antonymy, and grammatical difference; clear simple wording suits grade 5."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Keeps scale contrast, non-antonymy, and grammatical difference; clear simple wording suits grade 5.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "spiders",
+    "headword": "spiders",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Spiders are animals with eight legs; kinds include tarantulas, wolf spiders, and jumping spiders. The word can also mean a computer tool that visits web pages and sorts them. Insects or animals without webs can contrast with spiders, but are not true opposites.",
+    "source": "Spiders are arachnids in the order Araneae, typically characterized by eight legs, a segmented body, and the ability to produce silk. Most spiders use silk to build webs, line burrows, wrap prey, or protect eggs, and many are predators that feed on insects and other small animals. In biology, the term refers to the animal group as a whole; in computing, “spider” can also mean a software agent that automatically browses and indexes web pages. Synonyms include arachnid, eight-legged arthropod, webspinner, and web crawler, though some are broader or context-specific. Broader categories, or hypernyms, include arachnid and, in the digital sense, software agent and bot. Narrower types, or hyponyms, include tarantula, wolf spider, jumping spider, and crab spider; in computing, web crawler is a narrower usage. Antonyms are less exact for a biological noun, but in contrast to spiders one may mention insects or non-web-building animals, depending on context.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Omits silk, webs, predation, and arachnid classification—core defining facts lost."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Omits silk, webs, predation, and arachnid classification\\u2014core defining facts lost.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "etruscan:adjective:1",
+    "headword": "etruscan",
+    "level": "college",
+    "register": "technical",
+    "text": "Denoting or relating to the extinct language attested among the Etruscans of ancient Italy.",
+    "source": "Of or relating to the Etruscan language, a now extinct language once spoken by the Etruscan people in ancient Italy.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Extinction, language sense, and ancient Italian context retained; \"attested\" suits technical register."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Extinction, language sense, and ancient Italian context retained; \\\"attested\\\" suits technical register.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "salvadoran:adjective:0-synonym->salvadorian",
+    "headword": "salvadoran",
+    "target": "salvadorian",
+    "verdict": "related_as_typed",
+    "level": "college",
+    "register": "plain",
+    "text": "Salvadoran and Salvadorian are near-synonyms: both can modify nouns referring to El Salvador or its people, and neither marks a distinct culture or nationality. Salvadoran is more common and more firmly established in general writing, particularly in formal or edited prose, as in “Salvadoran reforms.” Salvadorian is also used, as in “Salvadorian culture,” and may be appropriate when it reflects a person’s or publication’s preferred wording. Their distinction is one of usage and preference, not meaning.",
+    "source": "Salvadoran and Salvadorian can both modify a noun referring to El Salvador or its people, and neither signals a different culture or nationality. Salvadoran is the more common and broadly established choice in general writing, as in “Salvadoran reforms”; Salvadorian is also used, as in “Salvadorian culture.” Choose Salvadoran when you want the more familiar form, especially in formal or edited prose, and use Salvadorian when it matches a person’s or publication’s preferred wording. The difference is one of usage and preference, not meaning.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Accurate variant-preference framing; \"near-synonyms\" slightly loose but clarified as usage-only difference."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Accurate variant-preference framing; \\\"near-synonyms\\\" slightly loose but clarified as usage-only difference.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "great_depression:noun:0-confusable_with->panic_of_1907",
+    "headword": "Great Depression",
+    "target": "panic of 1907",
+    "verdict": "related_as_typed",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Both names mean money trouble that hurt many people, but they name different times. Use Great Depression for the crisis that started in 1929 and lasted through the 1930s. Panic of 1907 names an earlier U.S. crisis. People rushed to take money from banks, and trust in them fell. If your sentence is about banks in 1907, Great Depression gives the wrong time. If it is about the 1930s, Panic of 1907 gives the wrong time. Both concern money troubles, not the same event.",
+    "source": "Both names identify serious financial crises, so the date is the clearest way to distinguish them. Great Depression refers to the crisis that began in 1929 and extended through the 1930s. Panic of 1907 points to an earlier U.S. crisis, marked by bank runs and shaken confidence in financial institutions. If a sentence concerns the banking system in 1907, Great Depression would shift it to a later era; using Panic of 1907 for the 1930s would make the same kind of chronological error. The shared subject is economic crisis, not a shared event.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Simple sentences, everyday words; date-based distinction and shared-topic point both retained accurately."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Simple sentences, everyday words; date-based distinction and shared-topic point both retained accurately.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "natural_languages:adjective:0",
+    "headword": "natural languages",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "For languages people speak and write in daily life.",
+    "source": "Relating to human languages as they occur naturally in speech and writing.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Simple and clear; \"daily life\" adequately conveys natural occurrence; neutral-formal tone holds."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple and clear; \\\"daily life\\\" adequately conveys natural occurrence; neutral-formal tone holds.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "xxi:adjective:0",
+    "headword": "xxi",
+    "level": "college",
+    "register": "technical",
+    "text": "XXI is the Roman-numeral ordinal used attributively to designate the twenty-first member of an ordered set, particularly in enumerations and titles.",
+    "source": "The numeral adjective XXI denotes the twenty-first item in a series, typically expressed with the Roman numeral XXI and used as a formal modifier in enumerations or titles.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate, concise; 'attributively' and 'ordered set' fit technical college register."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise; 'attributively' and 'ordered set' fit technical college register.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "corot",
+    "headword": "corot",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Corot names a space telescope and the mission that sent it into space. It studied stars and searched for planets passing in front of them.",
+    "source": "Corot is a noun referring to the CoRoT space telescope, an acronym for Convection, Rotation and planetary Transits. It was a satellite-based observatory launched in 2006 by CNES for studying stellar oscillations through asteroseismology and detecting exoplanets by observing planetary transits. In this sense, Corot names both the specific mission and the scientific instrument it carried. It is closely associated with space telescopes, space missions, astronomical instruments, and exoplanet search instruments. Broader terms, or hypernyms, include space mission and astronomical instrument. Narrower terms, or hyponyms, include exoplanet telescope, asteroseismology instrument, and transit survey instrument, each emphasizing one specialized function of the observatory. Synonyms include space telescope, space mission, astronomical instrument, and exoplanet search instrument. Antonyms, in a practical sense, are ground-based telescope and earthbound instrument, which refer to observational systems operating from Earth rather than in orbit. Corot is notable for contributing to both stellar physics and planet discovery.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Core sense kept; drops acronym, 2006 launch, CNES, and relation terms, but no distortion."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; drops acronym, 2006 launch, CNES, and relation terms, but no distortion.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "black_forest",
+    "headword": "Black Forest",
+    "level": "college",
+    "register": "plain",
+    "text": "Black Forest names the wooded mountain region of southwestern Germany, particularly in travel and geographic writing. Use the full name to distinguish the region from forests generally and from the cake associated with it.",
+    "source": "Use “Black Forest” when referring to the wooded mountain region in southwestern Germany, especially in travel, geography, or regional contexts. It is more specific than “forest,” which can mean any large wooded area, and should not be confused with the Black Forest cake associated with the region.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Concise and accurate; drops 'regional contexts' but keeps specificity and cake caveat."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Concise and accurate; drops 'regional contexts' but keeps specificity and cake caveat.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "seaboards:noun:0",
+    "headword": "seaboards",
+    "level": "college",
+    "register": "informal",
+    "text": "It’s the strip of land a country or region has along a sea or ocean.",
+    "source": "The land adjoining a sea or ocean; the coastline of a country or region.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Captures coastal-land sense; contraction and 'strip of land' suit informal adult register."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures coastal-land sense; contraction and 'strip of land' suit informal adult register.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "noninterchangeable:adjective:0-antonym->substitutable",
+    "headword": "noninterchangeable",
+    "target": "substitutable",
+    "verdict": "related_as_typed",
+    "level": "college",
+    "register": "plain",
+    "text": "Noninterchangeable and substitutable are opposites concerning whether one item can replace another without materially altering the result. The distinction is clearest when the same items are judged for the same purpose: variables may be substitutable in a logic problem, whereas grammatical forms that mark different roles may be noninterchangeable in a particular construction. This opposition is functional, not absolute: an item may be substitutable for one purpose and noninterchangeable for another, and replacement may cause a small, acceptable change rather than no change at all.",
+    "source": "Noninterchangeable and substitutable oppose each other on the axis of whether one item can replace another without materially changing the result. The contrast is clearest when the same two items are assessed for the same purpose: variables may be substitutable in a logic problem, while grammatical forms marking different roles are noninterchangeable in a particular construction. The opposition is practical rather than absolute; an item can be substitutable for one function but noninterchangeable for another, and a replacement may bring a small, acceptable change rather than none at all.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Faithful paraphrase; 'functional' for 'practical' and added hedges are negligible shifts."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Faithful paraphrase; 'functional' for 'practical' and added hedges are negligible shifts.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "lean_on:verb:0",
+    "headword": "lean on",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "To lean on a person or resource is to use it for help, advice, or support when facing trouble.",
+    "source": "To rely upon someone or something for support, help, or guidance, especially in times of difficulty or uncertainty.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "verdict_consistent": null,
+     "note": "Reads as plain speech, not technical; lacks precise terms. Meaning and simple wording are fine."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Reads as plain speech, not technical; lacks precise terms. Meaning and simple wording are fine.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "flagship:noun:1-synonym->showpiece",
+    "headword": "flagship",
+    "target": "showpiece",
+    "verdict": "related_as_typed",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "A flagship is the top product in a group. A showpiece shows what its maker can do. At a phone shop, call the company’s main, most important phone its flagship. Call a phone put on display to show its good features a showpiece.",
+    "source": "Flagship points to the leading member of a lineup, while showpiece points to an example displayed as evidence of quality or capability. A company’s flagship model is its most important or prestigious product, even if it is not presented to demonstrate a particular skill. A showpiece project, building, or study is selected because it best represents what its creators can do. Thus a flagship may generate sales or define a range, whereas a showpiece may be commissioned, exhibited, or cited mainly to impress and set a standard.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Core contrast kept; nuance about prestige and standard-setting lost but acceptable; clear simple wording."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Core contrast kept; nuance about prestige and standard-setting lost but acceptable; clear simple wording.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "expatiate:verb:1",
+    "headword": "expatiate",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "In older texts, it meant making journeys without choosing a destination beforehand.",
+    "source": "Archaic or historical sense: to travel about; to wander from place to place without a fixed destination.",
+    "flags": [
+     "og.readability_miss"
+    ],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Archaic sense and aimless travel retained; wording simple and suitably formal, though slightly abstract."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Archaic sense and aimless travel retained; wording simple and suitably formal, though slightly abstract.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "serve:verb:1",
+    "headword": "serve",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "Get food or a drink to someone, like when you bring them a plate.",
+    "source": "To provide food or drink to others; to dish out meals.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "\"Get...to someone\" is slightly ambiguous, but the plate example clarifies; simple, chatty tone fits."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Get...to someone\\\" is slightly ambiguous, but the plate example clarifies; simple, chatty tone fits.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "adobe_photoshop",
+    "headword": "Adobe Photoshop",
+    "level": "college",
+    "register": "plain",
+    "text": "Adobe Photoshop is useful when an image needs careful retouching, compositing, or adjustment of color and lighting. Its layered editing tools allow precise changes across complex creative and professional projects, beyond the capabilities of a viewer or basic photo editor.",
+    "source": "Use Adobe Photoshop when you need detailed control over digital images, such as retouching photos, combining elements, or changing colors and lighting. Unlike a general image viewer or basic photo editor, it supports precise, layered editing for complex professional and creative work.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate, concise; 'compositing' slightly technical but fine for college plain register."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise; 'compositing' slightly technical but fine for college plain register.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "czech:adjective:1",
+    "headword": "czech",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "In history, this describes people and places from the old Czech lands, mainly Bohemia.",
+    "source": "Relating to the historical Czech lands especially Bohemia; used in ethnographic or regional historical contexts.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Keeps historical/regional sense; 'old' loosens 'historical', and ethnographic use only implied."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Keeps historical/regional sense; 'old' loosens 'historical', and ethnographic use only implied.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "aaliyah:noun:1",
+    "headword": "aaliyah",
+    "level": "college",
+    "register": "informal",
+    "text": "It’s the name of an American singer and actress who became widely known as the 1990s gave way to the 2000s.",
+    "source": "Aaliyah is the name of an American singer and actress who gained prominence in the late 1990s and early 2000s.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Turn-of-decade phrasing captures late-90s/early-2000s prominence; contraction suits informal college register."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Turn-of-decade phrasing captures late-90s/early-2000s prominence; contraction suits informal college register.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "grand_coulee_dam:noun:0",
+    "headword": "Grand Coulee Dam",
+    "level": "college",
+    "register": "technical",
+    "text": "Grand Coulee Dam is a large hydroelectric facility on the Columbia River in Washington State, commissioned in 1942 and notable for its exceptionally high electrical generating capacity.",
+    "source": "Grand Coulee Dam is a large hydroelectric dam on the Columbia River in Washington State, completed in 1942 and known for its enormous power-generating capacity.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate; 'commissioned' slightly shifts 'completed' but acceptable technical phrasing for college readers."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; 'commissioned' slightly shifts 'completed' but acceptable technical phrasing for college readers.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "delusions_of_persecution",
+    "headword": "delusions of persecution",
+    "level": "college",
+    "register": "plain",
+    "text": "The phrase refers to a persistent, unfounded belief that others are deliberately targeting, conspiring against, humiliating, or harming someone. Paranoia is broader: it can describe distrust or suspiciousness without a firm belief in an organized plot.",
+    "source": "Use “delusions of persecution” for a persistent false belief that other people are targeting, plotting against, humiliating, or harming you. It is more specific than “paranoia,” which can refer broadly to distrust or suspiciousness without a fixed belief in a coordinated conspiracy.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate, precise, plainly worded; contrast with paranoia retained."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, precise, plainly worded; contrast with paranoia retained.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "technological:adjective:0",
+    "headword": "technological",
+    "level": "college",
+    "register": "formal",
+    "text": "Pertaining to technology and its practical application, with particular reference to contemporary tools and systems.",
+    "source": "Relating to technology or the use of technology, especially modern technology.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Faithful; minor drift from disjunctive 'or' to 'and' and narrowing to 'tools and systems'."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Faithful; minor drift from disjunctive 'or' to 'and' and narrowing to 'tools and systems'.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "extravert:noun:0-antonym->introvert",
+    "headword": "extravert",
+    "target": "introvert",
+    "verdict": "related_as_typed",
+    "level": "college",
+    "register": "plain",
+    "text": "Extravert and introvert mark opposite ends of social orientation: an extravert tends to seek interaction or feel energized by it, whereas an introvert tends to prefer less stimulation or time alone. This is a matter of tendency, not a test of confidence or enjoyment of parties. Many people fall between the two poles; an introvert may be sociable, and an extravert may choose solitude. Extravert is often the default term used to ask about this trait, but neither label implies a defect or determines social skill.",
+    "source": "Extravert and introvert sit at opposite ends of the axis of social orientation: an extravert tends to seek or gain energy from interaction, while an introvert tends to prefer less stimulation or time alone. The contrast is a tendency, not a rule about whether someone can speak confidently or enjoy a party. Many people fall between the poles, and an introvert can be sociable while an extravert can choose solitude. Extravert is often the default question when describing this trait, but neither term implies a defect or a fixed level of social skill.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Accurate, fluent condensation; opposite-pole contrast and tendency-not-rule caveat both retained."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Accurate, fluent condensation; opposite-pole contrast and tendency-not-rule caveat both retained.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "page:verb:1",
+    "headword": "page",
+    "level": "college",
+    "register": "formal",
+    "text": "A person is paged by transmitting an alert through a wireless paging system to request their attention.",
+    "source": "To summon or alert someone by sending a signal through a wireless alert system.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Circular: defines 'page' via 'paged/paging'; 'summon' weakened to 'request attention'; passive form unsuitable."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Circular: defines 'page' via 'paged/paging'; 'summon' weakened to 'request attention'; passive form unsuitable.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "aaliyah:noun:1-synonym->performer",
+    "headword": "aaliyah",
+    "target": "performer",
+    "verdict": "related_differently",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Aaliyah names one person. Performer tells what someone does in front of an audience. Aaliyah can be called a performer. A performer might sing, act, dance, or tell jokes, but the word does not say who. On a concert list, performer may matter more than each person's name. Aaliyah and performer are not two names for the same thing. One names a person; the other names a group or role.",
+    "source": "Aaliyah names a particular person, while performer describes someone by their role before an audience. You can say Aaliyah was a performer, but performer could refer to a singer, actor, dancer, or comedian and does not tell the reader which person you mean. Use Aaliyah when identifying or discussing her specifically; use performer when the person’s live or presented work matters more than their identity or discipline—for example, when reviewing a concert lineup. The relation is one of an individual to a category, not two interchangeable names for the same thing.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Clear, simple, keeps individual-versus-category contrast; usage guidance slightly compressed but intact."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Clear, simple, keeps individual-versus-category contrast; usage guidance slightly compressed but intact.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "greek_colonisation:noun:0",
+    "headword": "Greek colonisation",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "Greek colonisation was when Greeks set up towns by the Mediterranean and Black seas, mostly from the eighth to sixth centuries BCE.",
+    "source": "Greek colonisation was the establishment of Greek settlements around the Mediterranean and Black Sea, especially during the eighth to sixth centuries BCE.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Simple, chatty phrasing; keeps places and dates; 'set up towns' fits settlements well."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, chatty phrasing; keeps places and dates; 'set up towns' fits settlements well.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "geode:noun:0",
+    "headword": "geode",
+    "level": "college",
+    "register": "formal",
+    "text": "A rounded rock containing an internal cavity whose walls are coated with crystals deposited from mineral-bearing water.",
+    "source": "A hollow rounded rock cavity lined with crystals formed when mineral-rich solutions precipitate crystals within voids in rocks.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate, precise, formal; 'mineral-bearing water' slightly narrows 'solutions' but acceptable."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, precise, formal; 'mineral-bearing water' slightly narrows 'solutions' but acceptable.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "tank_car",
+    "headword": "tank car",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "A tank car is a sealed train car that carries lots of liquid or gas. It holds these safely, unlike cars that carry boxes or machines.",
+    "source": "Use “tank car” for a railway freight car with a sealed tank for carrying liquids or gases in bulk. Unlike a general freight car, it is designed to contain and safely transport fluids rather than boxes, machinery, or other solid cargo.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Simplifies 'sealed tank' to 'sealed car,' but core meaning and contrast survive."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simplifies 'sealed tank' to 'sealed car,' but core meaning and contrast survive.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "robert_f_kennedy:noun:0",
+    "headword": "Robert F. Kennedy",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "He serves on the Cabinet, the president's top team, and leads its health and aid office.",
+    "source": "Robert F. Kennedy is a United States cabinet secretary serving as secretary of health and human services.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "note": "Department renamed \"health and aid office\"; drops US and exact title; vague, not technical."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": false, \"note\": \"Department renamed \\\"health and aid office\\\"; drops US and exact title; vague, not technical.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "poor_performance:noun:0-synonym->underperformance",
+    "headword": "poor performance",
+    "target": "underperformance",
+    "verdict": "related_as_typed",
+    "level": "college",
+    "register": "plain",
+    "text": "Poor performance and underperformance can refer to the same shortfall, so either may describe a student’s low scores or an employee’s inadequate work. Poor performance is the more direct judgment of quality: it labels work unsatisfactory without requiring comparison to a specific standard. Underperformance emphasizes a gap between actual results and an expected level, benchmark, or potential, as when a department fails to meet its targets. Use poor performance when the quality of the result is central; use underperformance when its distance from an expectation or standard matters.",
+    "source": "Poor performance and underperformance can describe the same result, so either may fit when a student’s scores or an employee’s work fall short. Poor performance is the more direct, evaluative phrase: it can describe work judged unsatisfactory without specifying a particular comparison. Underperformance more strongly points to a gap against an expected level, benchmark, or potential, as in a department underperforming its targets. Choose poor performance when stressing the quality of the result; choose underperformance when the shortfall relative to an expectation or standard is the point.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Accurate paraphrase; overlap plus distinct emphases retained; plain, precise college-level prose."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Accurate paraphrase; overlap plus distinct emphases retained; plain, precise college-level prose.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "bedew:verb:0",
+    "headword": "bedew",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "To leave leaves or other things damp with dew.",
+    "source": "To wet or moisten by dew; to cause to be covered with dew, typically on plants or surfaces.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate and simple; awkward \"leave leaves\" echo, but meaning and tone hold up."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and simple; awkward \\\"leave leaves\\\" echo, but meaning and tone hold up.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "serve:noun:1",
+    "headword": "serve",
+    "level": "college",
+    "register": "informal",
+    "text": "It’s the shot that kicks off a rally, sending the ball into play.",
+    "source": "In racket sports, the act of starting play by delivering the ball into play.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Domain marker dropped, but 'rally' implies racket sports; informal tone fits adult reader."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Domain marker dropped, but 'rally' implies racket sports; informal tone fits adult reader.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "meliaceae",
+    "headword": "meliaceae",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Meliaceae is the plant group called the mahogany family, with many tropical trees. Use it for the whole family, not for one tree or kind of tree.",
+    "source": "Meliaceae is a family of flowering plants in the order Sapindales, commonly known as the mahogany family. It includes about 50 genera and 600–700 species, mostly tropical trees and shrubs valued for timber, ornamental use, and sometimes medicinal or ecological importance. Well-known members include Swietenia, Khaya, Cedrela, and Melia, which are important examples of the family’s diversity. As a taxonomic group, Meliaceae refers to a plant family within the broader hierarchy of biological classification. Synonyms or near-synonyms include mahogany family, the mahogany family, Meliaceae family, and, in a broader descriptive sense, Sapindales family or sapindales group. The broader category is plant family, and still more generally it belongs to taxonomic rank and the order Sapindales. Narrower terms include the individual genera Swietenia, Khaya, Cedrela, and Melia. Antonyms are not standard in taxonomy, but contrasting phrases such as unrelated taxon, nonfamily, or non-Sapindales family may be used informally to indicate something outside this group.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Over-compressed: drops Sapindales order, timber/medicinal uses, size, and example genera like Swietenia."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Over-compressed: drops Sapindales order, timber/medicinal uses, size, and example genera like Swietenia.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "wrapper:noun:1",
+    "headword": "wrapper",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "A person or machine that puts a cover around things before they are packed or moved.",
+    "source": "An agent such as a person or machine that wraps or encloses objects, typically in packaging or handling operations.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "\"before they are packed\" slightly shifts context; \"things\" mildly casual but acceptable overall."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"before they are packed\\\" slightly shifts context; \\\"things\\\" mildly casual but acceptable overall.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "of_sound_mind:adjective:0",
+    "headword": "of sound mind",
+    "level": "college",
+    "register": "formal",
+    "text": "Having adequate mental capacity, memory, and comprehension to understand legal proceedings and participate meaningfully in one’s trial.",
+    "source": "Having a sound mind, memory, and understanding; in law, competent to stand trial.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Collapses general sense into legal one; wrongly restricts mental soundness to trial competence."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Collapses general sense into legal one; wrongly restricts mental soundness to trial competence.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "punched_card",
+    "headword": "punched card",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "A punched card is stiff paper with holes that hold information. A plain card may have words or pictures, but its holes do not store that information.",
+    "source": "Use “punched card” for the stiff paper or cardboard card that stores data as patterns of holes, especially in older computing and data-processing systems. It is more specific than “card,” which may hold printed or handwritten information without encoding data through holes.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Wrongly implies plain cards have holes; drops older computing/data-processing context."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Wrongly implies plain cards have holes; drops older computing/data-processing context.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "assertion:noun:1-antonym->negation",
+    "headword": "assertion",
+    "target": "negation",
+    "verdict": "related_as_typed",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Assertion says a claim is true; negation says it is not true. If you say, “The cake is ready,” or “The cake is not ready,” you show the difference. Not every assertion needs a matching negation. Negation can also mean words in a sentence show that something is not true. The two words are not always opposites; the claim tells you what is being said or denied.",
+    "source": "Assertion and negation oppose each other on the axis of a speaker’s stance toward a proposition: assertion presents it as true, while negation denies it. The opposition is clearest when both concern the same proposition—“the result is significant” versus “the result is not significant.” It does not mean that every assertion has a corresponding negation in a conversation, and negation can also refer to grammatical structure. Neither word is a default opposite in every context; the particular proposition being affirmed or denied supplies the contrast.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Grammar-structure point is vague, but contrast, example, and caveats all survive simplification."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Grammar-structure point is vague, but contrast, example, and caveats all survive simplification.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "flagship:noun:0",
+    "headword": "flagship",
+    "level": "college",
+    "register": "technical",
+    "text": "A naval command platform assigned to embark the fleet commander and direct the fleet’s tactical maneuvering.",
+    "source": "A vessel designated to carry the fleet commander and coordinate tactical operations.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate; \"tactical maneuvering\" slightly narrows \"tactical operations,\" but core sense and naval register hold."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; \\\"tactical maneuvering\\\" slightly narrows \\\"tactical operations,\\\" but core sense and naval register hold.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "remarry",
+    "headword": "remarry",
+    "level": "college",
+    "register": "plain",
+    "text": "Remarry describes entering a later marriage after an earlier one has ended, whether by divorce, annulment, or a spouse’s death. It is a specific kind of marrying; related phrases include marry again, wed again, and tie the knot again, while remain unmarried and stay single describe choosing not to enter another marriage. The term identifies the sequence, not why the earlier marriage ended.",
+    "source": "Remarry is a verb meaning to marry again after a prior marriage has ended, whether through divorce, annulment, or the death of a spouse. It refers to entering a new legal or social marriage relationship after having been married before. Common synonyms include marry again, wed again, re-marry, and tie the knot again. Antonyms include remain unmarried and stay single, which describe not entering another marriage after the first one has ended. As a broader term, remarry belongs under the hypernym marry, since it is a specific instance of the act of marrying. Narrower or more specific forms include divorce remarriage, which refers to remarrying after divorce, and widow remarriage, which refers to remarrying after a spouse has died. The word is used in legal, social, and personal contexts to describe second or subsequent marriages. It carries no necessary implication about the reasons for the first marriage ending, only that a new marriage follows an earlier one.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Condensed but accurate; \"choosing\" adds slight volition; hyponyms and verb label dropped."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condensed but accurate; \\\"choosing\\\" adds slight volition; hyponyms and verb label dropped.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "earth_tremor:noun:0-synonym->microseism",
+    "headword": "earth tremor",
+    "target": "microseism",
+    "verdict": "related_differently",
+    "level": "college",
+    "register": "plain",
+    "text": "Earth tremor is the usual term in general accounts of a small earthquake that people may feel, such as overnight shaking. Microseism is narrower and more technical, referring to a very low-magnitude seismic event that is often imperceptible and detected through monitoring. The terms overlap when a microseism is described as a small earthquake, but their emphasis differs: earth tremor foregrounds felt shaking, whereas microseism identifies a tiny event in a scientific or monitoring context.",
+    "source": "Earth tremor is a natural choice for a small earthquake that people may feel, as in a report of shaking during the night. Microseism is the more technical, narrower term for a very low-magnitude seismic event, often too slight to be felt and identified through monitoring. The terms overlap when a microseism is being described as a small earthquake, but they are not interchangeable in emphasis: earth tremor suits general accounts of felt shaking, while microseism points to a tiny event discussed in a scientific or monitoring context.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Accurate paraphrase; overlap plus differing emphasis retained; college-level plain prose throughout."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Accurate paraphrase; overlap plus differing emphasis retained; college-level plain prose throughout.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "mathematical_process:noun:2",
+    "headword": "mathematical process",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "A planned order of steps shows how to work out a number problem.",
+    "source": "The set of computation steps used to perform calculations in math.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "note": "Slight drift: steps 'show how' rather than being the computation; 'work out' mildly colloquial."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"note\": \"Slight drift: steps 'show how' rather than being the computation; 'work out' mildly colloquial.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "shoehorning:adjective:0",
+    "headword": "shoehorning",
+    "level": "college",
+    "register": "informal",
+    "text": "It’s making a subject fit a setup that wasn’t made for it, rather than choosing a setting that suits it naturally.",
+    "source": "Indicating that the subject has been forced into a context where it is not a natural fit; characterized by alignment with a preexisting framework.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Captures forced fit into a pre-made framework; contrast clause added but consistent."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures forced fit into a pre-made framework; contrast clause added but consistent.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "tencent_qq:noun:0",
+    "headword": "Tencent QQ",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "It’s a Tencent app where people in China chat and connect online.",
+    "source": "Tencent QQ is a Chinese instant-messaging and social-networking product developed and operated by Tencent and widely used in China.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Covers chat and social use; 'widely used' only implied, acceptable for a short gloss."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Covers chat and social use; 'widely used' only implied, acceptable for a short gloss.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "seven:determiner:1",
+    "headword": "seven",
+    "level": "college",
+    "register": "technical",
+    "text": "A definite cardinal determiner denoting a discourse-anaphoric subset with cardinality seven.",
+    "source": "A definite numeral determiner referring to a known subset of six plus one items previously identified in discourse.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate and technical, though using 'seven' in the gloss is mildly circular."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and technical, though using 'seven' in the gloss is mildly circular.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "seven:adjective:0",
+    "headword": "seven",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "It modifies a noun, meaning it adds information to a naming word, and gives the count as seven.",
+    "source": "A cardinal numeral used attributively to modify a noun and denote a quantity of six plus one.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "verdict_consistent": null,
+     "note": "Circular: defines seven as 'seven'; drops 'cardinal numeral' and the six-plus-one quantity."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Circular: defines seven as 'seven'; drops 'cardinal numeral' and the six-plus-one quantity.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "proctoplasty",
+    "headword": "proctoplasty",
+    "level": "college",
+    "register": "plain",
+    "text": "Use proctoplasty for an operation that repairs or reconstructs the anus or rectum. Unlike the broader term rectal surgery, it refers specifically to rebuilding damaged or malformed tissue.",
+    "source": "Use “proctoplasty” in a medical context for surgery that repairs or reconstructs the anus or rectum. It is more specific than “rectal surgery,” which can include many procedures that do not rebuild damaged or malformed tissue.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate compression; dropping \"medical context\" is harmless. Plain, adult-level phrasing throughout."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate compression; dropping \\\"medical context\\\" is harmless. Plain, adult-level phrasing throughout.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "presentations:noun:2",
+    "headword": "presentations",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "Planned parts of a large meeting are set aside for talks or showing how things work.",
+    "source": "An organized unit of programming at a conference or seminar comprising one or more talks or demonstrations.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Defines as a statement rather than a noun unit, but sense and level hold."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Defines as a statement rather than a noun unit, but sense and level hold.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "miraculously:adverb:0-antonym->naturally",
+    "headword": "miraculously",
+    "target": "naturally",
+    "verdict": "related_as_typed",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Naturally says an event followed its usual course; miraculously suggests something amazing and hard to explain. If a lost dog walks home by its usual route, it returns naturally. If it survives a storm unharmed, people may say it returned miraculously. Naturally can also mean “of course” or “by instinct.” Miraculously can show wonder without saying God caused it. Something may seem miraculous at first, then get a natural explanation.",
+    "source": "Miraculously and naturally can oppose each other when they describe how an event seems to happen: the contrast is between an outcome attributed to extraordinary, inexplicable intervention and one understood as following ordinary processes. The opposition is not absolute, because naturally can also mean “of course” or “by instinct,” while miraculously can be used loosely for any astonishing result without making a religious claim. There is also a middle ground: an event may seem miraculous at first but later receive a natural explanation. In ordinary writing, naturally is the unmarked choice for expected processes; miraculously adds surprise and wonder.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Clear contrast kept; only the 'naturally is unmarked default' nuance is dropped."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Clear contrast kept; only the 'naturally is unmarked default' nuance is dropped.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "uninteresting",
+    "headword": "uninteresting",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Use uninteresting when something does not hold your attention or make you want to know more. It can describe a book, game, idea, or person, and it gives a mild negative opinion. Boring and dull mean much the same; interesting and exciting mean the opposite.",
+    "source": "Uninteresting is an adjective describing something that lacks interest, appeal, or the power to hold attention. It is used for events, objects, ideas, or people that do not stimulate curiosity or enjoyment and are perceived as dull or unengaging. Common synonyms include boring, dull, monotonous, prosaic, and unoriginal, all of which suggest limited liveliness or variety. Antonyms include interesting, engaging, stimulating, exciting, and novel, which refer to things that attract attention or spark curiosity. As a broader term, uninteresting belongs to the category of negative evaluation or descriptive language, and more generally to qualitative descriptors used to assess how something is experienced or judged. Narrower or closely related terms include boring, tedious, dreary, and monotonous, which specify different kinds of unappealing or repetitive lack of interest. The word is often applied in everyday speech, criticism, and writing to express a mild or moderate judgment that something fails to capture attention or provide enjoyment.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "verdict_consistent": null,
+     "register_appropriate": true,
+     "note": "Core sense, synonyms, antonyms, and mild judgment kept; wording simple and plain."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"verdict_consistent\": null, \"register_appropriate\": true, \"note\": \"Core sense, synonyms, antonyms, and mild judgment kept; wording simple and plain.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "pomade:noun:0-synonym->pomatum",
+    "headword": "pomade",
+    "target": "pomatum",
+    "verdict": "related_as_typed",
+    "level": "college",
+    "register": "plain",
+    "text": "Pomade is the current, ordinary term for a hair product, particularly in descriptions of styling and hold; pomatum is a less common, archaic-sounding name for a similar perfumed hair oil or ointment. In a present-day product description, pomade reads naturally, whereas pomatum gives the wording a historical or deliberately antique tone. The distinction is primarily one of currency and register, not a dependable difference in function: in many contexts, pomatum can be replaced by pomade without changing the basic reference.",
+    "source": "Pomade is the ordinary modern choice for a hair product, especially in discussions of styling and hold; pomatum is an older-sounding, less common name for a similar perfumed hair oil or ointment. In a contemporary product description, “pomade” will sound natural, while “pomatum” may make the wording feel historical or deliberately antique. The difference is chiefly one of currentness and register, not a reliable distinction in what the preparation does: in many contexts, pomatum could be replaced by pomade without changing the basic reference.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Faithful paraphrase; keeps currency/register distinction and substitutability, matching the stored verdict."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Faithful paraphrase; keeps currency/register distinction and substitutability, matching the stored verdict.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "mercury_chloride:noun:0",
+    "headword": "mercury chloride",
+    "level": "college",
+    "register": "informal",
+    "text": "It’s a white, water-soluble mercury crystal that’s poisonous; people once used it to kill pests, disinfect wounds, and preserve wood.",
+    "source": "a white poisonous soluble crystalline sublimate of mercury; used as a pesticide or antiseptic or wood preservative",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Drops 'sublimate' detail and adds 'once', but core sense and uses survive intact."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops 'sublimate' detail and adds 'once', but core sense and uses survive intact.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "brazenness:noun:0",
+    "headword": "brazenness",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "A bold breach, which means breaking a rule, done without shame.",
+    "source": "Shamelessly defiant conduct or speech that disregards accepted social norms.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "verdict_consistent": null,
+     "note": "Core sense kept, but inline self-gloss reads plain/instructional, not technical; 'rule' loosens 'social norms'."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Core sense kept, but inline self-gloss reads plain/instructional, not technical; 'rule' loosens 'social norms'.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "uninteresting:adjective:0",
+    "headword": "uninteresting",
+    "level": "college",
+    "register": "technical",
+    "text": "It fails to evoke meaningful curiosity or attentional engagement.",
+    "source": "Lacking interest or appeal; not engaging.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate technical gloss; sentential \"It fails\" framing deviates from phrasal gloss convention; \"appeal\" thinly covered."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate technical gloss; sentential \\\"It fails\\\" framing deviates from phrasal gloss convention; \\\"appeal\\\" thinly covered.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "representative:noun:0-synonym->spokesperson",
+    "headword": "representative",
+    "target": "spokesperson",
+    "verdict": "related_as_typed",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Representative and spokesperson are related words, but they do different jobs. Use representative for someone picked to speak or act for a group. A class representative might tell a teacher what students want without speaking to the public. Use spokesperson for someone who gives an organization’s official message to reporters or other people. A city spokesperson explains city policy for the city. One person at work can do both jobs, but spokesperson is the narrower, more formal role for public messages.",
+    "source": "Choose representative when the person has been selected to act or speak for a group, whether in a meeting, an elected body, or an organization. Choose spokesperson when the role is specifically to deliver the organization’s official public message, especially to journalists or the wider public. A class representative may raise students’ concerns without making public statements, while a city spokesperson is expected to explain policy consistently on the city’s behalf. In some workplaces one person may be both, but spokesperson is narrower and more formal about public communication.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Clear contrast kept; simple wording; minor awkwardness in city-policy sentence, no meaning loss."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Clear contrast kept; simple wording; minor awkwardness in city-policy sentence, no meaning loss.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "foetor",
+    "headword": "foetor",
+    "level": "college",
+    "register": "plain",
+    "text": "Foetor is a formal, Latin-derived term for an intense, offensive odor, especially one associated with decay; it appears chiefly in medical, scientific, and literary contexts. Figuratively, it can evoke moral or social corruption, and unlike a merely unpleasant scent, it suggests rot or deep-taintedness.",
+    "source": "Foetor is a noun referring to a strong, offensive smell, especially one produced by decay, decomposition, or putrefaction. It is commonly used in medical, scientific, and literary contexts to describe a particularly noxious odor, and it can also be applied figuratively to suggest moral corruption or social decline. Synonyms include stench, reek, malodor, fetor, and foul odor. Its antonyms include fragrance, perfume, sweetness, freshness, and, in figurative use, purity or integrity. As a broader term, foetor belongs to the category of smell or odor, and more generally to sensory perception or olfaction. Narrower forms include putrid smell, decomposing odor, fetid breath, carrion stink, and figurative uses such as moral foetor, political foetor, or intellectual foetor. The word derives from Latin and is more formal than everyday terms like “bad smell” or “stink.” In usage, it often implies intensity, unpleasantness, and association with rot or corruption rather than a merely disagreeable scent.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "verdict_consistent": null,
+     "note": "Core sense kept, but \"deep-taintedness\" is an awkward coinage; phrasing is dense rather than plain."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Core sense kept, but \\\"deep-taintedness\\\" is an awkward coinage; phrasing is dense rather than plain.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "paste:noun:1",
+    "headword": "paste",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "A thick, squishy mix you can smear or shape, even if it won’t stick.",
+    "source": "A thick soft mass of a substance that can be spread or shaped; not necessarily adhesive.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "\"Mix\" slightly implies mixture, but core sense and non-sticky caveat kept; wording fits kids."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Mix\\\" slightly implies mixture, but core sense and non-sticky caveat kept; wording fits kids.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "catalyst:noun:1",
+    "headword": "catalyst",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "An event or person that brings about major change or prompts action.",
+    "source": "Something that provokes or speeds significant change or action.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": false,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Narrows 'something' to event/person and drops 'speeds'; 'prompts' exceeds grade-5 vocabulary."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": false, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Narrows 'something' to event/person and drops 'speeds'; 'prompts' exceeds grade-5 vocabulary.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "stillborn:noun:1",
+    "headword": "stillborn",
+    "level": "college",
+    "register": "formal",
+    "text": "Describes a proposed course of action that is abandoned before it can be put into effect.",
+    "source": "A plan, proposal, or initiative that fails to reach realization; an idea that remains unrealized.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "\"Abandoned\" slightly narrows \"fails to reach realization,\" implying agency; otherwise accurate, precise, formal."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Abandoned\\\" slightly narrows \\\"fails to reach realization,\\\" implying agency; otherwise accurate, precise, formal.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "polysaccharide",
+    "headword": "polysaccharide",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "A polysaccharide is a large sugar made from many small sugar parts joined together. These long chains can store food or help build strong parts of living things.",
+    "source": "A polysaccharide is a large carbohydrate molecule made of many monosaccharide units joined by glycosidic bonds. It is a type of polymer and macromolecule found in living organisms, where it commonly serves either as an energy-storage substance or as a structural material. Typical examples include starch and glycogen, which store energy, and cellulose and chitin, which provide structural support. Related terms include glycan, complex carbohydrate, sugar polymer, and carbohydrate polymer. More broadly, a polysaccharide is a carbohydrate, biomolecule, polymer, macromolecule, and organic compound. Narrower forms include starch, cellulose, glycogen, chitin, and homopolysaccharides, which are polysaccharides made from repeating units of one kind of monosaccharide. The term contrasts with monosaccharide and oligosaccharide, which are smaller carbohydrate units, as well as with simple sugars in general. Polysaccharides differ from simpler carbohydrates in their size, complexity, and diverse biological roles.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Core definition and dual roles kept; examples and contrasts dropped, but nothing distorted."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core definition and dual roles kept; examples and contrasts dropped, but nothing distorted.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "stable_base:noun:0",
+    "headword": "stable base",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "A level support spreads weight and gives a building, object, or plan a secure starting point.",
+    "source": "A firm, level foundation that supports a building, object, or plan.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Drops 'firm' and adds unsupported 'spreads weight' claim; shifts foundation to 'starting point'."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops 'firm' and adds unsupported 'spreads weight' claim; shifts foundation to 'starting point'.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "tencent_qq:noun:0",
+    "headword": "Tencent QQ",
+    "level": "college",
+    "register": "formal",
+    "text": "This Chinese messaging and social-networking service is developed and operated by Tencent and has widespread use in China.",
+    "source": "Tencent QQ is a Chinese instant-messaging and social-networking product developed and operated by Tencent and widely used in China.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Adequate, though \"instant-messaging\" loses specificity when reduced to \"messaging\"."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Adequate, though \\\"instant-messaging\\\" loses specificity when reduced to \\\"messaging\\\".\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "unprofitability:noun:1",
+    "headword": "unprofitability",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "It shows how far a business is from making enough money to cover its costs.",
+    "source": "A metric or indicator used in financial analysis to quantify a venture’s lack of profitability.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Simple, clear measure of missing profit; drops 'financial analysis' but sense holds."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, clear measure of missing profit; drops 'financial analysis' but sense holds.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "restitution:noun:0",
+    "headword": "restitution",
+    "level": "college",
+    "register": "informal",
+    "text": "When someone’s wrongdoing leaves people worse off, restitution gives them money or other help to make up for what they lost.",
+    "source": "A monetary or non-monetary remedy intended to compensate for harm or loss, typically administered to victims or claimants to restore the relative balance after wrongdoing.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Core remedy sense kept; 'claimants' and balance-restoring nuance thinned but acceptable; tone suitably casual."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core remedy sense kept; 'claimants' and balance-restoring nuance thinned but acceptable; tone suitably casual.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "papua_new_guinea:noun:0-confusable_with->west_papua",
+    "headword": "Papua New Guinea",
+    "target": "west papua",
+    "verdict": "related_as_typed",
+    "level": "college",
+    "register": "plain",
+    "text": "Papua New Guinea and West Papua are related terms for political regions on New Guinea, but the international border across the island separates them. Papua New Guinea is the independent country in the east; West Papua lies to the west and is administered by Indonesia. Use Papua New Guinea when referring to the country, its government, or its people, such as in a discussion of parliament. Use West Papua for the western region, for example when describing its forests. Describing West Papua as part of Papua New Guinea would wrongly place it within another country.",
+    "source": "The names are easy to confuse because both refer to political regions on the island of New Guinea, but the boundary to remember is the international border running across the island. Papua New Guinea is the independent country in the east; West Papua is in the west and is administered by Indonesia. Use Papua New Guinea for the country, its government, or its people, as in a discussion of parliament. Use West Papua for the western region, as in a description of its forests. Calling West Papua part of Papua New Guinea would wrongly place it in a different country.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Accurate; 'easy to confuse' softened to 'related terms' but relation and distinction intact."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Accurate; 'easy to confuse' softened to 'related terms' but relation and distinction intact.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "bramante:noun:0-synonym->donato_bramante",
+    "headword": "bramante",
+    "target": "donato bramante",
+    "verdict": "related_as_typed",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Bramante and Donato Bramante mean the same person, an architect from the Renaissance, a time long ago. They are not two people or two different building ideas. On a school page, write Donato Bramante when you first name him. Later, Bramante is enough, like using a short name after telling who you mean. The name choice does not change the person or the point you make. Write Bramante with a capital B.",
+    "source": "Bramante and Donato Bramante name the same Renaissance architect, not two different people or two distinct architectural ideas. The shorter form, Bramante, is the usual choice once the person is identified, as in a discussion of Bramante’s plan for Saint Peter’s. Donato Bramante is useful when introducing him or when the full name helps identify him clearly. The choice changes how fully the person is named, not the historical reference or the claim being made; in ordinary prose, the surname is capitalized.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Keeps same-person judgement; adds harmless 'school page' framing; clear grade-5 plain wording."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Keeps same-person judgement; adds harmless 'school page' framing; clear grade-5 plain wording.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "julius_erving:noun:0",
+    "headword": "Julius Erving",
+    "level": "college",
+    "register": "technical",
+    "text": "A United States basketball player born in 1950 whose playing position was forward.",
+    "source": "United States basketball forward (born in 1950)",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "verdict_consistent": null,
+     "note": "Accurate and adult-level, but circumlocution ('whose playing position was forward') reads plain, not technical."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Accurate and adult-level, but circumlocution ('whose playing position was forward') reads plain, not technical.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "melisa:noun:0",
+    "headword": "melisa",
+    "level": "college",
+    "register": "technical",
+    "text": "Melisa is a feminine anthroponym attested in Turkish and other languages, and an orthographic variant of Melissa. In onomastic analysis, it functions as a designation for individuals bearing that name.",
+    "source": "Melisa is a female given name used in Turkish and other languages; it is a spelling variant of Melissa and is employed in onomastic studies to denote individuals bearing the name.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate technical rendering; terminology suits college-level onomastic register without semantic loss."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate technical rendering; terminology suits college-level onomastic register without semantic loss.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "autistic:adjective:0",
+    "headword": "autistic",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "Used to describe a person whose brain develops differently. This can affect how they communicate and may involve repeated actions or strong interests.",
+    "source": "Relating to a neurodevelopmental condition involving differences in social communication and restricted, repetitive patterns of behavior, especially in medical and scholarly contexts.",
+    "flags": [
+     "og.readability_miss"
+    ],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Core sense kept; omits the medical/scholarly usage context, but definition remains accurate and clear."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; omits the medical/scholarly usage context, but definition remains accurate and clear.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "daily_cycle",
+    "headword": "daily cycle",
+    "level": "college",
+    "register": "plain",
+    "text": "Use daily cycle for a predictable sequence that recurs each day, especially the alternation of daylight and darkness or human activities aligned with it. The phrase emphasizes repetition and regular timing; related expressions include day-night cycle, circadian cycle, and daily routine.",
+    "source": "A daily cycle is the regular sequence of daylight and darkness that occurs within a 24-hour day. It refers to the repeating alternation between day and night caused by the Earth’s rotation, and it can also describe a recurring pattern in human activity that follows this natural rhythm. Related terms include circadian cycle, day-night cycle, diurnal cycle, daily routine, and routine pattern. Broader concepts, or hypernyms, include cycle, temporal pattern, pattern, schedule, and rhythm. Narrower examples, or hyponyms, include sunrise-sunset cycle, light-dark cycle, homework cycle, mealtime routine, and sleep-wake cycle. Antonyms are expressions that suggest the absence of regular alternation or rhythmic order, such as constant daylight, nightless day, sporadic schedule, erratic routine, and desynchrony. In general use, the phrase emphasizes repetition, predictability, and the return of similar conditions each day, whether in nature, biology, or organized human habits.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Core sense kept; drops rotation cause and antonyms, but definition and usage remain accurate."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; drops rotation cause and antonyms, but definition and usage remain accurate.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "genital_phase",
+    "headword": "genital phase",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Use genital phase when writing about Freud’s ideas. It names the time when young people begin to seek grown-up love and close bonds with others. Unlike genital stage, the better-known name for Freud’s last step, it points to a stretch of change, not a set step.",
+    "source": "Use genital phase in psychoanalytic writing for the adolescent stage when sexual interests become focused on mature sexual relationships and broader social development. Unlike genital stage, which is the more common term for Freud’s final psychosexual stage, genital phase emphasizes a period or process rather than a named developmental stage.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Simple, accurate; 'stretch of change' slightly abstract but core contrast and meaning kept."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, accurate; 'stretch of change' slightly abstract but core contrast and meaning kept.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "coats:noun:1-synonym->film",
+    "headword": "coats",
+    "target": "film",
+    "verdict": "related_as_typed",
+    "level": "college",
+    "register": "plain",
+    "text": "Coats and film overlap in referring to a layer spread over a surface, but they emphasize different things. Coats is usually countable and names an applied treatment, often deliberately added: a painter may apply two coats of varnish, primer, or paint. Film usually denotes a thin, continuous covering, described by its appearance or how it formed rather than by an application process, as in a film of dust, oil, or moisture on glass. Choose coats when counting applications or emphasizing protection and finish; choose film when the layer is especially thin or uniform, or has accumulated naturally. The terms are related but are not interchangeable in every context.",
+    "source": "Coats and film can both refer to a layer spread over a surface, but coats is normally a countable word for an applied treatment, especially one put on deliberately: a painter applies two coats of varnish, primer, or paint. Film is usually a thin, continuous covering, often described by its appearance or formation rather than by the application process: a film of dust, oil, or moisture formed on the glass. Use coats when counting applications or discussing protection and finish; use film when the layer is notably thin, uniform, or naturally accumulated. The words overlap, but they are not interchangeable in every context.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Faithful paraphrase; retains overlap-but-not-interchangeable judgement, countable/thin-layer distinction, and plain college-level voice."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Faithful paraphrase; retains overlap-but-not-interchangeable judgement, countable/thin-layer distinction, and plain college-level voice.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "live_aid:noun:0",
+    "headword": "Live Aid",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "Live Aid was two 1985 TV shows that raised money for hungry people in Ethiopia.",
+    "source": "Live Aid was an internationally broadcast pair of benefit concerts held in 1985 to raise money for people affected by famine in Ethiopia.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "verdict_consistent": null,
+     "note": "Concerts became 'TV shows'; famine and international broadcast lost; wording plain, not formal."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Concerts became 'TV shows'; famine and international broadcast lost; wording plain, not formal.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "presentations:noun:0",
+    "headword": "presentations",
+    "level": "college",
+    "register": "formal",
+    "text": "Prepared oral talks or demonstrations that communicate information to an audience, commonly by presenting findings, methods, or concepts with visual support.",
+    "source": "A formal talk or demonstration delivered to an audience to convey information, typically introducing results, methods, or concepts, often accompanied by visual aids.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Adequate; 'prepared' softens 'formal' and hedging on visual aids is slightly blurred."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Adequate; 'prepared' softens 'formal' and hedging on visual aids is slightly blurred.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "scylla",
+    "headword": "scylla",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Scylla usually means a sea monster from Greek stories. She lived by rocks across from Charybdis and threatened ships. Scylla can also name a group of crabs, called a genus, and can stand for a dangerous choice.",
+    "source": "Scylla is a noun referring primarily to a figure in Greek mythology: a sea monster that dwells on a rocky shore opposite Charybdis and threatens passing sailors. In classical accounts, she is often described as a terrifying multiheaded female creature, and her name has become a symbol of a dangerous choice or peril at sea. In broader usage, Scylla may also denote a mythic monster or, in zoological contexts, a crab genus. Synonyms include sea monster, monster, mythical creature, and, in taxonomy, crab genus or true crab genus. Broader terms, or hypernyms, include creature, mythical creature, monster, genus, and taxon. Narrower terms, or hyponyms, include three-headed monster, sea demon, and species such as Scylla serrata, Scylla paramamosain, and Scylla olivacea. Antonyms are not direct or established for this noun, though ordinary opposites might be harmless creature, guardian, or savior when contrasting its destructive role. The word is closely associated with danger, monstrosity, and legendary seafaring peril.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Core sense kept; short plain sentences; 'genus' briefly glossed, suitable for a ten-year-old."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; short plain sentences; 'genus' briefly glossed, suitable for a ten-year-old.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "steep:adjective:0",
+    "headword": "steep",
+    "level": "college",
+    "register": "informal",
+    "text": "You call a path steep when it gains or loses height fast despite covering little ground.",
+    "source": "Having a sharp or abrupt slope; characterized by a large elevation change over a short horizontal distance, typical of surfaces or paths studied in geometry and physical geography.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Captures height-over-distance idea; 'fast' slightly time-flavored, but concise and suitably conversational."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures height-over-distance idea; 'fast' slightly time-flavored, but concise and suitably conversational.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "adjustment",
+    "headword": "adjustment",
+    "level": "college",
+    "register": "plain",
+    "text": "Use adjustment for a purposeful change that improves fit, operation, accuracy, or suitability; it often suggests a limited refinement rather than replacement. The term applies to devices, plans, data, finances, and a person's response to new circumstances, with the precise sense supplied by context.",
+    "source": "Adjustment is a noun meaning a change or modification made to improve fit, function, accuracy, or suitability. It can refer to a small correction in a mechanism, a shift in plans, or a personal adaptation to new conditions. In technical contexts, adjustment often involves fine-tuning or calibration to bring something into proper working order. Common synonyms include modification, alteration, adaptation, accommodation, and calibration. Antonyms include stability, rigidity, inflexibility, and, in data-related contexts, unadjusted data. More broadly, adjustment belongs to the class of changes or modifications, and it can also be seen as a form of correction or calibration. Narrower uses include calibration, tuning, realignment, and other specific kinds of accommodation or assignment extension. The term is widely used in engineering, statistics, finance, psychology, and everyday speech, where it usually implies a purposeful and often incremental change rather than a complete replacement.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Core sense and incremental nuance kept; synonym/antonym and calibration detail dropped but nothing contradicted."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense and incremental nuance kept; synonym/antonym and calibration detail dropped but nothing contradicted.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "pads:verb:0",
+    "headword": "pads",
+    "level": "college",
+    "register": "technical",
+    "text": "To apply compliant cushioning to a surface or body part, attenuating impact loads and abrasion through an interposed soft layer.",
+    "source": "To surround or cover a surface or body part with soft material to cushion it or protect it from impact or friction.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Technical phrasing fits; 'surround or cover' slightly weakened to 'apply,' but core sense intact."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Technical phrasing fits; 'surround or cover' slightly weakened to 'apply,' but core sense intact.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "stable_base:noun:0-synonym->stand",
+    "headword": "stable base",
+    "target": "stand",
+    "verdict": "related_differently",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "A stable base and a stand can both hold things up, but they do not mean the same thing. A stable base is firm and level, helping keep something steady. A stand is a separate holder, often made for a particular use or position, and it may not be stable. For example, you can set a phone on a stand and check whether its base is steady. Calling it a stand alone does not say that it will keep the phone steady.",
+    "source": "Stable base and stand overlap when both support an object, but they are not interchangeable. A stable base describes the quality and role of the supporting foundation: it is firm and level, and the emphasis is on keeping something steady. A stand is a separate support or holder, often a designed piece of equipment; it need not itself be stable, and it may be chosen for convenience or positioning. You can say a phone rests on a stand, then note that the stand has a stable base. Replacing “stable base” with “stand” loses the assurance of steadiness.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Example shifts slightly from stating the stand has a stable base to checking it; minor."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Example shifts slightly from stating the stand has a stable base to checking it; minor.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "truthiness:noun:3",
+    "headword": "truthiness",
+    "level": "college",
+    "register": "formal",
+    "text": "A measure of correctness that permits intermediate or partial truth, rather than restricting statements to true or false classifications.",
+    "source": "In nonclassical logics and semantics, a graded or partial status of being correct rather than a binary classification.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Core sense intact; domain qualifier (nonclassical logics/semantics) dropped, a minor loss of specificity."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense intact; domain qualifier (nonclassical logics/semantics) dropped, a minor loss of specificity.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "tic:noun:1",
+    "headword": "tic",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "A tic is a little move you keep making, usually without harm.",
+    "source": "A habitual, repetitive gesture or movement characteristic of a person, often benign.",
+    "flags": [
+     "og.headword_initial"
+    ],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Keeps repetition and harmlessness; 'usually without harm' slightly stiff but clear and simple."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Keeps repetition and harmlessness; 'usually without harm' slightly stiff but clear and simple.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "sequence_data:noun:0",
+    "headword": "sequence data",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "Lists keep information in order, so an item's spot can change what you learn.",
+    "source": "Data consisting of one or more ordered lists of elements, where the position of each element in the list is meaningful for analysis, modeling, or interpretation.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Order and position-matters kept; framing as data (one or more lists) is only implied."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Order and position-matters kept; framing as data (one or more lists) is only implied.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "presentations:noun:1",
+    "headword": "presentations",
+    "level": "college",
+    "register": "informal",
+    "text": "It’s the collection of things you use to make a talk or demonstration clear to the people watching.",
+    "source": "The set of materials prepared to accompany a talk or demonstration for presentation to an audience, including slides, handouts, and visual elements.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": false,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Drops slides/handouts/visuals and 'prepared materials'; vague 'things' reads below college precision."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": false, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops slides/handouts/visuals and 'prepared materials'; vague 'things' reads below college precision.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "josue:noun:0",
+    "headword": "josue",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "This masculine name is used in Spanish and Portuguese. It comes from Hebrew Yehoshua, is related to Joshua, and means “Yahweh is salvation.”",
+    "source": "Josue is a masculine given name used in Spanish and Portuguese contexts, cognate with Joshua, derived from Hebrew Yehoshua and meaning Yahweh is salvation.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Short sentences, plain wording; all source elements retained, including cognate link and meaning."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Short sentences, plain wording; all source elements retained, including cognate link and meaning.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "self_reliance:noun:0-synonym->work_alone",
+    "headword": "self-reliance",
+    "target": "work alone",
+    "verdict": "related_differently",
+    "level": "college",
+    "register": "plain",
+    "text": "Self-reliance is a personal quality that can influence someone’s approach across many situations; work alone refers to a specific way of carrying out a task. The terms are related but describe different things: a student might work alone on a report because no partner is available, without being generally self-reliant, while a self-reliant student may still choose to collaborate. The phrase work alone functions as a verb phrase, so “completed the science report with work alone” is ungrammatical. Use “worked alone” or “completed the report independently” instead.",
+    "source": "Self-reliance is a personal quality that can shape how someone approaches many situations; work alone describes a particular way of doing a task. A student may work alone on one report because no partner is available without being generally self-reliant, while a self-reliant student may still choose to collaborate. There is also a grammar problem in the supplied example: work alone is a verb phrase, so “completed the science report with work alone” is unnatural. Say “worked alone” or “completed the report independently.”",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Accurate rewrite; explicitly marks terms as related yet distinct, matching related_differently verdict."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Accurate rewrite; explicitly marks terms as related yet distinct, matching related_differently verdict.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "dicky:noun:0",
+    "headword": "dicky",
+    "level": "college",
+    "register": "formal",
+    "text": "An informal sobriquet applied to a man whose given name is Richard.",
+    "source": "A nickname for a man named Richard; used in informal contexts.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate; 'sobriquet' and 'given name' suit formal, college-level gloss register."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; 'sobriquet' and 'given name' suit formal, college-level gloss register.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "justin",
+    "headword": "justin",
+    "level": "college",
+    "register": "plain",
+    "text": "Justin is a masculine personal name, usually given as a first name rather than a surname, and is used in English and many other languages. It derives from Latin iustus, meaning “just” or “fair,” and has been borne by saints, rulers, and contemporary public figures.",
+    "source": "Justin is a masculine given name of Latin origin, used primarily in English-language contexts and many other languages. It refers to a personal name assigned to a male individual, typically as a first name rather than a family name. The name is historically associated with Latin iustus, meaning “just” or “fair,” and has been borne by various saints, rulers, and modern public figures. As a type of name, Justin belongs to the broader category of a name and, more specifically, an anthroponym, or human personal name. Synonyms include forename, given name, and masculine name, all of which emphasize its role as an individual’s personal identifier. Antonyms are less exact in this semantic field, but surname serves as the main contrast because it denotes a family name rather than a personal one. Narrower terms include forename and Christian name, both of which refer to a first name used to identify a person within social and legal contexts.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Omits hypernyms (name, anthroponym), synonyms, contrast with surname, and narrower terms."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Omits hypernyms (name, anthroponym), synonyms, contrast with surname, and narrower terms.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "hedge:noun:0",
+    "headword": "hedge",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "A dense row of shrubs or trees marks a boundary, the line between two areas, or surrounds a garden.",
+    "source": "A living barrier of shrubs or trees planted close together to mark a boundary or enclose an area, commonly used in gardens or landscapes.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "verdict_consistent": null,
+     "note": "Drops 'planted/living'; narrows enclosure to gardens; plain voice, not technical; appositive muddles syntax."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Drops 'planted/living'; narrows enclosure to gardens; plain voice, not technical; appositive muddles syntax.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "ionia:noun:2",
+    "headword": "ionia",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "This Greek region linked Ionian speech, one kind of Greek, with its old writings.",
+    "source": "Ionia denotes the cultural linguistic zone associated with the Ionian Greek dialect and its literary traditions.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "verdict_consistent": null,
+     "note": "Vague 'old writings' and 'speech' drop technical terms like dialect and literary tradition."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Vague 'old writings' and 'speech' drop technical terms like dialect and literary tradition.\"}"
+   },
+   {
+    "field": "explanation",
+    "owner": "art",
+    "headword": "art",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Art can be a song, a play, a picture, or a statue. People value it for beauty, feelings, ideas, or the skill it shows. The word can also name a whole kind of creative work.",
+    "source": "Art, as a noun, refers to the expression or application of human creative skill and imagination, usually in forms such as visual, auditory, or performative works. It includes activities and products valued chiefly for their beauty, emotional force, symbolic meaning, or conceptual depth. In this sense, art encompasses fine art and artistic expression, as well as broader creative work within a cultural field or discipline. Common synonyms include fine art, creative work, artistic expression, discipline, and field. Broader categories, or hypernyms, include creation, cultural product, domain, field, and skill, since art is one kind of human-made cultural expression. Narrower forms, or hyponyms, include painting, sculpture, visual art, performing art, and, in some contexts, statecraft when understood as a refined creative practice. Antonyms are terms such as banality, vandalism, nonart, crafts, and clumsiness, which suggest the absence of artistry, aesthetic value, or intentional creative refinement. Art may be appreciated for its technique, originality, emotional resonance, or intellectual significance.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Core sense and examples kept; relation lists dropped but gist survives at this level."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense and examples kept; relation lists dropped but gist survives at this level.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "shopping:noun:1",
+    "headword": "shopping",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "Purchasing, which means paying to get goods, can be done for enjoyment or to feel better.",
+    "source": "A form of purchasing goods used for leisure or to improve one’s mood, sometimes called retail therapy.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": false,
+     "level_appropriate": true,
+     "register_appropriate": false,
+     "verdict_consistent": null,
+     "note": "Drops 'retail therapy' term and reframes as purchasing generally; voice is plain, not technical."
+    },
+    "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Drops 'retail therapy' term and reframes as purchasing generally; voice is plain, not technical.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "dynamic_system:adjective:1",
+    "headword": "dynamic system",
+    "level": "grade_5",
+    "register": "technical",
+    "text": "A system is dynamic when its parts change over time instead of staying fixed.",
+    "source": "Characterized by change and movement; not fixed or static.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Captures change vs. fixed; simple wording fits grade 5 and technical voice."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures change vs. fixed; simple wording fits grade 5 and technical voice.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "exoneration:noun:1",
+    "headword": "exoneration",
+    "level": "college",
+    "register": "technical",
+    "text": "Exoneration is the evidential or analytical removal of grounds for doubt, restoring the credibility of a person, claim, or theory.",
+    "source": "The vindication or rehabilitation of a claim, theory, or individual's reputation through new evidence or careful analysis, thereby restoring credibility.",
+    "flags": [
+     "og.headword_initial"
+    ],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Vindication recast as removal of doubt; core sense, agents, and restoration of credibility retained."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Vindication recast as removal of doubt; core sense, agents, and restoration of credibility retained.\"}"
+   },
+   {
+    "field": "contrast",
+    "owner": "serve:verb:2-synonym->serve_well",
+    "headword": "serve",
+    "target": "serve well",
+    "verdict": "related_as_typed",
+    "level": "grade_5",
+    "register": "plain",
+    "text": "Serve can mean that something helps; serve well says it helps effectively. At a school fair, a table can serve the bake sale by holding cakes. If it keeps them easy to reach, it serves the sale well. Use serve when you only say it helps. Use serve well when you also judge how well it helps.",
+    "source": "Serve well adds an evaluation that serve alone does not: it says the thing is effective or beneficial for its purpose. A plan may serve a project simply by helping it, while a plan that serves the project well helps it effectively. In a sentence such as “Art serves commerce,” serve states the relationship without judging its success; “Art serves commerce well” makes that judgment explicit. Use serve when benefit is the point, and serve well when the quality of that benefit matters.",
+    "names_headword": true,
+    "names_target": true,
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": true,
+     "note": "Clear contrast kept; evaluation added by 'well' shown with simple bake-sale example."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": true, \"note\": \"Clear contrast kept; evaluation added by 'well' shown with simple bake-sale example.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "daily_cycle:noun:2",
+    "headword": "daily cycle",
+    "level": "college",
+    "register": "informal",
+    "text": "It’s the timing system inside a living thing that keeps its daily routines on a roughly twenty-four-hour beat.",
+    "source": "An internal biological clock regulating recurring 24-hour patterns in organisms.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Accurate paraphrase; casual contraction and \"beat\" fit informal college voice; \"roughly\" is a fair nuance."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate paraphrase; casual contraction and \\\"beat\\\" fit informal college voice; \\\"roughly\\\" is a fair nuance.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "serve:noun:1",
+    "headword": "serve",
+    "level": "grade_5",
+    "register": "informal",
+    "text": "It’s the first hit that gets a racket game going.",
+    "source": "In racket sports, the act of starting play by delivering the ball into play.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Simple and casual; \"first hit\" slightly implies once per game, but acceptable."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple and casual; \\\"first hit\\\" slightly implies once per game, but acceptable.\"}"
+   },
+   {
+    "field": "gloss",
+    "owner": "ionia:noun:2",
+    "headword": "ionia",
+    "level": "grade_5",
+    "register": "formal",
+    "text": "This Greek region was known for its shared speech and its written works.",
+    "source": "Ionia denotes the cultural linguistic zone associated with the Ionian Greek dialect and its literary traditions.",
+    "flags": [],
+    "judge": {
+     "meaning_preserved": true,
+     "level_appropriate": true,
+     "register_appropriate": true,
+     "verdict_consistent": null,
+     "note": "Acceptable, though 'shared speech' vaguely renders the specific Ionian dialect; slight loss of precision."
+    },
+    "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Acceptable, though 'shared speech' vaguely renders the specific Ionian dialect; slight loss of precision.\"}"
+   }
+  ]
+ }
+}

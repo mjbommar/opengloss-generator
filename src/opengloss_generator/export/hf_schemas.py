@@ -1510,9 +1510,11 @@ _PRETRAIN = RepoSpec(
         "continued pretraining: four document templates per entry — a dictionary entry, a "
         "thesaurus entry, an encyclopedia article and a usage note — written as plain text "
         "and light markdown, with no JSON or YAML duplication and no special tokens. A "
-        "section with nothing to say is left out rather than emitted empty. Requesting a "
-        "reading level renders every template at that level, falling back to the canonical "
-        "text where a rendition is missing (`level_used` says which happened)."
+        "section with nothing to say is left out rather than emitted empty. Each template is "
+        "rendered at every requested reading level from text written for that level; a "
+        "non-neutral document with no text of its own at its level is not emitted, and no "
+        "two documents share the same text (`level_used` and `sections_at_level` say how "
+        "much of each document is at its level)."
     ),
     task_categories=("text-generation", "fill-mask"),
     tags=("pretraining", "corpus", "plain-text", "reading-level"),
@@ -1545,11 +1547,18 @@ for doc in corpus.take(3):
                 FieldSpec(
                     "level_used",
                     _STR,
-                    "`neutral` when any part of the document fell back to canonical text; "
-                    "otherwise equal to `level`.",
+                    "Equal to `level` when every leveled section was written at that level; "
+                    "`mixed` when some fell back to neutral text. Non-neutral documents with "
+                    "no leveled section at all are not emitted.",
                 ),
                 FieldSpec("text", _STR, "The document."),
                 FieldSpec("n_words", _I32, "Whitespace-delimited word count."),
+                FieldSpec(
+                    "sections_at_level",
+                    _I32,
+                    "Leveled sections (glosses, examples, overview, explanation, register "
+                    "lines, contrast notes) written at `level`.",
+                ),
                 FieldSpec("tier", _STR, "Tier of the entry."),
             ),
         ),

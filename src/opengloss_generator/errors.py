@@ -8,6 +8,7 @@ from __future__ import annotations
 
 __all__ = [
     "BudgetExceededError",
+    "DuplicateDocumentError",
     "GenerationError",
     "LockTimeoutError",
     "OpenGlossError",
@@ -57,6 +58,14 @@ class BudgetExceededError(OpenGlossError):
 
 class StoreError(OpenGlossError):
     """The content store could not complete an operation."""
+
+
+class DuplicateDocumentError(OpenGlossError):
+    """Two distinct exported documents carry the same normalized text.
+
+    Raised by the pretraining exporter's duplicate gate (docs/LEVELED-PRETRAIN-PLAN.md
+    § 4.6) so that a copied document can never reach a release silently.
+    """
 
 
 class LockTimeoutError(StoreError):

@@ -1,0 +1,1686 @@
+{
+ "judge": "claude-opus-5",
+ "items": 90,
+ "cost_usd": 1.1219,
+ "by": {
+  "all": {
+   "n": 90,
+   "meaning_preserved": 0.7444,
+   "level_appropriate": 0.9778,
+   "register_appropriate": 0.9889,
+   "unparsed": 0
+  },
+  "explanation": {
+   "n": 60,
+   "meaning_preserved": 0.7333,
+   "level_appropriate": 1.0,
+   "register_appropriate": 1.0,
+   "unparsed": 0
+  },
+  "explanation/college/plain": {
+   "n": 30,
+   "meaning_preserved": 0.6667,
+   "level_appropriate": 1.0,
+   "register_appropriate": 1.0,
+   "unparsed": 0
+  },
+  "explanation/grade_5/plain": {
+   "n": 30,
+   "meaning_preserved": 0.8,
+   "level_appropriate": 1.0,
+   "register_appropriate": 1.0,
+   "unparsed": 0
+  },
+  "gloss": {
+   "n": 30,
+   "meaning_preserved": 0.7667,
+   "level_appropriate": 0.9333,
+   "register_appropriate": 0.9667,
+   "unparsed": 0
+  },
+  "gloss/grade_5/formal": {
+   "n": 30,
+   "meaning_preserved": 0.7667,
+   "level_appropriate": 0.9333,
+   "register_appropriate": 0.9667,
+   "unparsed": 0
+  }
+ },
+ "results": [
+  {
+   "field": "explanation",
+   "owner": "strangers",
+   "headword": "strangers",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A stranger is someone you do not know, or someone outside your group. The word means unfamiliar, not dangerous, though it can suggest distance or caution. A visitor, tourist, or newcomer may be a stranger until people know them.",
+   "source": "Strangers are people who are not known to a particular observer, community, or group and who therefore lie outside one’s personal or social circle. The term emphasizes unfamiliarity rather than hostility, though in some contexts it can also suggest social distance, privacy, or caution. Common synonyms include outsider, unknown person, alien, foreigner, and guest, depending on the setting and degree of familiarity implied. Antonyms include insider, acquaintance, local, member, and familiar member, which all indicate established recognition or belonging. As a broader category, strangers are kinds of person, since the word refers to a human individual defined by relationship to others. Narrower examples or hyponyms include newcomer, visitor, guest, immigrant, and tourist, which specify particular kinds of people who are not fully known or belong temporarily or externally to a place or group. In everyday use, the word can describe someone met for the first time, someone from outside a community, or anyone lacking prior connection to the observer.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; synonyms/antonyms dropped but gist and examples survive; wording simple and plain."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; synonyms/antonyms dropped but gist and examples survive; wording simple and plain.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "british_antarctic_territory",
+   "headword": "British Antarctic Territory",
+   "level": "college",
+   "register": "plain",
+   "text": "Use British Antarctic Territory for the sector of Antarctica and nearby islands administered by the United Kingdom. Antarctica refers to the continent and surrounding region as a whole, whereas this name denotes a specific British-administered territory.",
+   "source": "Use British Antarctic Territory when referring specifically to the part of Antarctica administered by the United Kingdom and its nearby islands. Unlike Antarctica, which names the whole continent and surrounding region, this term identifies a particular British-administered territory.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise; 'denotes' slightly formal but acceptable for plain college-level prose."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise; 'denotes' slightly formal but acceptable for plain college-level prose.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "tomsk:adjective:0",
+   "headword": "tomsk",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "Describes something from Tomsk, or something linked to that city in Russia.",
+   "source": "Relating to the city of Tomsk, Russia, used as a toponymic adjective to describe objects, institutions, or phenomena associated with Tomsk.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple, neutral phrasing keeps toponymic sense; 'that city' ordering slightly awkward but acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, neutral phrasing keeps toponymic sense; 'that city' ordering slightly awkward but acceptable.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "j_l_mackie",
+   "headword": "J. L. Mackie",
+   "level": "college",
+   "register": "plain",
+   "text": "Use “J. L. Mackie” for the Australian analytic philosopher who defended moral error theory: the view that objective moral values do not exist. “Moral skeptic” is broader, describing anyone who doubts that moral knowledge is possible or certain.",
+   "source": "Use “J. L. Mackie” when referring to the Australian analytic philosopher, especially in discussions of moral error theory, moral skepticism, and the claim that objective moral values do not exist. Unlike “moral skeptic,” which can describe anyone who doubts moral knowledge or certainty, “J. L. Mackie” names the specific philosopher associated with this position.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise; keeps Mackie's error theory and the broader 'moral skeptic' distinction."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise; keeps Mackie's error theory and the broader 'moral skeptic' distinction.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "live_aid",
+   "headword": "Live Aid",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Say Live Aid for the 1985 shows that raised money for hungry people in Ethiopia. A benefit concert can mean any show held to raise money.",
+   "source": "Use “Live Aid” when referring specifically to the 1985 international benefit concerts for famine relief in Ethiopia. It is more precise than “a benefit concert,” which could refer to any fundraising performance.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops \"international\" and the explicit precision claim, but contrast stays clear; wording fits grade 5."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops \\\"international\\\" and the explicit precision claim, but contrast stays clear; wording fits grade 5.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "information_type",
+   "headword": "information type",
+   "level": "college",
+   "register": "plain",
+   "text": "In libraries, databases, computing, and research, an information type classifies material by properties such as format, structure, or intended use. These categories make information easier to identify, compare, retrieve, and process, and support consistent exchange between systems. Related labels include file format, document type, and metadata type; the contrasting idea is information left uncategorized.",
+   "source": "Information type is a noun referring to a classification system or category used to group information according to its characteristics, structure, format, or intended use, especially in academic, technical, or professional settings. It helps organize data and documents by making their properties easier to identify, compare, retrieve, and process. Common synonyms include data classification, information category, content type, data type, and content format. Broader terms, or hypernyms, include classification system, taxonomic category, data specification, format standard, and theoretical framework, all of which describe more general ways of organizing or defining entities. Narrower terms, or hyponyms, include metadata type, file format, document type, MIME type, and file extension, which refer to specific kinds of information types used in digital systems and documentation. Antonyms are less direct, since the term denotes organized categorization; possible opposites include unclassified information, miscellaneous data, or uncategorized content. In practice, information type is important in libraries, databases, computing, and research, where precise categorization supports consistency, interoperability, and efficient information management.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Condensed but accurate; hyponyms vaguely called 'related labels', synonyms/hypernyms dropped."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condensed but accurate; hyponyms vaguely called 'related labels', synonyms/hypernyms dropped.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "papua_new_guinea",
+   "headword": "Papua New Guinea",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use Papua New Guinea for the country on New Guinea’s east side and nearby islands. Papua is a part of Indonesia on the west side, while New Guinea is the island.",
+   "source": "Use “Papua New Guinea” when referring to the independent country occupying the eastern half of New Guinea and nearby islands. Do not confuse it with Papua, a region in Indonesia on the western half of the island, or with New Guinea, the island itself.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Clear, simple wording; drops 'independent' but 'country' conveys it adequately."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Clear, simple wording; drops 'independent' but 'country' conveys it adequately.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "regularly:adverb:0",
+   "headword": "regularly",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "It occurs at planned times or follows a pattern that can be expected.",
+   "source": "At consistent intervals or according to a predictable pattern.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Planned times\" adds intention; loses \"consistent intervals\" (even spacing) sense."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Planned times\\\" adds intention; loses \\\"consistent intervals\\\" (even spacing) sense.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "caliginous",
+   "headword": "caliginous",
+   "level": "college",
+   "register": "plain",
+   "text": "Caliginous describes something obscured by darkness or insufficient light, and can also suggest a heavy, gloomy atmosphere. Dusky, shadowed, and tenebrous are more specific terms for darkness, while bright, luminous, and clear express contrasting conditions. Esoteric and cryptic sometimes appear as related terms, but usually refer to difficult meanings rather than dimness.",
+   "source": "Caliginous is an adjective meaning dark, dim, or murky because of insufficient light. It is often used to describe an environment, surface, or object that appears shadowed, obscure, or hard to see clearly. The word can also suggest a heavy, gloomy atmosphere. Common synonyms include dark, dim, shadowy, murky, and obscure, all of which convey reduced visibility or lack of clarity. Antonyms include bright, luminous, illuminated, radiant, and clear, which describe conditions with ample light or visibility. In broader terms, caliginous belongs to the category of visual property, since it describes how something looks, and can also relate more generally to atmosphere or emotional state when used figuratively. Narrower or more specific related terms include dusky, shadowed, and tenebrous, which emphasize particular shades of darkness or gloom. In some contexts, esoteric and cryptic are listed as related narrower terms, though they usually describe meaning rather than light, and therefore are less literal uses of the word.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Condenses well; core sense, narrower terms, antonyms, and esoteric caveat all retained accurately."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condenses well; core sense, narrower terms, antonyms, and esoteric caveat all retained accurately.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "julius_erving",
+   "headword": "Julius Erving",
+   "level": "college",
+   "register": "plain",
+   "text": "Use “Julius Erving” as the proper name of the American basketball forward whose professional career spanned the 1970s and 1980s. “Dr. J” is his familiar nickname; the name also points specifically to his status as a Basketball Hall of Fame inductee, rather than to basketball players generally.",
+   "source": "Use “Julius Erving” when referring to the celebrated American basketball forward, also known as “Dr. J,” who played professionally in the 1970s and 1980s. Unlike the broader term “basketball player,” this name identifies one specific Hall of Fame athlete.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Awkward claim that the name points to his \"status as inductee\"; specificity contrast still clear."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Awkward claim that the name points to his \\\"status as inductee\\\"; specificity contrast still clear.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "michel",
+   "headword": "michel",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Michel is a French name usually given to boys and men. It comes from Michael and is mostly a first name, but it can also be a family name. Unlike words for whole groups of things, it names one person.",
+   "source": "Michel is a masculine given name of French origin, historically derived from Michael and especially common in Francophone cultures. As a proper name, it identifies a person rather than a category or object, and it functions primarily as a forename, though it may also appear as a surname in some contexts. The core meaning is therefore that of a personal name used to designate an individual male. Synonyms include Michael, forename, given name, personal name, and, in some contexts, surname. Broader hypernyms are name and proper noun, since Michel belongs to the larger class of words used to label people, places, or things uniquely. Narrower hyponyms include French given name, masculine given name, French surname, and common surname, which specify particular social or linguistic uses of the name. Antonyms are not strictly applicable to personal names, though in a broad semantic sense Michel contrasts with common nouns or appellatives, which denote general classes rather than named individuals.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; simple wording fits grade 5; minor taxonomy details dropped but acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; simple wording fits grade 5; minor taxonomy details dropped but acceptable.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "pantheist",
+   "headword": "pantheist",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A pantheist sees God as part of the whole world, not a separate person. The name can describe a belief or spiritual path, often linked to love of nature.",
+   "source": "A pantheist is a person who subscribes to pantheism, the view that the divine reality is identical with the universe and present throughout all things. In this outlook, God or the sacred is not understood as a separate, personal being outside the world, but as immanent in nature, matter, and existence itself. The term can refer both to a philosophical position and to a religious or spiritual orientation. Related words and expressions include pantheism believer, pantheism adherent, divine immanentist, nature worshipper, and nature-centered believer. Broader categories for pantheist include believer, religious believer, and supporter of a belief system. Narrower or more specific related terms include ecotheist and nature mystic, which emphasize spiritual meaning found in the natural world. Antonyms include atheist, who denies the existence of God or gods, and theist, who believes in a distinct divine being. Pantheism is often associated with reverence for nature, unity of existence, and the idea that all things share in a single sacred reality.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Part of the whole world\" weakens the key claim that God is the universe itself."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Part of the whole world\\\" weakens the key claim that God is the universe itself.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "2_dimensional",
+   "headword": "2-dimensional",
+   "level": "college",
+   "register": "plain",
+   "text": "Use “2-dimensional” for an image, design, or display that appears flat, with no visual depth. The term distinguishes it from “3-dimensional,” which depicts or suggests height, width, and depth.",
+   "source": "Use “2-dimensional” when something is flat in appearance or lacks visual depth, such as an image, design, or display. It contrasts with “3-dimensional,” which represents or creates the impression of height, width, and depth.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate and concise; examples slightly narrowed from illustrative to defining, but sense intact."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and concise; examples slightly narrowed from illustrative to defining, but sense intact.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "great_depression:noun:0",
+   "headword": "Great Depression",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "The Great Depression was a time of lost jobs and money, beginning after the 1929 stock crash and lasting into the 1930s.",
+   "source": "the economic crisis beginning with the stock market crash in 1929 and continuing through the 1930s",
+   "flags": [
+    "og.readability_miss"
+   ],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"lasting into the 1930s\" weakens \"through the 1930s\"; \"after\" the crash also shifts start."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"lasting into the 1930s\\\" weakens \\\"through the 1930s\\\"; \\\"after\\\" the crash also shifts start.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "hydraulicly",
+   "headword": "hydraulicly",
+   "level": "college",
+   "register": "plain",
+   "text": "Use “hydraulicly” only for action driven by hydraulic pressure or power; the standard spelling is “hydraulically.” The term distinguishes fluid-driven action from “mechanically,” which can refer to machinery more broadly.",
+   "source": "Use “hydraulicly” only when referring to something done through hydraulic power or pressure, but the standard spelling is “hydraulically.” Unlike “mechanically,” it specifically points to fluid-driven action rather than machinery in general.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise; keeps spelling note and fluid-vs-machinery distinction in plain college prose."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise; keeps spelling note and fluid-vs-machinery distinction in plain college prose.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "unprofitability",
+   "headword": "unprofitability",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Unprofitability means a business brings in too little money to pay its costs. It can lead to a loss, and it is the opposite of making a profit. People use the term to judge how well a business or project is doing.",
+   "source": "Unprofitability is the state of failing to produce profit, especially when a project, business, or operation yields negative or zero net income after costs are deducted. It describes a condition in which revenues are insufficient to cover expenses, leaving no financial gain and often indicating inefficiency, weak demand, high costs, or poor management. Common synonyms include loss and unprofitableness, as well as related expressions such as loss metric or unprofitability metric in analytical contexts. Antonyms include profitability, profit, profit metric, and profit drivers, all of which refer to positive financial return or the forces that create it. As a broader concept, unprofitability belongs to economic condition, financial metric, and economic factors, since it reflects a measurable outcome within a wider financial environment. Narrower forms include net loss, operating loss, cost overrun, loss ratio, and net margin, each naming a specific type or measure of financial shortfall. The term is used in accounting, business analysis, and economics to assess performance and viability.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; \"can lead to a loss\" slightly weakens the loss equivalence."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; \\\"can lead to a loss\\\" slightly weakens the loss equivalence.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "pads:noun:0",
+   "headword": "pads",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "Sheets attached along one edge provide paper for notes, drawings, and early school or work drafts.",
+   "source": "A pad of paper bound at one edge used for writing or drawing; a stack of sheets intended for note taking and drafting in academic or professional contexts.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; \"early ... drafts\" phrasing is slightly clunky but clear and formal."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; \\\"early ... drafts\\\" phrasing is slightly clunky but clear and formal.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "spring_to_mind:verb:0",
+   "headword": "spring to mind",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "To return to a person's thoughts as something known before.",
+   "source": "be remembered",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": false,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Abstract phrasing 'as something known before' is awkward and unclear for a ten-year-old."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": false, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Abstract phrasing 'as something known before' is awkward and unclear for a ten-year-old.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "presents",
+   "headword": "presents",
+   "level": "college",
+   "register": "plain",
+   "text": "As a plural noun, “presents” means gifts or offerings deliberately given to another person or group, commonly to mark an occasion or express generosity, appreciation, or recognition. The term covers tangible objects and symbolic contributions; birthday and Christmas gifts, diplomatic gifts, and commemorative gifts are narrower kinds, while gifts, tokens, donations, and tributes overlap in meaning. In ordinary use, presents usually signal goodwill or ceremonial respect, in contrast with withholding, neglect, or penalties, which imply deprivation or refusal.",
+   "source": "“Presents” as a noun refers to gifts or offerings given to someone, usually on a special occasion or as an expression of generosity, appreciation, or recognition. The word commonly implies something intentionally selected and transferred to another person, often to celebrate events such as birthdays, holidays, weddings, or achievements. Synonyms include gifts, offerings, donations, tokens, and tributes, each emphasizing a slightly different shade of giving. Antonyms include penalties, withholdings, and neglect, which suggest refusal, absence, or deprivation rather than giving. As a broader term, presents belong to the category of items, objects, offerings, and contributions, since they are tangible or symbolic things given from one party to another. Narrower forms, or hyponyms, include birthday gifts, Christmas presents, diplomatic gifts, and commemorative gifts. In everyday use, “presents” most often conveys a positive social act, marking goodwill, generosity, or ceremonial respect between individuals, groups, or institutions.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Condensed but accurate; retains synonyms, antonyms, hyponyms, and social function; plain, college-level phrasing."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condensed but accurate; retains synonyms, antonyms, hyponyms, and social function; plain, college-level phrasing.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "cheops",
+   "headword": "cheops",
+   "level": "college",
+   "register": "plain",
+   "text": "Cheops is an alternative name for Khufu, the Fourth Dynasty pharaoh associated with the Great Pyramid of Giza. Historical writing may use it for the ruler or, more broadly, for monuments and other legacies linked to his reign; as a proper name, it has no fixed antonym.",
+   "source": "Cheops is a noun referring to Khufu, the Fourth Dynasty pharaoh of ancient Egypt, best known as the builder associated with the Great Pyramid of Giza. In historical and archaeological writing, the term may denote this ruler himself or, by extension, things connected with his reign and monumental legacy. Common synonyms include Khufu, Pharaoh Khufu, King Khufu, and, in some contexts, Great Pyramid, since the monument is strongly linked to his name. Broader terms, or hypernyms, include pharaoh, ancient Egyptian ruler, ruler, and monument; in specialized contexts, it may also relate to pyramid or ancient monument. Narrower terms, or hyponyms, include Fourth Dynasty ruler, Old Kingdom ruler, tomb pyramid, funerary pyramid, and pyramid complex, which specify the period, function, or architectural form associated with Cheops. Antonyms are not fixed for proper nouns like this, though contrastive terms might include non-Egyptian ruler, later dynasty ruler, or unrelated monument.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise; drops synonym/hypernym lists but preserves core sense and antonym note."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise; drops synonym/hypernym lists but preserves core sense and antonym note.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "john_hancock:noun:1",
+   "headword": "John Hancock",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A signature is a person’s own written name on a document.",
+   "source": "a person's own signature",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Defines 'signature' instead of the headword; loses that John Hancock means one's signature."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Defines 'signature' instead of the headword; loses that John Hancock means one's signature.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "caliginous:adjective:1",
+   "headword": "caliginous",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "Difficult to understand because its meaning is not clear.",
+   "source": "Figuratively obscure or unclear; not readily understood or accessible to interpretation.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple, accurate gloss; slightly circular but retains figurative obscurity sense and formal tone."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, accurate gloss; slightly circular but retains figurative obscurity sense and formal tone.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "international_committee_of_the_red_cross",
+   "headword": "International Committee of the Red Cross",
+   "level": "college",
+   "register": "plain",
+   "text": "Use this name specifically for the neutral humanitarian organization headquartered in Geneva, which protects people affected by armed conflict and promotes international humanitarian law. “Red Cross” is less precise: it may refer to a national society, the broader Red Cross and Red Crescent Movement, or the emblem.",
+   "source": "Use this name when referring specifically to the neutral humanitarian organization based in Geneva that protects people affected by armed conflict and promotes international humanitarian law. It is more precise than “Red Cross,” which can also mean a national Red Cross society, the wider Red Cross and Red Crescent Movement, or the red-cross emblem.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise, college-level plain prose; all distinctions retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise, college-level plain prose; all distinctions retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "technological:adjective:0",
+   "headword": "technological",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "About tools and machines people use, often new ones.",
+   "source": "Relating to technology or the use of technology, especially modern technology.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": false,
+    "verdict_consistent": null,
+    "note": "Clear for age, but \"About tools...\" reads plain/casual; \"Relating to\" would suit formal register."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": false, \"verdict_consistent\": null, \"note\": \"Clear for age, but \\\"About tools...\\\" reads plain/casual; \\\"Relating to\\\" would suit formal register.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "wartiest",
+   "headword": "wartiest",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use wartiest for the thing with the most warts or rough bumps. It can also mean the most flawed or ugly; smooth is the opposite.",
+   "source": "Wartiest is a superlative adjective meaning having or showing the greatest number of warts or wart-like growths, or, more broadly, the most marked degree of wart-like roughness, irregularity, or blemish among a set of things. In literal medical or descriptive use, it refers to skin or surfaces covered with many wart-like protrusions. In figurative use, it can describe something visibly flawed, rough, or unsightly. Synonyms include verrucous, warty, blemished, defective, and flawed, with verrucous and warty being the closest in form and sense. Antonyms include smooth, unblemished, faultless, and perfect, which suggest evenness, cleanliness, or absence of visible defects. As a broader term, wartiest belongs to appearance descriptors and evaluative adjectives, words used to characterize how something looks or how desirable it seems. Narrower related terms include verrucous and papillomatous for specific kinds of wart-like growths, as well as more particular notions of serious defect or major flaw when used in a figurative sense.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense and antonym kept; synonyms dropped but plain, short, kid-friendly wording."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense and antonym kept; synonyms dropped but plain, short, kid-friendly wording.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "sensuously",
+   "headword": "sensuously",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use sensuously when something makes you notice sights, sounds, smells, tastes, or touch. It can suggest beauty or sexual pleasure, not just touch. In stories, it often helps a scene feel rich and real.",
+   "source": "Sensuously is an adverb meaning in a way that strongly appeals to the senses, especially through touch, sight, sound, or taste, and often with erotic or aesthetically rich overtones. It is used to describe actions, movements, speech, writing, or artistic presentation that emphasize physical feeling and sensory pleasure. A sensuously described scene may seem vivid, intimate, and deeply embodied, drawing attention to texture, warmth, rhythm, or beauty. Common synonyms include sensually, erotically, and voluptuously, all of which suggest a heightened focus on sensory or bodily experience. Antonyms include coldly and bluntly, which imply a lack of emotional warmth, refinement, or sensory appeal. As a broader category, sensuously belongs to adverbs of manner, since it describes how an action is performed. More specific or narrower uses include evocatively and lushly, which highlight particular forms of rich, suggestive, or luxuriant sensory expression. In literary and artistic contexts, the word often conveys a deliberate fullness of perception rather than mere physicality.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Captures senses, beauty/erotic hint, literary use; \"not just touch\" clause is slightly confusing."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures senses, beauty/erotic hint, literary use; \\\"not just touch\\\" clause is slightly confusing.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "2_dimensional",
+   "headword": "2-dimensional",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use “2-dimensional” for a picture or design that looks flat. It has no look of depth, unlike something that seems to have height, width, and depth.",
+   "source": "Use “2-dimensional” when something is flat in appearance or lacks visual depth, such as an image, design, or display. It contrasts with “3-dimensional,” which represents or creates the impression of height, width, and depth.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops the explicit term \"3-dimensional,\" but keeps the contrast idea; wording simple and plain."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops the explicit term \\\"3-dimensional,\\\" but keeps the contrast idea; wording simple and plain.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "first_boer_war:noun:0",
+   "headword": "First Boer War",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "The war began in 1880 and ended in 1881, as Boer fighters opposed British rule in the Transvaal.",
+   "source": "First Boer War was an 1880–1881 conflict in southern Africa in which Boer forces fought British rule in the Transvaal.",
+   "flags": [
+    "og.readability_miss"
+   ],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops \"southern Africa,\" but Transvaal implies it; dates and conflict retained; sentence slightly long."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops \\\"southern Africa,\\\" but Transvaal implies it; dates and conflict retained; sentence slightly long.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "dynamic_system",
+   "headword": "dynamic system",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A dynamic system keeps changing or responds when things around it change. A static system stays much the same; people use dynamic in science, business, and daily talk.",
+   "source": "Dynamic, as an adjective, describes something energetic, active, and characterized by movement, force, or ongoing change. It is often used for people, situations, processes, or systems that are lively, adaptable, and not fixed in one state. In ordinary use, a dynamic person may be vigorous and full of initiative, while a dynamic system may be continually changing or responding to new conditions. Closely related synonyms include energetic, active, lively, vigorous, and changing. Antonyms include static, inactive, dull, stable, and unchanging, which suggest lack of motion, growth, or responsiveness. As a broader term, dynamic belongs under general categories such as quality, descriptor, adjective, change, and property. Narrower or more specific uses include vigorous, lively, changing, evolving, and kinetic, which emphasize particular aspects of motion, development, or energy. The word is common in science, business, and everyday speech, where it often implies adaptability and constant interaction rather than permanence or rigidity.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; semicolon joins unrelated ideas—two plain sentences would suit a ten-year-old better."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; semicolon joins unrelated ideas—two plain sentences would suit a ten-year-old better.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "julius_erving:noun:0",
+   "headword": "Julius Erving",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A United States basketball player born in 1950 who played forward, a position on the team.",
+   "source": "United States basketball forward (born in 1950)",
+   "flags": [
+    "og.readability_miss"
+   ],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate; simple words, slightly long single sentence but clear; neutral-formal tone maintained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; simple words, slightly long single sentence but clear; neutral-formal tone maintained.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "pharmacy",
+   "headword": "pharmacy",
+   "level": "college",
+   "register": "plain",
+   "text": "In everyday use, a pharmacy is usually the place where prescriptions are filled and nonprescription medicines are sold; the term also names a hospital’s pharmacy department. Pharmacy can additionally refer to the professional field concerned with preparing, using, and distributing drugs.",
+   "source": "A pharmacy is a retail establishment where medicines and related health products are prepared, dispensed, and sold to the public, usually under the supervision of a licensed pharmacist. It may also refer to the professional field concerned with the preparation, use, and distribution of drugs. Common synonyms include drugstore, chemist, and apothecary, though “pharmacy” can also denote a pharmacy department within a hospital or other healthcare setting. Broader categories, or hypernyms, include retail establishment, store, healthcare facility division, and, in the professional sense, medical science or applied science. Narrower types, or hyponyms, include drugstore, clinical pharmacy, industrial pharmacy, and inpatient pharmacy, each emphasizing a different setting or function. Antonyms are less exact than for many nouns, but terms such as sickroom, untreated condition, or nonmedical space may serve as rough opposites depending on context. In everyday use, pharmacy most often means the place where prescriptions are filled and over-the-counter remedies are obtained.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops pharmacist supervision, synonyms, hypernyms, hyponyms, antonyms; only everyday senses retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops pharmacist supervision, synonyms, hypernyms, hyponyms, antonyms; only everyday senses retained.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "bill_monroe",
+   "headword": "Bill Monroe",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use Bill Monroe for the musician who helped start bluegrass, a kind of country music. He helped shape its early sound through his mandolin, songs, and singing.",
+   "source": "Use “Bill Monroe” when referring to the influential American musician who pioneered bluegrass and became known for his mandolin playing, singing, and songwriting. Unlike a general reference to a bluegrass musician, this name identifies the genre’s principal founder and defining early figure.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Helped start\" downgrades his status as bluegrass's principal founder and defining figure."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Helped start\\\" downgrades his status as bluegrass's principal founder and defining figure.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "baptistries",
+   "headword": "baptistries",
+   "level": "college",
+   "register": "plain",
+   "text": "Baptistry names the place set aside for Christian baptism, whether a room, an architectural feature, or a separate building; it often contains a font or pool. Baptistery is a common variant, and terms such as baptismal chapel or font chamber describe related spaces, which form part of religious architecture rather than secular space.",
+   "source": "A baptistry is a dedicated space or chamber in Christian religious architecture used for the sacrament of baptism. It may be located within a church, attached to it, or built as a separate structure, and it commonly contains a baptismal font or a baptismal pool. The term refers to the physical setting in which baptism is performed, especially in traditions that emphasize a distinct architectural space for the rite. Synonyms include baptistery, baptismal chapel, font chamber, and baptismal space. Broader categories for baptistry include place of worship and religious building, since it is part of sacred architecture. Narrower forms include baptistry pool, baptistry chapel, and baptistry room, which describe specific types or arrangements of such spaces. Antonyms are secular space and nonreligious space, which lack ritual or sacred function. In usage, the word can denote both the room itself and, in some contexts, the architectural feature or building designed specifically for baptism.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Condensed but accurate; drops narrower types, though core sense and synonyms retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condensed but accurate; drops narrower types, though core sense and synonyms retained.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "realistically",
+   "headword": "realistically",
+   "level": "college",
+   "register": "plain",
+   "text": "Use realistically to frame an assessment of whether an action, plan, or expectation is feasible given actual conditions and evidence. It signals a restrained, practical judgment rather than an idealized or wishful one.",
+   "source": "“Realistically” is an adverb meaning in a manner that accords with the real world, practical limits, and available evidence. It is used when assessing what can actually happen, be done, or be expected, rather than what is ideal, imagined, or merely hoped for. In everyday use, it often introduces a sober judgment about feasibility, such as whether a plan, estimate, or expectation is grounded in facts. Synonyms include practically, plausibly, pragmatically, feasibly, and viably. Antonyms include unrealistically and unfeasibly, which describe judgments detached from conditions or impossible to carry out. As a broader category, it belongs to adverbs of manner, especially manner adverbs that modify how an action, evaluation, or statement is made. Narrower uses overlap with adverbs such as believably, plausibly, reasonably, feasibly, and viably, which emphasize specific shades of credible, sensible, or workable assessment. The word often conveys restraint, accuracy, and evidence-based thinking in contrast to exaggeration or wishful thinking.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Condensed but accurate; core sense of feasibility and restraint retained; taxonomy details omitted."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condensed but accurate; core sense of feasibility and restraint retained; taxonomy details omitted.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "trouped:verb:0",
+   "headword": "trouped",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "Gathered actors and other people into one group for a show.",
+   "source": "To organize performers or participants into a performing company.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple, clear, neutral-formal; 'actors and other people' slightly narrows 'performers or participants'."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, clear, neutral-formal; 'actors and other people' slightly narrows 'performers or participants'.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "stable_base:adjective:0",
+   "headword": "stable base",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A broad base keeps it upright and in place.",
+   "source": "Describing an object or condition having a foundation that is firm and unlikely to tilt or shift.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Adds 'broad' and drops 'firm foundation'; describes a cause, not the condition itself."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Adds 'broad' and drops 'firm foundation'; describes a cause, not the condition itself.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "mathematical_process",
+   "headword": "mathematical process",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "It means following clear steps to solve a math problem or check an answer. A method or calculation is one kind of math process. Guessing and disorder lack the steps that make results clear and repeatable.",
+   "source": "A mathematical process is a sequence of ordered steps used to solve a mathematical problem, perform a computation, or establish a result. It may involve rules, operations, logical reasoning, and verification, and it is often designed to produce a clear and repeatable outcome. Common synonyms include method, procedure, technique, approach, and reasoning method. Broader terms, or hypernyms, include process, method, and operation, since a mathematical process is a specific kind of organized action or system. Narrower terms, or hyponyms, include algorithm, calculation, modeling, reasoning, and arithmetic, each referring to a more specific type of mathematical activity. Antonyms include disorder, randomness, guesswork, disorganization, and haphazardness, which describe actions lacking structure, consistency, or deliberate logic. In mathematics, a process is valued because it turns abstract problems into manageable steps and helps ensure accuracy, clarity, and reproducibility.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Calls 'method' a kind of math process; it is a synonym/broader term, not narrower."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Calls 'method' a kind of math process; it is a synonym/broader term, not narrower.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "commissions",
+   "headword": "commissions",
+   "level": "college",
+   "register": "plain",
+   "text": "A commission is an authorized assignment to create a work or perform a service, as well as the resulting assignment; commissions may come from patrons, clients, or institutions. Examples include an artist’s commission to paint a picture, a committee’s appointment to investigate an issue, and an expert’s direction to prepare a report; related terms include assignment, mandate, instruction, directive, and task. Commissions belong to broader categories such as orders, instructions, organizations, and institutions, while specific types include research, policy, ethics, and monuments commissions; refusal, prohibition, withdrawal, and the states of being uncommissioned or unappointed indicate denied or absent authorization.",
+   "source": "Commissions, as a noun, refers to a formal instruction or authorization given by a patron, client, or institution to create a specified work or carry out a particular service, and also to the assignment that results from such authorization. In this sense, a commission may involve hiring an artist to produce a painting, appointing a committee to investigate an issue, or directing an expert to complete a report. Related synonyms include assignment, mandate, instruction, directive, and task, all of which emphasize an ordered or authorized duty. Broader categories, or hypernyms, include instruction, order, assignment, organization, and institution, since commissions typically arise within structured systems of authority. Narrower forms, or hyponyms, include an artist’s commission, research commission, policy commission, ethics commission, and monuments commission, each specifying a particular field or purpose. Antonyms include refusal, prohibition, withdrawal, uncommissioned, and unappointed, which indicate the absence, denial, or cancellation of formal authorization.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Opening collapses the two senses into a circular \"assignment...resulting assignment\"; loses \"instruction/authorization\" sense."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Opening collapses the two senses into a circular \\\"assignment...resulting assignment\\\"; loses \\\"instruction/authorization\\\" sense.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "tencent_qq",
+   "headword": "Tencent QQ",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use Tencent QQ for Tencent’s chat and social app, popular with many people in China. Online messaging means sending quick messages, while Tencent QQ is one service that does it.",
+   "source": "Use “Tencent QQ” when referring specifically to Tencent’s messaging and social-networking service, especially in the context of its widespread use in China. Unlike the broader term “instant messaging,” which describes a type of communication rather than a particular product, “Tencent QQ” names one specific platform.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core general-vs-specific point kept; \"instant messaging\" loosely renamed \"online messaging\"."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core general-vs-specific point kept; \\\"instant messaging\\\" loosely renamed \\\"online messaging\\\".\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "borodin",
+   "headword": "borodin",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Borodin is a Russian family name, not a person's first name. It is known from Alexander Borodin, a Russian composer and science worker who lived in the 1800s and joined a group called The Five. Like other family names, it can show which family someone belongs to; people also call it a last name.",
+   "source": "Borodin is a Russian surname, used as a proper noun to identify members of a particular family line. It functions as a family name rather than a personal given name and is most notably associated with Alexander Borodin, the 19th-century Russian chemist, composer, and member of the group known as The Five. In general use, a surname such as Borodin serves as an identifying label that distinguishes one person or family from others and can also reflect ancestry or heritage. Synonyms include family name, last name, and ancestral name. Its antonyms are given name and first name, which refer to an individual’s personal name rather than inherited name. As a broader term, Borodin belongs under name or identifying label. More specific uses include reference to particular bearers of the surname, such as Alexander Borodin, or to the Borodin family as a lineage. Like other surnames, it may appear in historical, biographical, genealogical, or cultural contexts, especially when identifying notable individuals or tracing family origins.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Clear and simple; 'science worker' is vague for chemist, and semicolon slightly advanced."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Clear and simple; 'science worker' is vague for chemist, and semicolon slightly advanced.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "shy_away_from",
+   "headword": "shy away from",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "People shy away from a task when it feels hard or scary. They hold back because they do not feel ready, not just because they prefer something else.",
+   "source": "Use “shy away from” when someone deliberately avoids an unpleasant, difficult, or intimidating task or issue. It suggests reluctance or lack of confidence, rather than simply choosing not to do something.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Captures reluctance and low confidence vs. mere preference; simple wording fits a ten-year-old."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures reluctance and low confidence vs. mere preference; simple wording fits a ten-year-old.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "seven:determiner:1",
+   "headword": "seven",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "This number points to seven members of a group named earlier.",
+   "source": "A definite numeral determiner referring to a known subset of six plus one items previously identified in discourse.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Definiteness and quantity kept; slightly circular using 'seven', but acceptable and clear for grade 5."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Definiteness and quantity kept; slightly circular using 'seven', but acceptable and clear for grade 5.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "pantheist:noun:0",
+   "headword": "pantheist",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A person who believes God and the universe are one, with God in all things.",
+   "source": "A person who regards the divine reality as identical with the universe and as present throughout all things.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simplifies 'divine reality' to 'God' but core identity and immanence claims are retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simplifies 'divine reality' to 'God' but core identity and immanence claims are retained.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "seaboards",
+   "headword": "seaboards",
+   "level": "college",
+   "register": "plain",
+   "text": "Seaboard usually denotes an extended coastal belt, rather than a particular beach or point on a map. The term is common in writing about ports, trade, settlement, climate, transport, and borders; inland describes the contrasting region.",
+   "source": "Seaboards are the stretches of land that adjoin a sea or ocean, forming the outer edge of a country or region where land meets water. The term is closely related to coast, coastline, shoreline, and coastal region, and it often suggests an extended coastal belt rather than a single point on the map. In geographic use, a seaboard may refer to a broad coastal area with social, economic, and environmental significance, including ports, fishing communities, beaches, and cities that depend on maritime access. The opposite of a seaboard is inland or the interior region, meaning areas farther from the sea. As a type of geographic region or coastal area, a seaboard is a broader category that can include narrower forms such as shorelines, coastlines, coastal states, and port cities. The word is common in formal and descriptive contexts, especially when discussing settlement patterns, trade, climate, transportation, and national boundaries along the sea.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Compressed but core sense, contrast, and typical contexts survive; omissions are peripheral detail."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Compressed but core sense, contrast, and typical contexts survive; omissions are peripheral detail.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "comma_splice:noun:0",
+   "headword": "comma splice",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A comma splice is a writing error in which a comma joins two complete sentences.",
+   "source": "A grammatical error where two independent clauses are joined with only a comma, producing a run-on sentence.",
+   "flags": [
+    "og.headword_initial"
+   ],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Clear and simple; drops 'only' and 'run-on', but core meaning survives."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Clear and simple; drops 'only' and 'run-on', but core meaning survives.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "marijuana_cigarette:noun:0",
+   "headword": "marijuana cigarette",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A paper roll filled with marijuana leaves, made for smoking.",
+   "source": "marijuana leaves rolled into a cigarette for smoking",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate; 'paper roll' fits cigarette sense, simple wording, neutral-formal tone suitable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate; 'paper roll' fits cigarette sense, simple wording, neutral-formal tone suitable.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "understood",
+   "headword": "understood",
+   "level": "college",
+   "register": "plain",
+   "text": "Understood is the past-tense and past-participle form of understand, used for successful comprehension of meaning, instructions, situations, or feelings. It can also describe information treated as implicit or accepted without being stated; related verbs such as infer and interpret name more specific ways of reaching an understanding.",
+   "source": "Understood is the past tense and past participle of the verb understand, meaning to grasp the meaning, significance, or implications of something, or to mentally apprehend information. It refers to successful comprehension of ideas, instructions, language, situations, or feelings. Common synonyms include grasp, comprehend, and perceive, though these are not always exact equivalents in every context. Its antonyms include misunderstand, misinterpret, and confuse, which describe failure to interpret meaning correctly. As a broader term, it belongs to the domain of cognition, the mental process of acquiring and using knowledge. More narrowly, related uses may involve interpret, deduce, and infer, which name specific ways of arriving at understanding. In some contexts, understood can also imply something implicit or presumed, especially when information is taken for granted rather than stated directly. The word is central in everyday communication, academic reading, and reasoning, where accurate comprehension is essential.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Condensed but core senses intact; drops synonyms/antonyms without distorting meaning. Plain, college-level phrasing."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condensed but core senses intact; drops synonyms/antonyms without distorting meaning. Plain, college-level phrasing.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "paraphilia",
+   "headword": "paraphilia",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Paraphilia means an uncommon kind of sexual interest. It does not always mean someone is harmed. A related disorder can cause great upset, limit daily life, or put someone at risk.",
+   "source": "Paraphilia is a noun referring to a category of atypical sexual interests in which arousal is linked to non-normative targets, situations, or patterns of stimulation. The term is used in psychology and psychiatry to describe interests that differ from culturally typical sexual preferences, without implying harm in every case. In some contexts, paraphilia may be distinguished from paraphilic disorder, which involves distress, impairment, or risk of harm. Synonyms include unconventional sexual interest, atypical sexual attraction, and paraphilic disorder in related clinical usage. Antonyms include normative sexuality, typical sexual interest, and benign paraphilia. As a broader concept, paraphilia falls under sexual interest, and in medical classification it may also relate to sexual disorder or psychiatric disorder. Narrower forms, or hyponyms, include fetishism, voyeurism, exhibitionism, pedophilia, and fetishistic disorder, each of which describes a more specific pattern of arousal. The term is primarily descriptive and may carry clinical, legal, or social implications depending on context.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; omits clinical field, examples, and related terms, but nothing contradicts source."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; omits clinical field, examples, and related terms, but nothing contradicts source.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "meyer",
+   "headword": "meyer",
+   "level": "college",
+   "register": "plain",
+   "text": "Meyer is a German-origin hereditary surname, identifying family descent rather than an individual's given name. Migration has carried it from German-speaking regions to communities worldwide, where it serves in personal identification and official records.",
+   "source": "Meyer is a surname of German origin, used as a hereditary family name passed from one generation to the next. As a noun, it refers not to a personal title or role but to a type of name identifying a person’s family lineage or ancestral branch. The name appears in many German-speaking regions and has also spread widely through migration and settlement, so it is found in numerous countries and communities. Synonyms include family name, last name, and surname, all of which describe the same general category of inherited personal naming. Antonyms are forename and given name, which identify an individual personally rather than by family descent. More broadly, Meyer belongs to the class of names, especially surnames, making “name” and “surname” its hypernyms. Narrower terms are family name and last name when used to refer to the same specific kind of inherited designation. In practical use, Meyer functions like other surnames as a label for identity, recordkeeping, and social association.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Condensed but core sense, contrast with given name, and usage retained; lexical relations implicit."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condensed but core sense, contrast with given name, and usage retained; lexical relations implicit.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "assertion",
+   "headword": "assertion",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "An assertion is a statement someone presents as true, even when they give no proof. It can rest on facts, thought, or judgment, and may be factual, moral, bold, or unsure.",
+   "source": "An assertion is a noun referring to a claim, proposition, or statement presented as true, often with confidence and without necessarily providing immediate proof. In scholarly writing, analysis, logic, and debate, an assertion serves as a declarative act that puts forward a view for consideration or evaluation. It may be based on evidence, judgment, or reasoning, but the term itself emphasizes the act of affirming rather than the truth of the content. Common synonyms include claim, statement, proposition, averment, and the act of asserting. Antonyms include refutation, denial, contradiction, doubt, and disproof, which oppose or question the validity of a claim. Broader categories for assertion include proposition, claim, statement, speech act, and verbal act, since an assertion is a type of communicative or logical expression. Narrower forms include factual assertion, theoretical assertion, moral assertion, emphatic assertion, and tentative assertion, each specifying the kind, strength, or domain of the claim being made.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; drops emphasis on act of affirming, but clear and plain for grade 5."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; drops emphasis on act of affirming, but clear and plain for grade 5.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "time_loan",
+   "headword": "time loan",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use time loan when a loan has a set date for paying it back. It is not a loan the lender can ask you to repay at any time.",
+   "source": "Use “time loan” for a loan with a fixed repayment date or deadline, rather than a loan repayable whenever the lender demands it. The term highlights the agreed time limit for repayment.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core contrast kept; dropped nuance about stressing time limit is minor and implied."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core contrast kept; dropped nuance about stressing time limit is minor and implied.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "spats",
+   "headword": "spats",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Spats can mean a small fight between people, often about something unimportant. It can also mean short covers worn over shoes and ankles, once part of dress or uniforms. Both meanings are rare today; one small fight is called a spat.",
+   "source": "Spats is a noun with two main senses. In the first, it refers to a minor quarrel or brief dispute between people, usually over something trivial. In this sense, it is close in meaning to quarrel, argument, dispute, tiff, and row, and more broadly to conflict or disagreement. Antonyms include agreement, harmony, and concord. In the second sense, spats are short gaiters or protective coverings worn over the instep and ankle, historically used with formal dress or as part of military uniforms. In this clothing sense, related words include gaiters, leggings, and overshoes, while broader terms are garment, accessory, and footwear covering. Narrower forms include dress spats and military spats. The two meanings are historically distinct, though both are fairly uncommon in modern everyday use. As a plural noun, spats often appears in fixed phrases such as “a spat” for a small argument or “spats” for the decorative footwear accessory.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Both senses kept in simple, plain wording; 'fight' slightly overstates a quarrel but acceptable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Both senses kept in simple, plain wording; 'fight' slightly overstates a quarrel but acceptable.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "valid_license:noun:0",
+   "headword": "valid license",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A current permit lets a person do one named task under the law.",
+   "source": "A currently effective authorization permitting a person to engage in a specified activity.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"one named task\" narrows \"specified activity\"; \"under the law\" adds unstated condition."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"one named task\\\" narrows \\\"specified activity\\\"; \\\"under the law\\\" adds unstated condition.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "reprehend:verb:0",
+   "headword": "reprehend",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "To state clearly that someone's words or deeds are very wrong.",
+   "source": "To express strong disapproval of a person’s or action’s conduct, typically by rebuking or censuring.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Captures strong disapproval of conduct; 'state clearly' slightly weakens rebuke, but acceptable and age-suitable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Captures strong disapproval of conduct; 'state clearly' slightly weakens rebuke, but acceptable and age-suitable.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "canada",
+   "headword": "canada",
+   "level": "college",
+   "register": "plain",
+   "text": "Canada names both a sovereign state in North America and the geographic territory, population, and institutions associated with it. In political contexts, it is a federal constitutional monarchy and parliamentary democracy; in broader classification, it is a nation, country, or state, divided into provinces and territories.",
+   "source": "Canada is a sovereign country in North America, made up of ten provinces and three territories. It is a federal state with a constitutional monarchy and a parliamentary democracy, meaning political authority is shared between the national government and regional governments, while the monarch serves as ceremonial head of state. The term can also refer to the Canadian nation as a political and geographic entity. Synonyms include nation, country, state, and federal state. Broader categories, or hypernyms, include sovereign state, political entity, and geopolitical unit. Narrower terms, or hyponyms, include province and territory, which are the country’s main subnational divisions. Antonyms are less direct for place names, but may include colony, dependency, or non-sovereign territory when contrasting forms of governance and autonomy. In ordinary usage, “Canada” commonly denotes both the state and the land within its borders, along with the people and institutions associated with it.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops antonyms, ceremonial monarch/shared-authority gloss, and the ten/three provinces-territories count."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops antonyms, ceremonial monarch/shared-authority gloss, and the ten/three provinces-territories count.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "unhopeful",
+   "headword": "unhopeful",
+   "level": "college",
+   "register": "plain",
+   "text": "Unhopeful describes a person, mood, circumstance, or forecast marked by little expectation of a good outcome. Unlike hopeless, it can suggest restrained doubt rather than complete despair; hopeful, optimistic, and promising express confidence in improvement or success. Related terms such as doubtful, discouraged, bleak, and grim mark more specific shades of negative expectation, as in an unhopeful expression or prognosis.",
+   "source": "Unhopeful is an adjective describing a state or outlook that lacks hope or expectation of a favorable outcome. It is used for people, moods, situations, or forecasts that seem pessimistic, dim, or unlikely to improve. In everyday use, it often overlaps with words such as hopeless, pessimistic, unpromising, and discouraging, though it may imply a quieter or more tentative lack of optimism rather than total despair. The opposite terms are hopeful, optimistic, promising, and encouraging, which suggest confidence in success or improvement. As a broader category, unhopeful belongs to emotional states, mood descriptors, and expressions of outlook or prospect. More specific related forms include doubtful, discouraged, pessimistic, bleak, and grim, each emphasizing a narrower shade of negative expectation. The word is commonly applied in contexts such as unhopeful circumstances, an unhopeful expression, or an unhopeful prognosis, where it conveys reduced confidence in a positive result.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Condensed but accurate; nuance versus hopeless kept; slightly compact yet clear, plain, college-level."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condensed but accurate; nuance versus hopeless kept; slightly compact yet clear, plain, college-level.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "strict_standards:adjective:0",
+   "headword": "strict standards",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "In schools, these rules are followed closely, with little room to do things differently.",
+   "source": "Standards described as strict are applied with little tolerance for deviation in an educational setting.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple, neutral-formal phrasing; 'rules' for 'standards' is acceptable in a gloss."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, neutral-formal phrasing; 'rules' for 'standards' is acceptable in a gloss.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "passport",
+   "headword": "passport",
+   "level": "college",
+   "register": "plain",
+   "text": "A passport is both a travel credential and an identity document, though terms such as ID card are not exact synonyms. Machine-readable and electronic passports are narrower types; in computing, “passport” can also name software that verifies identity rather than a physical booklet. At borders, it is contrasted with missing or invalid documents and with access that has not been authenticated.",
+   "source": "A passport is a government-issued travel document that certifies the holder’s identity and nationality and is used to enter and leave countries and to confirm identity at borders. It typically contains the holder’s name, photograph, date of birth, signature, and official endorsements or visas. More broadly, a passport is a type of travel document and identity document, and it belongs to the larger category of official documents. Common synonyms include travel document, identification document, ID card, and identity document, though these are not always exact equivalents. In contexts of border control and security, a passport may be contrasted with no travel document, unauthenticated access, or the absence of valid identification. Narrower kinds, or hyponyms, include machine readable passport and electronic passport. In computing, the word can also appear metaphorically or in technical names such as authentication middleware, local strategy, OAuth strategy, and SAML strategy, where it refers to a component for verifying identity rather than a physical booklet.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops core definition: government-issued, certifies nationality, enables border crossing, contents listed."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops core definition: government-issued, certifies nationality, enables border crossing, contents listed.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "noah_webster",
+   "headword": "Noah Webster",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Noah Webster was an American man who wrote a major English dictionary. His name means that one person, while lexicographer means anyone who writes dictionaries.",
+   "source": "Use “Noah Webster” when referring to the American lexicographer associated with the first major American English dictionary and with promoting distinctively American spelling. Unlike the broader term “lexicographer,” which can refer to any dictionary writer, this name identifies one particular historical figure.",
+   "flags": [
+    "og.readability_miss"
+   ],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops that it was the first American dictionary and his American spelling reforms."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops that it was the first American dictionary and his American spelling reforms.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "oatmeal",
+   "headword": "oatmeal",
+   "level": "college",
+   "register": "plain",
+   "text": "Oatmeal usually refers to a porridge made by cooking ground, rolled, or crushed oats in water or milk. Related terms include oat porridge and oat cereal; instant oatmeal and rolled oats name particular forms or preparations.",
+   "source": "Oatmeal is a noun referring to a porridge made from oats that have been ground, rolled, or crushed and then cooked with water or milk, usually eaten as a breakfast food. It is commonly associated with a warm, soft texture and a mild flavor that can be served plain or with sweet or savory additions. Closely related terms include porridge oats, oat porridge, oat cereal, oat cereal product, and oat product. Broader categories for oatmeal include cereal, grain product, and nutritional component, since it is a food derived from grains and valued for its dietary content. Narrower forms include rolled oats, instant oatmeal, instant oats, beta glucan source, and soluble fiber source, which refer to specific preparations or nutritional uses of oats. Antonyms are less direct, but may include raw oats, uncooked oats, low fiber food, and fiber poor food, emphasizing either the unprocessed state or the opposite nutritional profile. Oatmeal is widely recognized as a high-fiber, versatile cereal preparation.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops breakfast use, texture/flavor, broader categories, antonyms, and high-fiber versatility."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops breakfast use, texture/flavor, broader categories, antonyms, and high-fiber versatility.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "hedge:noun:1",
+   "headword": "hedge",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "In finance, this is a plan or tool for balancing possible losses or gains from another asset.",
+   "source": "In finance, an instrument or strategy used to offset potential losses or gains from another asset.",
+   "flags": [
+    "og.readability_miss"
+   ],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple wording; 'balancing' slightly weaker than 'offset' but sense holds; 'asset' unavoidable."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple wording; 'balancing' slightly weaker than 'offset' but sense holds; 'asset' unavoidable.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "gumshoe",
+   "headword": "gumshoe",
+   "level": "college",
+   "register": "plain",
+   "text": "Gumshoe is an informal, somewhat old-fashioned term for a detective, especially a private investigator or someone pursuing a case discreetly. It can describe investigators inside or outside the police, and sometimes serves as a casual synonym for detective. The word also literally refers to a rubber-soled shoe, linking its detective sense to quiet movement.",
+   "source": "A gumshoe is a detective, especially a private detective or someone who investigates a case informally, quietly, or in secret. The word often suggests a hard-boiled, old-fashioned style of sleuthing, and it can refer either to an official investigator or to a person who works outside formal police channels. In some contexts, gumshoe also appears as slang for a detective in general. Synonyms include detective, investigator, sleuth, private detective, and plainclothes detective. Antonyms are less exact, but may include suspect, accused person, or layperson, depending on context. As a broader term, gumshoe belongs under detective, investigator, and, in its literal sense, footwear. Narrower terms include private detective, plainclothes detective, undercover investigator, and, for the footwear sense, rubber-soled shoe or sneaker. The word is also associated with quiet movement, since gum-soled shoes reduce noise. Overall, gumshoe combines the idea of secretive investigation with a colloquial, slightly dated tone, making it common in crime fiction and informal speech.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Condensed but faithful; drops synonym/antonym lists and hard-boiled note without distorting the core sense."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Condensed but faithful; drops synonym/antonym lists and hard-boiled note without distorting the core sense.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "meyer",
+   "headword": "meyer",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Meyer is a family name from Germany, passed down through generations. People with this name live in many places, often because families moved there.",
+   "source": "Meyer is a surname of German origin, used as a hereditary family name passed from one generation to the next. As a noun, it refers not to a personal title or role but to a type of name identifying a person’s family lineage or ancestral branch. The name appears in many German-speaking regions and has also spread widely through migration and settlement, so it is found in numerous countries and communities. Synonyms include family name, last name, and surname, all of which describe the same general category of inherited personal naming. Antonyms are forename and given name, which identify an individual personally rather than by family descent. More broadly, Meyer belongs to the class of names, especially surnames, making “name” and “surname” its hypernyms. Narrower terms are family name and last name when used to refer to the same specific kind of inherited designation. In practical use, Meyer functions like other surnames as a label for identity, recordkeeping, and social association.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; omits synonym/antonym and naming-function details, but nothing contradicted. Wording suits grade 5."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; omits synonym/antonym and naming-function details, but nothing contradicted. Wording suits grade 5.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "cell_type",
+   "headword": "cell type",
+   "level": "college",
+   "register": "plain",
+   "text": "Cell type names a group of cells distinguished by shared features, including shape, surface markers, gene activity, and function. Biologists and clinicians use these categories to describe how cells are organized and to investigate development, tissue function, disease, and treatment responses.",
+   "source": "A cell type is a distinct category of cells within an organism that shares particular structural, functional, and molecular traits distinguishing it from other cell populations. Cell types are identified by features such as shape, size, surface markers, gene expression patterns, metabolic activity, and specialized roles in tissues and organs. The term is commonly used in biology, medicine, and developmental science to describe how cells are organized into functional groups. Synonyms include cell class, cellular phenotype, cell variety, cellular classification, and cell categorization. Broader terms include biological classification, cellular category, taxonomic system, laboratory classification, and experimental category. Narrower examples include stem cell type, immune cell type, epithelial cell type, developmental cell type, and functional cell type. Antonyms are less exact, but may include cell mixture, heterogeneous population, or unclassified cells, which emphasize lack of distinct identity or uniformity. In research, identifying cell types is essential for understanding development, tissue function, disease processes, and responses to treatment.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core definition kept, but synonyms, broader/narrower terms, and antonyms are entirely dropped."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core definition kept, but synonyms, broader/narrower terms, and antonyms are entirely dropped.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "buzz_aldrin",
+   "headword": "Buzz Aldrin",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use Buzz Aldrin's name for the Apollo 11 astronaut in stories about space and the Moon. Neil Armstrong led Apollo 11 and walked first; Aldrin piloted the Moon craft and followed.",
+   "source": "Use “Buzz Aldrin” when referring specifically to the Apollo 11 astronaut, especially in discussions of space exploration, lunar missions, or the history of human spaceflight. Unlike “Neil Armstrong,” who commanded Apollo 11 and was the first person to walk on the Moon, Aldrin was the lunar module pilot and the second person to step onto the lunar surface.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple, accurate; semicolon slightly advanced but wording stays plain and clear for ten-year-olds."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, accurate; semicolon slightly advanced but wording stays plain and clear for ten-year-olds.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "grinch:noun:2",
+   "headword": "grinch",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A Grinch is someone who sees group traditions as silly and not worth keeping.",
+   "source": "As a cultural archetype, the Grinch represents cynicism toward communal rituals.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "note": "Archetype framing simplified to a person; \"silly\" slightly casual but acceptable and clear."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"note\": \"Archetype framing simplified to a person; \\\"silly\\\" slightly casual but acceptable and clear.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "preservation_technique",
+   "headword": "preservation technique",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "A preservation technique helps keep things from getting damaged or spoiled. People use these methods for food, old objects, and computer files. Each method protects something in a way that suits it.",
+   "source": "A preservation technique is a method or procedure designed to keep a material, artifact, or system in a stable condition by slowing or preventing deterioration. It is used in contexts such as conservation, archival work, food storage, and digital records management. The term emphasizes practical actions that extend usable life, maintain integrity, or reduce damage from environmental, chemical, biological, or technological causes. Common synonyms include preservation method, conservation technique, stabilization procedure, archival method, and digital preservation method. Broader hypernyms include method, technique, process, conservation, and information management process. Narrower hyponyms include vacuum sealing, freeze drying, controlled atmosphere storage, digital archiving, and physical archiving, each applying the general idea to a specific medium or threat. Antonyms are deterioration, degradation, data loss, data decay, and accelerated degradation, which describe the unwanted outcomes preservation techniques seek to prevent. In use, the phrase may refer to both traditional physical practices and modern digital strategies, but the central idea remains the same: deliberate intervention to preserve value, structure, or information over time.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops synonyms, hypernyms, specific examples, antonyms, and the deliberate-intervention-over-time idea."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops synonyms, hypernyms, specific examples, antonyms, and the deliberate-intervention-over-time idea.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "labyrinthine_sense",
+   "headword": "labyrinthine sense",
+   "level": "college",
+   "register": "plain",
+   "text": "Use labyrinthine for features of the inner-ear labyrinth, particularly those involved in detecting head orientation and maintaining balance. Vestibular is broader, describing the balance system as a whole and its functions.",
+   "source": "Use “labyrinthine” for something relating to the inner-ear labyrinth, especially its role in sensing head orientation and balance. It is more specific than “vestibular,” which refers broadly to the balance system and its functions.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, concise; specificity contrast retained via 'broader'. Plain college-level phrasing throughout."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, concise; specificity contrast retained via 'broader'. Plain college-level phrasing throughout.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "presentations:noun:2",
+   "headword": "presentations",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "Planned parts of a large meeting are set aside for talks or showing how things work.",
+   "source": "An organized unit of programming at a conference or seminar comprising one or more talks or demonstrations.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simplified but accurate; 'large meeting' loosely covers conference/seminar; tone stays formal and plain."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simplified but accurate; 'large meeting' loosely covers conference/seminar; tone stays formal and plain.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "flyers",
+   "headword": "flyers",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Flyers are paper sheets that share news about events, goods, services, or causes. They use few words and pictures, and are handed out to many people. Flyer can also mean someone or something that flies; a digital flyer is shared online.",
+   "source": "Flyers are printed promotional handouts distributed to advertise events, products, services, or causes. Usually produced as a single sheet or a folded sheet, they combine brief text and images to convey information quickly and attract attention. In this sense, a flyer is a kind of advertising material, promotional material, or printed matter. Common synonyms include handbill, leaflet, pamphlet, brochure, and advertisement, though these terms may differ slightly in size, format, or purpose. Broader categories for flyers include printed matter and promotional material. Narrower forms include handbill, leaflet, pamphlet, and brochure, each referring to a specific kind of informational or promotional piece. The antonym digital flyer contrasts with the printed form by emphasizing electronic distribution rather than physical handouts. The word flyer can also refer to a person or thing that flies, such as a commercial pilot, but in the promotional sense it denotes a concise, portable marketing document designed for mass distribution and rapid public notice.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; synonym list dropped but compression acceptable; wording simple and plain."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; synonym list dropped but compression acceptable; wording simple and plain.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "page",
+   "headword": "page",
+   "level": "college",
+   "register": "plain",
+   "text": "In print, page may denote either a physical sheet or one of its sides, so sheet and leaf are close but not exact synonyms. It also names a discrete section of a document or webpage; the historical sense “young attendant” is unrelated.",
+   "source": "A page is a single sheet of paper in a book, notebook, magazine, or similar publication, usually numbered and intended for writing, printing, or reading. In ordinary use, it may refer to one side of a sheet as well as the sheet itself when bound into a volume. More broadly, a page can also mean a section of a document or a digital webpage, though the core sense remains that of a discrete unit within a larger written work. Related terms include sheet and leaf, which are close synonyms in the physical sense. More specific kinds of pages include a front page, back page, title page, and contents page. Broader categories for page include paper, document component, and, in digital usage, web document. Antonyms are less exact, but may include whole volume, binding, or spread, depending on context. The word page is also historically used for a young attendant or servant, though this sense is separate from the paper meaning.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops numbering, purpose, hyponyms, hypernyms, antonyms; core sense kept but heavily truncated."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops numbering, purpose, hyponyms, hypernyms, antonyms; core sense kept but heavily truncated.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "amphibolite:noun:0",
+   "headword": "amphibolite",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "This rock forms when heat and pressure change other rocks; two minerals make up most of it.",
+   "source": "a metamorphic rock composed chiefly of amphibole and plagioclase",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Omits amphibole and plagioclase; 'two minerals' leaves the rock unidentified and definition incomplete."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Omits amphibole and plagioclase; 'two minerals' leaves the rock unidentified and definition incomplete.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "christian_lous_lange",
+   "headword": "Christian Lous Lange",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use this name for Norway’s peace worker and history writer. He worked with people in other countries and won the 1921 Nobel Peace Prize. This helps tell him apart from another man named Christian Lange.",
+   "source": "Use this name when referring to the Norwegian historian and peace activist associated with international cooperation and the 1921 Nobel Peace Prize. It distinguishes him from other Nobel Peace Prize recipients and from Christian Lange, a different person.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops the distinction from other Nobel Peace Prize recipients; otherwise simple and clear."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops the distinction from other Nobel Peace Prize recipients; otherwise simple and clear.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "strict_standards:noun:2",
+   "headword": "strict standards",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "The level of care a school requires when students complete their work.",
+   "source": "A phrase used to describe how stringently something must be done in educational contexts.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "\"Level of care\" loses strictness; narrows scope to students' work only, not education generally."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"\\\"Level of care\\\" loses strictness; narrows scope to students' work only, not education generally.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "shopping",
+   "headword": "shopping",
+   "level": "college",
+   "register": "plain",
+   "text": "Shopping refers both to the activity of searching for and acquiring goods or services, and to a planned group of purchases. It ranges from practical errands to recreational browsing, and may take place in stores, markets, malls, or online; related terms include buying, purchasing, and, in leisure contexts, retail therapy. In business and everyday use, the term also covers comparing options and prices before completing a transaction.",
+   "source": "Shopping is the act or process of visiting stores, markets, or online outlets to examine, compare, and acquire goods or services. As a noun, it can refer both to the activity itself and to a planned set of purchases. The term covers practical errands, such as buying food or household items, as well as recreational browsing for pleasure or comparison. Common synonyms include buying, purchasing, procurement, and retail therapy; in some contexts, it may also imply leisure shopping. Antonyms include selling, divesting, discarding, and withholding, since these involve giving up goods rather than obtaining them. More broadly, shopping is a kind of economic activity, consumer behavior, leisure activity, commerce, and, in a wider sense, part of the economy. Narrower forms include retail shopping, online shopping, window shopping, mall shopping, and gift shopping. The word is widely used in everyday speech, business, and digital commerce, where the process may involve physical selection, price comparison, and transaction completion.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Omits antonyms and all broader/narrower categories; substantial content loss beyond compression."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Omits antonyms and all broader/narrower categories; substantial content loss beyond compression.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "aperitif",
+   "headword": "aperitif",
+   "level": "college",
+   "register": "plain",
+   "text": "Aperitif can name either the pre-meal drink, often light and alcoholic, or the social custom of serving one before eating. Vermouth and pastis are familiar examples; a digestif, by contrast, is served after the meal.",
+   "source": "An aperitif is a beverage served before a meal to stimulate the appetite and prepare the palate for food. It is most often a light alcoholic drink, though nonalcoholic versions also exist, and it is commonly associated with social hospitality and dining customs in Western cultures. Typical aperitifs are usually drier, lower in alcohol, or more refreshing than drinks intended for after a meal. Common synonyms include pre-dinner drink, starter drink, and apéritif. The opposite of an aperitif is a digestif, a beverage taken after eating to aid digestion or conclude a meal. As a broader category, an aperitif is a kind of beverage and also part of a drinking ritual or dining tradition. Narrower examples include vermouth and pastis, both of which are classic aperitif drinks in European culinary practice. In everyday use, the word can refer either to the drink itself or to the cultural custom of serving a small before-dinner beverage as part of a meal's social rhythm.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Omits core purpose (stimulating appetite), nonalcoholic versions, and typical dry/lighter character."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Omits core purpose (stimulating appetite), nonalcoholic versions, and typical dry/lighter character.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "university_community:noun:0",
+   "headword": "university community",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "It includes all people and groups involved in a university’s teaching, learning, services, and leadership.",
+   "source": "The people and groups that compose a university, including students, faculty, staff, and administrators.",
+   "flags": [
+    "og.readability_miss"
+   ],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": false,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Abstract nouns (services, leadership) replace concrete examples; harder, not easier, for ten-year-olds."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": false, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Abstract nouns (services, leadership) replace concrete examples; harder, not easier, for ten-year-olds.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "oatmeal:noun:1",
+   "headword": "oatmeal",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "This cereal ingredient consists of oats shaped into flakes or smaller pieces for cereals and snacks.",
+   "source": "A cereal product derived from oats produced by milling or processing oats into forms such as rolled, crushed, or flaked oats, used as a base for cereals and snacks.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Concise, formal, clear; milling implied by 'shaped into', core sense and uses retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Concise, formal, clear; milling implied by 'shaped into', core sense and uses retained.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "black_forest",
+   "headword": "Black Forest",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use Black Forest for the wooded mountain area in southwestern Germany. A forest can be any large place with trees. Black Forest cake is a separate thing.",
+   "source": "Use “Black Forest” when referring to the wooded mountain region in southwestern Germany, especially in travel, geography, or regional contexts. It is more specific than “forest,” which can mean any large wooded area, and should not be confused with the Black Forest cake associated with the region.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple and clear; drops usage contexts and cake-region link, but core sense intact."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple and clear; drops usage contexts and cake-region link, but core sense intact.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "plainly",
+   "headword": "plainly",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use plainly when someone says something in a clear, direct way. It can also show that a person is open and not hiding the truth.",
+   "source": "“Plainly” is an adverb meaning in a clear, direct, and easy-to-understand way, without concealment, ambiguity, or figurative intent. It is used when speech, writing, or behavior is straightforward and leaves little room for misunderstanding. In everyday use, it can describe both clarity of expression and frankness of manner, as in saying something openly or stating a fact in an unadorned way. Synonyms include clearly, evidently, obviously, simply, and directly, which all emphasize transparency or ease of comprehension. Antonyms include ambiguously, unclearly, roundabout, and indirectly, which suggest vagueness, obscurity, or lack of directness. As a broader category, plainly belongs to adverbs of manner, since it describes how an action is performed. Narrower or related forms overlap with uses such as clearly, evidently, obviously, simply, and directly, each stressing a slightly different shade of straightforwardness. The word is common in both formal and informal English, especially where precision and openness are important.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; drops synonyms, antonyms, and adverb-of-manner label, but no distortion."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; drops synonyms, antonyms, and adverb-of-manner label, but no distortion.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "restitution",
+   "headword": "restitution",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Restitution means paying someone back or fixing harm so things can be made right. It can mean returning stolen things, paying costs, or doing work to make up for harm.",
+   "source": "Restitution is a noun referring to compensation or repair made for a loss, injury, or wrongdoing, especially when the aim is to restore a person or group to the position they occupied before the harm occurred. It may take monetary form, such as paying damages or reimbursing expenses, or non-monetary form, such as returning property or providing services. In legal and moral contexts, restitution emphasizes making amends and restoring balance rather than merely punishing an offender. Close synonyms include compensation, redress, amends, restoration, and return. Broader terms, or hypernyms, include compensation, remedy, settlement, property transfer, and possession change, all of which describe ways of addressing or adjusting harm or ownership. Narrower forms, or hyponyms, include reimbursement, repayment, damages, return of goods, and recovery of property, each representing a specific type of restitution. Antonyms include loss, deprivation, seizure, confiscation, and retention, which describe the continued absence or taking of what should be restored.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; drops synonyms, antonyms, and restore-not-punish emphasis, but stays accurate and simple."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; drops synonyms, antonyms, and restore-not-punish emphasis, but stays accurate and simple.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "boxing_equipment:noun:0",
+   "headword": "boxing equipment",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "Items used by boxers in training and matches.",
+   "source": "equipment used in boxing",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Adds 'training and matches' but stays faithful; simple wording, suitably formal."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Adds 'training and matches' but stays faithful; simple wording, suitably formal.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "expatiate",
+   "headword": "expatiate",
+   "level": "college",
+   "register": "plain",
+   "text": "To expatiate is to develop a subject at length in speech or writing, often in a formal or literary style. The verb can suggest careful explanation, but also an expansive or digressive treatment that wanders from the central point. Elaborate and expound are close alternatives; summarize and condense express the opposite approach.",
+   "source": "Expatiate is a verb meaning to speak or write at length and in detail about a subject, especially in order to explain, enlarge upon, or develop an idea. It often suggests a formal or literary style of discourse in which a speaker or writer goes beyond a brief statement to elaborate carefully on a point. Common synonyms include elaborate, expound, and dilate; in some contexts, roam and wander may also relate to moving away from the main topic. Antonyms include summarize, condense, stay, and settle, since these imply brevity, restraint, or remaining fixed rather than spreading out in explanation. As a broader term, expatiate belongs to the class of verbs, especially those of communication or expression. Narrower uses may involve specific kinds of extended discourse such as detailing, perorating, dilating, or perambulating in a figurative sense of moving through topics at length. It can also imply a digressive or expansive manner of addressing a subject.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate, compact; omits taxonomy detail but core sense, synonyms, and antonyms retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate, compact; omits taxonomy detail but core sense, synonyms, and antonyms retained.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "noninterchangeable",
+   "headword": "noninterchangeable",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Use noninterchangeable when a swap would make something wrong or change what it does. It often describes words, parts, or signs that need a certain match or order.",
+   "source": "Noninterchangeable is an adjective meaning not able to be swapped with something else without changing meaning, function, value, or correctness. It describes items, terms, parts, or symbols that are not equivalent in use or effect and therefore cannot serve as direct substitutes. In language and logic, noninterchangeable elements differ in ways that make substitution inappropriate or invalid; in technical or practical contexts, they may require a specific order, form, or matching counterpart. Synonyms include nonreplaceable, irreplaceable, and invariant, though these overlap only partly depending on context. The main antonym is interchangeable, which refers to things that can be exchanged without significant difference. As a broader concept, noninterchangeable falls under incompatible and distinct, since it marks an absence of mutual substitutability or sameness. Narrower related terms include nonconvertible and noncomparable, which specify cases where conversion or comparison is not possible or not meaningful. The word is often used in grammar, mathematics, engineering, and classification to emphasize strict non-equivalence.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; synonyms, antonym, and domain uses dropped but central meaning is clear."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; synonyms, antonym, and domain uses dropped but central meaning is clear.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "justin",
+   "headword": "justin",
+   "level": "college",
+   "register": "plain",
+   "text": "Justin is a masculine personal name, usually given as a first name rather than a surname, and is used in English and many other languages. It derives from Latin iustus, meaning “just” or “fair,” and has been borne by saints, rulers, and contemporary public figures.",
+   "source": "Justin is a masculine given name of Latin origin, used primarily in English-language contexts and many other languages. It refers to a personal name assigned to a male individual, typically as a first name rather than a family name. The name is historically associated with Latin iustus, meaning “just” or “fair,” and has been borne by various saints, rulers, and modern public figures. As a type of name, Justin belongs to the broader category of a name and, more specifically, an anthroponym, or human personal name. Synonyms include forename, given name, and masculine name, all of which emphasize its role as an individual’s personal identifier. Antonyms are less exact in this semantic field, but surname serves as the main contrast because it denotes a family name rather than a personal one. Narrower terms include forename and Christian name, both of which refer to a first name used to identify a person within social and legal contexts.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": false,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Drops hypernyms (anthroponym), synonyms, antonym surname, and narrower terms; only core gloss retained."
+   },
+   "judge_raw": "{\"meaning_preserved\": false, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Drops hypernyms (anthroponym), synonyms, antonym surname, and narrower terms; only core gloss retained.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "art:noun:0",
+   "headword": "art",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "Creative work uses skill and imagination to make pictures, music, or plays that people value for beauty, feelings, or ideas.",
+   "source": "The expression or application of human creative skill and imagination, typically in a visual, auditory, or performative form, producing works that are appreciated primarily for their beauty, emotional power, or conceptual significance.",
+   "flags": [
+    "og.readability_miss"
+   ],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Simple, neutral-formal; covers visual, auditory, performative forms and all three grounds of value."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Simple, neutral-formal; covers visual, auditory, performative forms and all three grounds of value.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "pharmacy:noun:0",
+   "headword": "pharmacy",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A shop that provides medicines and other health goods to people for their use.",
+   "source": "The retail establishment where medicines and related products are dispensed to the public.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Clear, simple, neutral-formal; retail dispensing sense retained, though 'for their use' is redundant."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Clear, simple, neutral-formal; retail dispensing sense retained, though 'for their use' is redundant.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "nonstatutory",
+   "headword": "nonstatutory",
+   "level": "grade_5",
+   "register": "plain",
+   "text": "Nonstatutory means not set by a law passed by lawmakers. Such rules may guide public offices, but they do not have the same legal force.",
+   "source": "Nonstatutory is an adjective describing something that is not created by, derived from, or governed by statute, especially in legal, administrative, or regulatory settings. It refers to rules, powers, procedures, or arrangements that exist outside formal legislative authority, often relying instead on policy, custom, administrative practice, or other nonlegislative sources. In this sense, nonstatutory measures may complement statutory ones, but they do not have the same basis in enacted law. Synonyms include unstatutory and policy-based, though these may vary slightly in emphasis. The main antonym is statutory, meaning established by statute. As a broader term, nonstatutory falls under law, guidance, and policy, since it concerns forms of governance or regulation. Narrower examples include nonstatutory provisions, nonstatutory powers, nonstatutory guidelines, and nonstatutory procedures, each specifying a particular kind of rule or authority outside statute. The term is often used where legal force is limited, informal, or derived from administrative discretion rather than legislation.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept, though very compressed; omits policy/custom sources, synonyms, antonym, and examples."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept, though very compressed; omits policy/custom sources, synonyms, antonym, and examples.\"}"
+  },
+  {
+   "field": "explanation",
+   "owner": "rushed",
+   "headword": "rushed",
+   "level": "college",
+   "register": "plain",
+   "text": "Rushed is the past tense and past participle of rush, used for rapid movement or for actions carried out with undue haste. It can imply urgency or pressure and, in some contexts, insufficient care or deliberation.",
+   "source": "Rushed is the past tense and past participle of rush, meaning to move with great speed or to make oneself or something else proceed in haste. It describes quick physical motion, such as rushing to catch a train, and can also refer to acting or doing something in a hurried, sometimes careless way. In broader usage, it may suggest urgency, pressure, or the need to complete an action quickly. Synonyms include hasten, hurry, speed, dash, and press, all of which convey rapid movement or acceleration. Antonyms include slow, delay, crawl, allow, and permit, which express reduced pace or the absence of urgency. As a lexical category, rushed belongs to the broader hypernyms movement, action, and behavior, since it involves a form of directed conduct or motion. Narrower hyponyms include dash, bolt, dart, scurry, and press, each naming a specific kind of hurried movement or forceful advance. The term often carries connotations of immediacy and lack of deliberation.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Core sense kept; synonym, antonym, and hypernym/hyponym detail dropped but definition intact."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Core sense kept; synonym, antonym, and hypernym/hyponym detail dropped but definition intact.\"}"
+  },
+  {
+   "field": "gloss",
+   "owner": "lid:noun:1",
+   "headword": "lid",
+   "level": "grade_5",
+   "register": "formal",
+   "text": "A movable skin fold covers the eye and helps protect its surface.",
+   "source": "The movable protective skin that covers the eye.",
+   "flags": [],
+   "judge": {
+    "meaning_preserved": true,
+    "level_appropriate": true,
+    "register_appropriate": true,
+    "verdict_consistent": null,
+    "note": "Accurate and simple; shifts from defining noun phrase to full sentence, slightly off gloss form."
+   },
+   "judge_raw": "{\"meaning_preserved\": true, \"level_appropriate\": true, \"register_appropriate\": true, \"verdict_consistent\": null, \"note\": \"Accurate and simple; shifts from defining noun phrase to full sentence, slightly off gloss form.\"}"
+  }
+ ]
+}

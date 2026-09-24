@@ -7,6 +7,7 @@ model calls at all, so there is nothing to script.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from typer.testing import CliRunner
 
 from opengloss_generator import cli
 from opengloss_generator.config import StoreConfig
+from opengloss_generator.errors import DuplicateDocumentError
+from opengloss_generator.export import pretrain as pretrain_module
 from opengloss_generator.export.pretrain import (
     TEMPLATES,
     documents_for_entry,
@@ -23,6 +26,7 @@ from opengloss_generator.export.pretrain import (
 from opengloss_generator.identity import edge_id, sense_id
 from opengloss_generator.readability import word_count
 from opengloss_generator.schema import (
+    Assessment,
     Contrast,
     ContrastVerdict,
     Etymology,
@@ -33,6 +37,7 @@ from opengloss_generator.schema import (
     Morphology,
     PartOfSpeech,
     POSEntry,
+    QAFlag,
     ReadingLevel,
     Register,
     Relation,
@@ -223,7 +228,7 @@ def test_encyclopedia_template_renders_overview_etymology_and_explanation():
     assert "Abseil entered English from mountaineering German." in text
 
 
-def test_usage_note_template_renders_registers_side_by_side_and_contrast():
+def test_usage_note_template_renders_registers_side_by_side_without_contrasts():
     entry = _rich_entry()
     docs = documents_for_entry(entry, templates=["usage_note"])
     assert len(docs) == 1
@@ -231,10 +236,19 @@ def test_usage_note_template_renders_registers_side_by_side_and_contrast():
     technical_line = (
         "In technical writing: To perform a controlled descent of a vertical face via rope."
     )
-    assert "Informally: To rope your way down a cliff." in text
+    assert "Informally: To rope your way down a cliff; In technical writing" in text
     assert technical_line in text
-    assert "## Related Terms" in text
-    assert "Compared to rappel: Rappel is the American spelling." in text
+    assert ".;" not in text
+    assert ".." not in text
+    # Contrasts moved to the thesaurus (docs/LEVELED-PRETRAIN-PLAN.md § 4.3-4.4).
+    assert "Rappel is the American spelling." not in text
+
+
+def test_thesaurus_carries_the_contrast_under_choosing_between_them():
+    entry = _rich_entry()
+    (doc,) = documents_for_entry(entry, templates=["thesaurus"])
+    assert "Choosing between them:" in doc.text
+    assert "abseil or rappel? Rappel is the American spelling." in doc.text
 
 
 def test_usage_note_omits_registers_never_written(monkeypatch: pytest.MonkeyPatch):
@@ -303,14 +317,19 @@ def test_no_document_ever_contains_an_empty_heading():
 # --------------------------------------------------------------------------------------
 
 
-def test_fallback_to_neutral_is_recorded_in_level_used():
+def test_a_level_with_no_text_of_its_own_is_skipped_not_copied():
     entry = _rich_entry()
-    # grade_10 has no dedicated renditions anywhere on this entry -> every section
-    # falls back to (neutral, plain)/(neutral, register).
-    docs = documents_for_entry(entry, templates=["encyclopedia"], levels=[ReadingLevel.GRADE_10])
-    assert len(docs) == 1
-    assert docs[0].level == "grade_10"
-    assert docs[0].level_used == "neutral"
+    # grade_10 has no dedicated renditions anywhere on this entry, so every section would
+    # fall back to neutral text: the document would be a copy, and is not emitted.
+    skipped: list[tuple[str, ReadingLevel]] = []
+    docs = documents_for_entry(
+        entry,
+        templates=["encyclopedia"],
+        levels=[ReadingLevel.GRADE_10],
+        on_skip=lambda template, level: skipped.append((template, level)),
+    )
+    assert docs == []
+    assert skipped == [("encyclopedia", ReadingLevel.GRADE_10)]
 
 
 def test_exact_level_match_is_not_reported_as_fallback():
@@ -318,8 +337,9 @@ def test_exact_level_match_is_not_reported_as_fallback():
     docs = documents_for_entry(entry, templates=["dictionary"], levels=[ReadingLevel.GRADE_5])
     assert len(docs) == 1
     # sense 0's gloss and one example exist at grade_5; sense 1 has none there and
-    # falls back -- so the document as a whole is still flagged as a fallback.
-    assert docs[0].level_used == "neutral"
+    # falls back -- so the document is emitted and labelled mixed.
+    assert docs[0].level_used == "mixed"
+    assert docs[0].sections_at_level == 2
 
     # A level with genuinely nothing but the canonical text everywhere renders neutral
     # cleanly, with no fallback flag at all.
@@ -336,10 +356,10 @@ def test_exact_level_match_is_not_reported_as_fallback():
 
 def test_document_id_is_derived_and_stable():
     entry = _rich_entry()
-    docs = documents_for_entry(entry, templates=["dictionary"], levels=[ReadingLevel.COLLEGE])
-    assert docs[0].id == "abseil#pretrain-dictionary-college"
+    docs = documents_for_entry(entry, templates=["dictionary"], levels=[ReadingLevel.GRADE_5])
+    assert docs[0].id == "abseil#pretrain-dictionary-grade_5"
     # the id is a pure function of (lexeme_id, template, level), not randomly assigned
-    again = documents_for_entry(entry, templates=["dictionary"], levels=[ReadingLevel.COLLEGE])
+    again = documents_for_entry(entry, templates=["dictionary"], levels=[ReadingLevel.GRADE_5])
     assert docs[0].id == again[0].id
 
 
@@ -426,7 +446,16 @@ def test_export_pretrain_writes_jsonl_and_summarises_words(tmp_path: Path):
     assert len(lines) == summary.documents_written
     rows = [json.loads(line) for line in lines]
     for row in rows:
-        assert set(row) == {"id", "headword", "template", "level", "level_used", "text", "n_words"}
+        assert set(row) == {
+            "id",
+            "headword",
+            "template",
+            "level",
+            "level_used",
+            "text",
+            "n_words",
+            "sections_at_level",
+        }
     # the all-retired entry never contributes a row
     assert all(row["headword"] != "goneword" for row in rows)
 
@@ -517,3 +546,103 @@ def test_cli_export_pretrain_rejects_per_entry_below_one(tmp_path: Path):
         ],
     )
     assert result.exit_code != 0
+
+
+# --------------------------------------------------------------------------------------
+# Leveled documents (docs/LEVELED-PRETRAIN-PLAN.md § 4)
+# --------------------------------------------------------------------------------------
+
+
+def test_usage_note_at_a_level_lists_only_registers_written_at_that_level():
+    entry = _rich_entry()
+    assert documents_for_entry(entry, templates=["usage_note"], levels=[ReadingLevel.GRADE_5]) == []
+
+    entry.pos_entries[0].senses[0].gloss.add(
+        Rendition[str](
+            reading_level=ReadingLevel.GRADE_5,
+            style=Register.INFORMAL,
+            content="Going down a cliff on a rope, like in a climbing class.",
+        )
+    )
+    (doc,) = documents_for_entry(entry, templates=["usage_note"], levels=[ReadingLevel.GRADE_5])
+    assert "Informally: Going down a cliff on a rope, like in a climbing class." in doc.text
+    assert "In technical writing" not in doc.text
+    assert doc.level_used == "grade_5"
+    assert doc.sections_at_level == 1
+
+
+def test_thesaurus_at_a_level_uses_the_leveled_gloss_and_leveled_contrast():
+    entry = _rich_entry()
+    entry.contrasts[0].text.add(
+        Rendition[str](
+            reading_level=ReadingLevel.GRADE_5,
+            style=Register.PLAIN,
+            content="Rappel is the word many Americans use for the same thing.",
+        )
+    )
+    (doc,) = documents_for_entry(entry, templates=["thesaurus"], levels=[ReadingLevel.GRADE_5])
+    assert "## Verb sense 1: To climb down a cliff using a rope." in doc.text
+    assert "abseil or rappel? Rappel is the word many Americans use" in doc.text
+    assert doc.level_used == "grade_5"
+    assert doc.sections_at_level == 2
+
+
+def test_export_summary_counts_skipped_levels(tmp_path: Path):
+    store = _store(tmp_path)
+    store.write(_rich_entry())
+    summary = export_pretrain(
+        store,
+        tmp_path / "pretrain.jsonl",
+        templates=list(TEMPLATES),
+        levels=[ReadingLevel.NEUTRAL, ReadingLevel.GRADE_10],
+    )
+    skipped = summary.as_dict()["documents_skipped_no_level_content"]
+    assert set(skipped) == {f"{t}/grade_10" for t in TEMPLATES}
+    assert summary.documents_by_level == {"neutral": 4}
+
+
+def test_duplicate_documents_fail_the_export(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    store = _store(tmp_path)
+    store.write(_rich_entry())
+
+    def twin(entry: Lexeme, **_kwargs: object) -> list[pretrain_module.PretrainRecord]:
+        record = pretrain_module.PretrainRecord(
+            id=f"{entry.lexeme_id}#a",
+            headword="x",
+            template="dictionary",
+            level="neutral",
+            level_used="neutral",
+            text="Same text.",
+            n_words=2,
+        )
+        return [record, dataclasses.replace(record, id=f"{entry.lexeme_id}#b")]
+
+    monkeypatch.setattr(pretrain_module, "documents_for_entry", twin)
+    with pytest.raises(DuplicateDocumentError):
+        export_pretrain(store, tmp_path / "dup.jsonl")
+    summary = export_pretrain(store, tmp_path / "dup.jsonl", allow_duplicates=True)
+    assert summary.documents_written == 1
+    assert summary.documents_duplicate == 1
+
+
+def test_a_retired_lexeme_renders_nothing():
+    entry = _rich_entry()
+    for pos_entry in entry.pos_entries:
+        for sense in pos_entry.senses:
+            sense.retired = True
+    assert documents_for_entry(entry, templates=list(TEMPLATES)) == []
+
+
+def test_usage_note_keeps_a_flagged_leveled_line_out_of_the_corpus():
+    entry = _rich_entry()
+    flagged = Assessment()
+    flagged.flag(QAFlag.OG_READABILITY_MISS)
+    entry.pos_entries[0].senses[0].gloss.add(
+        Rendition[str](
+            reading_level=ReadingLevel.GRADE_5,
+            style=Register.FORMAL,
+            content="A formally described controlled descent along a rope anchored above.",
+            assessment=flagged,
+        )
+    )
+    assert documents_for_entry(entry, templates=["usage_note"], levels=[ReadingLevel.GRADE_5]) == []
