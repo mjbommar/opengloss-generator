@@ -26,9 +26,14 @@ import os
 import warnings
 from typing import TYPE_CHECKING
 
+import httpx2
 from pydantic_ai.models import Model, infer_model
 from pydantic_ai.models.anthropic import AnthropicModelSettings
-from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
+from pydantic_ai.models.openai import (
+    OpenAIChatModel,
+    OpenAIResponsesModel,
+    OpenAIResponsesModelSettings,
+)
 from pydantic_ai.models.openrouter import OpenRouterModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
@@ -168,6 +173,31 @@ def _build_local_model(bare: str) -> Model:
     return OpenAIChatModel(bare, provider=OpenAIProvider(base_url=base_url, api_key=api_key))
 
 
+def _build_openai_model(bare: str, workers: int) -> Model:
+    """Build an OpenAI Responses model whose connection pool matches the worker pool.
+
+    ``infer_model`` gives the provider a default HTTP client, and that client's pool
+    allows 100 connections. A flex call holds its connection for the whole 5-60 s it
+    waits, so a run with more than 100 workers silently ran only 100 calls at a time
+    (measured 2026-09-24: exactly 100 open sockets in each of twelve 192-worker
+    processes). The pool is sized to the configured workers, with headroom for retries
+    and the sense-check calls that some stages make while holding a worker.
+
+    Args:
+        bare: The OpenAI model id.
+        workers: The run's configured worker count.
+
+    Returns:
+        The same ``OpenAIResponsesModel`` that ``infer_model`` builds, with a sized pool.
+    """
+    size = max(100, workers * 2)
+    http_client = httpx2.AsyncClient(
+        timeout=httpx2.Timeout(timeout=900, connect=10),
+        limits=httpx2.Limits(max_connections=size, max_keepalive_connections=size),
+    )
+    return OpenAIResponsesModel(bare, provider=OpenAIProvider(http_client=http_client))
+
+
 class ModelRouter:
     """Builds models and settings for stages, and owns run-level tier state.
 
@@ -204,9 +234,12 @@ class ModelRouter:
         name = model if model is not None else policy.model
         if name not in self._models:
             kind, bare = _split_model(name)
-            self._models[name] = (
-                _build_local_model(bare) if kind == "local" else _infer_model(kind, bare)
-            )
+            if kind == "local":
+                self._models[name] = _build_local_model(bare)
+            elif kind == "openai":
+                self._models[name] = _build_openai_model(bare, self._config.concurrency.workers)
+            else:
+                self._models[name] = _infer_model(kind, bare)
         return self._models[name]
 
     def limiter_for(self, policy: ModelPolicy, *, model: str | None = None) -> RateLimiter:

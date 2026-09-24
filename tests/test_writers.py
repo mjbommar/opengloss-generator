@@ -111,6 +111,17 @@ def test_local_model_with_base_url_builds(monkeypatch):
     assert model.model_name == "qwen2.5-14b-instruct"
 
 
+def test_openai_connection_pool_scales_with_workers(monkeypatch):
+    # The default client's pool is 100 connections, which silently capped every
+    # 192-worker flex run at 100 calls in flight (docs/FILL-ROUND-V2.4.md).
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    cfg = AppConfig.model_validate({"concurrency": {"workers": 192}})
+    model = ModelRouter(cfg).model_for(ModelPolicy(model="gpt-6-luna"))
+    pool = model.client._client._transport._pool
+    assert pool._max_connections == 384
+    assert model.model_name == "gpt-6-luna"
+
+
 def test_model_for_override_is_cached_independently_of_the_policy_model():
     router = _router()
     policy = ModelPolicy(model="gpt-5.6-luna")

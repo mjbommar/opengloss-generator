@@ -113,6 +113,14 @@ def _flat(model: str, in_usd: float, out_usd: float, cached_usd: float) -> list[
 
 _ROWS: list[ModelPrice] = [
     # --- OpenAI, standard-tier rates from the pricing page (short-context band) ---
+    # GPT-6 family, released 2026-09-22 and listed on the account's `/v1/models` the next
+    # day. Standard rates from developers.openai.com/api/docs/pricing, fetched 2026-09-23:
+    # gpt-6-luna $0.10 / $0.01 cached / $0.50, gpt-6-sol $2.00 / $0.20 / $10.00, Batch
+    # exactly half. The page does not list flex for either, but a live flex request to
+    # both returned `service_tier: "flex"` the same day (reports/writer-probe-2026-09-23),
+    # so flex is priced at the batch rate as for every other OpenAI row.
+    *_openai("gpt-6-luna", 0.10, 0.01, 0.50),
+    *_openai("gpt-6-sol", 2.00, 0.20, 10.00),
     *_openai("gpt-5.6-luna", 0.20, 0.02, 1.20),
     *_openai("gpt-5.6-terra", 2.00, 0.20, 12.00),
     *_openai("gpt-5.6-sol", 4.00, 0.40, 20.00),
