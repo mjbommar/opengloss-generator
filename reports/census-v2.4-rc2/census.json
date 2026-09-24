@@ -1,0 +1,7971 @@
+{
+ "census": "opengloss-g0-v2.3",
+ "plan": "docs/ENCODER-DATA-EXPANSION-PLAN.md#phase-g0--census-and-design-freeze",
+ "release": "v2.4-rc2",
+ "model_calls": 0,
+ "meta": {
+  "generated_at": "2026-09-24T18:25:13-0400",
+  "seconds": 837.4,
+  "tokenizer_file": "ogbert-tokenizer-16384.json",
+  "tokenizer_sha256": "5c01d4271cfdb4bba21fbee76b16c2743e1093f4d0aca853ecfae9ec6ec2623d",
+  "tokenizers_version": "0.23.2",
+  "pyarrow_version": "25.0.1",
+  "numpy_version": "2.5.3",
+  "contexts": [
+   256,
+   512,
+   1024
+  ],
+  "sample_words": 200000,
+  "sample_openers": 20000,
+  "stratum_sample_words": 50000,
+  "stratum_sample_openers": 5000,
+  "word_regex": "[a-z0-9]+(?:'[a-z]+)?",
+  "normalization": "casefold, collapse whitespace, strip"
+ },
+ "inventory": {
+  "totals": {
+   "repos": 16,
+   "files": 185,
+   "bytes": 6888427810
+  },
+  "repos": {
+   "opengloss-v2.4-rc2-contrasts": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 93702461,
+      "sha256": "a1b659e91ba5638d7c39ae68842713e9469e13f02527f7e5e6cddaedd6636afe",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 60023100,
+      "sha256": "1248f0fbf7164a4179b3777deb8778315558441585d93e2ddeeaaee5c66530ab",
+      "rows": 310424
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-definitions": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 18855645,
+      "sha256": "46003da9ae9f0374df1385e7c667f4d47f06a9808e0770e2307743d5a15898a4",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 18857226,
+      "sha256": "9656e57bccde21afb10c89c538380b324b0fa67d3a3f152ff4c266d71be6c8a5",
+      "rows": 501760
+     },
+     "data/train-00002.parquet": {
+      "bytes": 18829106,
+      "sha256": "1ea3aad9c4c33064b57382bb7aedaee38a09371be1f32c81b2b2495734c4c22d",
+      "rows": 501760
+     },
+     "data/train-00003.parquet": {
+      "bytes": 19086113,
+      "sha256": "978881696a87ab9ec45cd24f2f88a45842d6ddde754ff72538c07ef041a6f334",
+      "rows": 501760
+     },
+     "data/train-00004.parquet": {
+      "bytes": 19210610,
+      "sha256": "a2533a689f77a3897641e9b012d9736ded97c8c16e0ba56f6c12e7817773057b",
+      "rows": 501760
+     },
+     "data/train-00005.parquet": {
+      "bytes": 18983567,
+      "sha256": "c05dd49af7af287f3173da78fb2d5555903c9eb78469265e8b00ca3de93e5e75",
+      "rows": 501760
+     },
+     "data/train-00006.parquet": {
+      "bytes": 18714286,
+      "sha256": "b56eade22761f77756b21f66c68d61eaab4ad2de46e9b7a092c871d6dddf6037",
+      "rows": 501760
+     },
+     "data/train-00007.parquet": {
+      "bytes": 18582712,
+      "sha256": "55a5f1271015d69daa2a2428904ba78996fbc98e2b0a87f5f5fc7854a1516461",
+      "rows": 501760
+     },
+     "data/train-00008.parquet": {
+      "bytes": 7331281,
+      "sha256": "6298043ace0e54b0b54a566d1efb0557639bc5992612cc62359c215aeacb75ac",
+      "rows": 195414
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-encyclopedia": {
+    "files": {
+     "data/encyclopedia/train-00000.parquet": {
+      "bytes": 283566165,
+      "sha256": "b0763ce2c9e5259b0e7a3d08893d5ea2545c3eb141ccbd42ea222024c4c95f32",
+      "rows": 501760
+     },
+     "data/encyclopedia/train-00001.parquet": {
+      "bytes": 170019377,
+      "sha256": "fe5226d42bff5fca3906e225c7b09feb4ae1cf66e660f0918c9f5f67cbc0e79a",
+      "rows": 301154
+     },
+     "data/explanation/train-00000.parquet": {
+      "bytes": 81347045,
+      "sha256": "321d7e94bf0bf256d9400ba4e46a1897a289404cb90f91ab30e583941d74e228",
+      "rows": 482172
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-etymology": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 62389297,
+      "sha256": "783ba5e584d3b50f442dbabfdfb6d89c4a0d80138f0b436dd5f7506a1c52f327",
+      "rows": 160688
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-examples": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 18301934,
+      "sha256": "5da51203accd985fcf5ff56c16cf682e4d5bab52ca7bfaea1b54f8c5bb69147c",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 18274089,
+      "sha256": "0ef2769f060728f79e78b9acb712ffdd210cda9b0ef5556654e8ffab245b5a8f",
+      "rows": 501760
+     },
+     "data/train-00002.parquet": {
+      "bytes": 18402938,
+      "sha256": "ffb3e62a160d4c2c3258ef5506266e7d53ea7482ab3d3e2e535f850a095b967a",
+      "rows": 501760
+     },
+     "data/train-00003.parquet": {
+      "bytes": 18278263,
+      "sha256": "fa8c0241e226d116311edcffb5427b6c8f56189c6411cee2de4a6d166893cabf",
+      "rows": 501760
+     },
+     "data/train-00004.parquet": {
+      "bytes": 18478398,
+      "sha256": "240ca968989c4cce942bc0face1c8fa061bb22a13865a519a5242e60509a598a",
+      "rows": 501760
+     },
+     "data/train-00005.parquet": {
+      "bytes": 18476111,
+      "sha256": "244554549ce761e0b73651f937bce2ffa6360d29b13653b720f43733c31005a3",
+      "rows": 501760
+     },
+     "data/train-00006.parquet": {
+      "bytes": 18399822,
+      "sha256": "4080a36fd1e0682122c24c8b187c149ac12b34fe3f7ece96f48e1380a0f776ce",
+      "rows": 501760
+     },
+     "data/train-00007.parquet": {
+      "bytes": 18231959,
+      "sha256": "33a014ee55287ccc53f2018ec4b6248b3cdaa3c4ee4d3bf47ade46b9d6f17ab0",
+      "rows": 501760
+     },
+     "data/train-00008.parquet": {
+      "bytes": 18196482,
+      "sha256": "a650bd4aea13a7d60f1108b31fb42314dcf049d10bad3e7907662b03d994dbf2",
+      "rows": 501760
+     },
+     "data/train-00009.parquet": {
+      "bytes": 15437004,
+      "sha256": "5120a089deed31b35f7a79ab2aa318842a37c519089db7cd02db2b6824387f31",
+      "rows": 424047
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-inflections": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 6867800,
+      "sha256": "17b32973cb9b1fa1be17fdf41a7c5ea168f1d311fbf059cf0d75fb856bcb4731",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 5145301,
+      "sha256": "23676966e851ef3ea6b05323b0172c5faf88bbb5e968e5c22fd5e70cc0a1cac7",
+      "rows": 379604
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-lexicon": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 304300340,
+      "sha256": "c606ca3e804619761035eed9a5eeb863ddbb3ee9793075c317883b24aa74bf6a",
+      "rows": 71680
+     },
+     "data/train-00001.parquet": {
+      "bytes": 305812603,
+      "sha256": "34015c6613890c0f9945427d9c54fc91f05a4100cbb4113b5977b5622b429b6d",
+      "rows": 75776
+     },
+     "data/train-00002.parquet": {
+      "bytes": 68778273,
+      "sha256": "ee8b8ca0a76310467b8e33dd21b6842ef0bcd1965d9a1d005e9e810d694fc3df",
+      "rows": 17835
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-pretrain": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 226769273,
+      "sha256": "5f3560ce7671bffab829f8fc7723bf585a10bc7ed73150b6220ba0f2d5503caf",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 214202997,
+      "sha256": "83683275f1bb8841aade72e3b54004d016f281c4a5ed06db11eb4b50376371a9",
+      "rows": 501760
+     },
+     "data/train-00002.parquet": {
+      "bytes": 204729046,
+      "sha256": "b8e7228f875e239da940f554e7d1abc3e0b4212a12329efccfe382509ca7fe1f",
+      "rows": 501760
+     },
+     "data/train-00003.parquet": {
+      "bytes": 156096447,
+      "sha256": "db46da7cc309731ae277b4b6b0bdc56122a82e403474808eb957f42e38d9caab",
+      "rows": 405093
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-provenance": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 16490096,
+      "sha256": "f0757ffc90529687221a9ffebdb1bbe7312b6a75447d0536d731728c13ac2203",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 16530252,
+      "sha256": "1b2b7305d6e2fa2950fea728dc90f930686b130a3042051cd5a6b22f71c5d88c",
+      "rows": 501760
+     },
+     "data/train-00002.parquet": {
+      "bytes": 16523980,
+      "sha256": "7220bc3031fc64da6249cbcdddf0e5033e7e37e6892f7a5093b82c43f8caa782",
+      "rows": 501760
+     },
+     "data/train-00003.parquet": {
+      "bytes": 16459370,
+      "sha256": "9df191cd563464e7580c73ecd1590df5ff14bb28031a331cb87c947de518ae21",
+      "rows": 501760
+     },
+     "data/train-00004.parquet": {
+      "bytes": 16453449,
+      "sha256": "eccc5336c960b960a93264001ced9f97dfe5368f2adaf46095c301b4920e6acc",
+      "rows": 501760
+     },
+     "data/train-00005.parquet": {
+      "bytes": 16427338,
+      "sha256": "86e096a364a41f963c2c53fb5ffe68654a326893bab5928c6db735ea1c8d7b3a",
+      "rows": 501760
+     },
+     "data/train-00006.parquet": {
+      "bytes": 16431775,
+      "sha256": "0d863288d783116136f574b2d2d1eafe69681eb3e4465714d05df215beef0b24",
+      "rows": 501760
+     },
+     "data/train-00007.parquet": {
+      "bytes": 16468478,
+      "sha256": "3d2d5ad520ba7c885e4eaae661308a7e6f4eee4c9285c59ad667cdf54e19e052",
+      "rows": 501760
+     },
+     "data/train-00008.parquet": {
+      "bytes": 16377067,
+      "sha256": "080fcf93ea1a73c32d6b5da33de2c4452a677106c7c05ebba8e5ef55c2b4b87b",
+      "rows": 501760
+     },
+     "data/train-00009.parquet": {
+      "bytes": 16407922,
+      "sha256": "1444d7628c97439c47acf29a0d692cc95dc7648104e91b49a2b9a75210f7e5e8",
+      "rows": 501760
+     },
+     "data/train-00010.parquet": {
+      "bytes": 16573022,
+      "sha256": "ee541294ce7de30ca079db40c9f2862cae6a0b18316097dda646eea82fb310bf",
+      "rows": 501760
+     },
+     "data/train-00011.parquet": {
+      "bytes": 16476236,
+      "sha256": "e452eed26345ae4bd6955a2189b5762aa808c936e929446427da3fa0beb80341",
+      "rows": 501760
+     },
+     "data/train-00012.parquet": {
+      "bytes": 16541975,
+      "sha256": "221425283b3bdcbdfb9ceddc2bc8bed75d686078e3dd92b0027dde16a0084b0e",
+      "rows": 501760
+     },
+     "data/train-00013.parquet": {
+      "bytes": 16465565,
+      "sha256": "58808735482c45be907f5272560dd9625c6fbcdff89f5339f15c50286fcd4223",
+      "rows": 501760
+     },
+     "data/train-00014.parquet": {
+      "bytes": 16483375,
+      "sha256": "0ebd052a9bf341ed716bfef9c05cdd4a306983796d1964392582cade7b0e3e12",
+      "rows": 501760
+     },
+     "data/train-00015.parquet": {
+      "bytes": 16401994,
+      "sha256": "8ab43b8f365d07da6f7022fa86b81c27a7651f1308cb635da9f699262770e453",
+      "rows": 501760
+     },
+     "data/train-00016.parquet": {
+      "bytes": 16457725,
+      "sha256": "5184abb140d703b4355e255e3acc92b21f46fabcc21897d62169f84747ca54fb",
+      "rows": 501760
+     },
+     "data/train-00017.parquet": {
+      "bytes": 16471798,
+      "sha256": "427f2694e97eaff5146d7f3f461e2f31cc3f666da9a91908ad413d0d03720953",
+      "rows": 501760
+     },
+     "data/train-00018.parquet": {
+      "bytes": 4868325,
+      "sha256": "5a03f776a0042efad8a7b6ec6c54e3bf9b047aaf0e43c64c9f0ebed2b6a61ac4",
+      "rows": 147809
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-qa-pairs": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 41448986,
+      "sha256": "76c100cb7644752a8a4937dbc33e81bc7e562aa5eb32d774605044c117d04ad4",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 41459212,
+      "sha256": "ed1613e775f62d5d9a4159f21835c280da991da54fa206f6e91f5981224370c3",
+      "rows": 501760
+     },
+     "data/train-00002.parquet": {
+      "bytes": 41744217,
+      "sha256": "ba415395217af26837684475236a4dd8bd61497d7b18164aadd5cda668a52e33",
+      "rows": 501760
+     },
+     "data/train-00003.parquet": {
+      "bytes": 41079187,
+      "sha256": "e4d467496ae16e1bdb53e5081ef30581bd4a9dae00a86dcd912e2c01c9054946",
+      "rows": 501760
+     },
+     "data/train-00004.parquet": {
+      "bytes": 24541695,
+      "sha256": "3f86a40f8050de8b7f01f818900678a08ff571511a03eeee7775500f4ada327d",
+      "rows": 297087
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-qrels": {
+    "files": {
+     "data/docs/train-00000.parquet": {
+      "bytes": 152476391,
+      "sha256": "ef980cdaf47f60e1efd54f7e70b3c3040edaa2f54c0b4843e66780b89544456d",
+      "rows": 461511
+     },
+     "data/listwise/train-00000.parquet": {
+      "bytes": 53610069,
+      "sha256": "d4d31a229bcd1052043d993904b3cccd0cfe4ed8a550a05b41cc93fd56a3a824",
+      "rows": 501760
+     },
+     "data/listwise/train-00001.parquet": {
+      "bytes": 52962819,
+      "sha256": "f7e3ec9d84304f9c850f56cf31a62ef596d51bbfa2b8112bb3ace7a1632e6f99",
+      "rows": 501760
+     },
+     "data/listwise/train-00002.parquet": {
+      "bytes": 52990152,
+      "sha256": "57acd0099b2b78fb0b24c74aecd834ba3be4db91ef96ed92c66b80c56787b400",
+      "rows": 501760
+     },
+     "data/listwise/train-00003.parquet": {
+      "bytes": 53389173,
+      "sha256": "75d5bcbefd546cc716af72eb064cb7c5b85700300b4a384ef104f67ff3e48404",
+      "rows": 501760
+     },
+     "data/listwise/train-00004.parquet": {
+      "bytes": 52275378,
+      "sha256": "588e9594bd9c9615147e4a0275f1f09accb84e1d151e8b181940dec4e64451d8",
+      "rows": 501760
+     },
+     "data/listwise/train-00005.parquet": {
+      "bytes": 51390192,
+      "sha256": "e66558e1da457f92b95f9b6d8b5978f3c18332efb6fbcec65e1cd8df9f70b036",
+      "rows": 501760
+     },
+     "data/listwise/train-00006.parquet": {
+      "bytes": 51145764,
+      "sha256": "883906d76b8941570eff79b994cd0a55cee4525893edcce824ec59e4d26d0a20",
+      "rows": 501760
+     },
+     "data/listwise/train-00007.parquet": {
+      "bytes": 35023835,
+      "sha256": "597d4f7ae51ed6ac807536a899bddaa8b50e2c467276238995b44a6598ad2c0f",
+      "rows": 339658
+     },
+     "qrels.trec": {
+      "bytes": 1405880090,
+      "sha256": "dcce551404952db9f57ff418c196e58084c14fa2c40ad50db4c5ebbfdb8e73f2"
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-queries": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 17649837,
+      "sha256": "9964bf7823d951cb807ca87395e9f3da2591217a3a3bafb088b5716bebdaf8ca",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 17723089,
+      "sha256": "7ece2414d0f611af81ce46334c45d6622803c4ee5bba6c19a338dd850ac355f5",
+      "rows": 501760
+     },
+     "data/train-00002.parquet": {
+      "bytes": 17789536,
+      "sha256": "41e3ff1d17e74fc0a73b34fd6149adc308ef9c2f148174c91ce05f3b9c1cfa45",
+      "rows": 501760
+     },
+     "data/train-00003.parquet": {
+      "bytes": 17811213,
+      "sha256": "b23f61894a31e25f0975330febd6baa8d018c631e4422e17e6f99fa8ef536e59",
+      "rows": 501760
+     },
+     "data/train-00004.parquet": {
+      "bytes": 17852481,
+      "sha256": "cffa41be25fe0990eb3a27fc0cd4f5fee3575e7d1fa03652e4f5c75815992c47",
+      "rows": 501760
+     },
+     "data/train-00005.parquet": {
+      "bytes": 17739586,
+      "sha256": "f16087bc24f4cbb30d572c6e1398dfc8d2863564b42dcd096524a06ac23a71a1",
+      "rows": 501760
+     },
+     "data/train-00006.parquet": {
+      "bytes": 17702153,
+      "sha256": "89b970635fa3a8af9e5c149f989f3e1b58ac4aa8ce6f5998a1ad81d11c74fc2e",
+      "rows": 501760
+     },
+     "data/train-00007.parquet": {
+      "bytes": 11997331,
+      "sha256": "5307952aca33669d040d6236a401d586bc6c65d2e802a2a98d9e8337fb110897",
+      "rows": 339658
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-relations": {
+    "files": {
+     "data/relations/train-00000.parquet": {
+      "bytes": 19663535,
+      "sha256": "0391aaa7b1411713dcb31897a3ed9931e111adf7bb9210367286e914fefc9dfe",
+      "rows": 501760
+     },
+     "data/relations/train-00001.parquet": {
+      "bytes": 19558665,
+      "sha256": "3a3c5a44601f63d46af98a232c2a453b0c2e4be2a153f8a9b95554d7968ca5ee",
+      "rows": 501760
+     },
+     "data/relations/train-00002.parquet": {
+      "bytes": 19418289,
+      "sha256": "39084363dc8feecf4b508f85b16bd47e0f5cec81903de089a4c886eb1c0abfb5",
+      "rows": 501760
+     },
+     "data/relations/train-00003.parquet": {
+      "bytes": 8218377,
+      "sha256": "4d9d1a1bdd5b080c6d741211f4db07c97afd2680cb4fc4464c772bece9ba33fd",
+      "rows": 211755
+     },
+     "data/tombstoned/train-00000.parquet": {
+      "bytes": 16819931,
+      "sha256": "8c6859ccf32a99a011f8ba0daf0b6b2921962775c5dd6a1abd643c4249a741e0",
+      "rows": 501760
+     },
+     "data/tombstoned/train-00001.parquet": {
+      "bytes": 16740146,
+      "sha256": "70d7189369b3892ee756f1b3a8725c83c2e2b550cfeeac6aac93b972c252d79d",
+      "rows": 501760
+     },
+     "data/tombstoned/train-00002.parquet": {
+      "bytes": 16973331,
+      "sha256": "31c7e208e77a1b8f8f98fd727a958aa6f79f6417970dd900e7ca2c6eecda56e3",
+      "rows": 501760
+     },
+     "data/tombstoned/train-00003.parquet": {
+      "bytes": 16735641,
+      "sha256": "9dbd07d2a90deca317fb8c4f4ec5479d788876a60f6ee8ab6da4f730cf1ec888",
+      "rows": 501760
+     },
+     "data/tombstoned/train-00004.parquet": {
+      "bytes": 10803940,
+      "sha256": "2632fe060fd91d30731425c5eaf70f0dcf419dfc1dc1d2628dbe4943f8c3d2c7",
+      "rows": 319384
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-retrieval-pairs": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 8117362,
+      "sha256": "4808c46c45af820c72e797f2027a83245ed76f347589e4938b0036d07495e724",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 8000372,
+      "sha256": "5c99ea5fa75ec3c2f045467b3c3e99d6687af2caa6df2101c6ee509925df4a95",
+      "rows": 501760
+     },
+     "data/train-00002.parquet": {
+      "bytes": 8083327,
+      "sha256": "509e0c1bf5800b286771025bb27b70dea03383d39936d20b6373fe9416a4a9a7",
+      "rows": 501760
+     },
+     "data/train-00003.parquet": {
+      "bytes": 7976466,
+      "sha256": "783d0961d8acca0943a1dc920124e4e1a60e92d285d6ea3c2c9b0437bb6f63ba",
+      "rows": 501760
+     },
+     "data/train-00004.parquet": {
+      "bytes": 8063180,
+      "sha256": "42f6ed68c4548add5baa24737ea12228e6036909c194472c0728cd5d8b67c602",
+      "rows": 501760
+     },
+     "data/train-00005.parquet": {
+      "bytes": 8066894,
+      "sha256": "d40042f8e048c8e807be5173332a12eb162ba6ea09c10df5f45e799e23c13cea",
+      "rows": 501760
+     },
+     "data/train-00006.parquet": {
+      "bytes": 8257390,
+      "sha256": "9a479ca279689985f919091e65fddac14238f639150ab0ca365185f5be0766c7",
+      "rows": 501760
+     },
+     "data/train-00007.parquet": {
+      "bytes": 8045942,
+      "sha256": "7b1c35dc9b95858eb3fba3d8377822a49199f0e3dbb17833b2a2b4c45c54925e",
+      "rows": 501760
+     },
+     "data/train-00008.parquet": {
+      "bytes": 8202060,
+      "sha256": "1e22a3fc8e558457cdaac8bf0413edd98ebbbb23b019416272ef8f650bc3713c",
+      "rows": 501760
+     },
+     "data/train-00009.parquet": {
+      "bytes": 8112481,
+      "sha256": "37417b74a9afca24e154631fa783ec6a881b3365367f437d444b1b8ea591d01a",
+      "rows": 501760
+     },
+     "data/train-00010.parquet": {
+      "bytes": 8203400,
+      "sha256": "813b5b7a021c2d91f3286e02757efd4e8f75cbdc3b560fbbdefebb86cc2a9294",
+      "rows": 501760
+     },
+     "data/train-00011.parquet": {
+      "bytes": 8068799,
+      "sha256": "997b991d0dcdef2b0d6630921f57942ae7738e24ca2b79f61267a9d200e76ab5",
+      "rows": 501760
+     },
+     "data/train-00012.parquet": {
+      "bytes": 7983631,
+      "sha256": "df5dfddbbcd2b712de929e8bc4c79ce214660e1dd312edb6f8d728f50e7b5e44",
+      "rows": 501760
+     },
+     "data/train-00013.parquet": {
+      "bytes": 7842908,
+      "sha256": "62aac10b275b5e0eff890c708495eae1d37f9043d6768c2c49d3a943aaa8d971",
+      "rows": 501760
+     },
+     "data/train-00014.parquet": {
+      "bytes": 7704443,
+      "sha256": "da610750a03b4cb0c4c8fa2fa75908a1568d2251ac7516513de24229a4107d44",
+      "rows": 501760
+     },
+     "data/train-00015.parquet": {
+      "bytes": 7870171,
+      "sha256": "d3b6148ae5d266ec3591c4c26f5cbe5e3b6570b41b8ad82e84ce37dc48d32985",
+      "rows": 501760
+     },
+     "data/train-00016.parquet": {
+      "bytes": 7854082,
+      "sha256": "5ec51b044fd0a63ffeec30b70ce6ced9a0fe2e16644f14d73b3be39de8611433",
+      "rows": 501760
+     },
+     "data/train-00017.parquet": {
+      "bytes": 7959077,
+      "sha256": "5c6ac798849120808eadfc7041e484f55a4b05527f616f31a69f4f6564b523e0",
+      "rows": 501760
+     },
+     "data/train-00018.parquet": {
+      "bytes": 7786446,
+      "sha256": "9e55477def627883ad7a581a9ce9ad4743541c6addf593b7ff5de832cd8ec964",
+      "rows": 501760
+     },
+     "data/train-00019.parquet": {
+      "bytes": 7903258,
+      "sha256": "f9e3fd5745f89136339342ebd1e780f31b1cf76d6bf6ccfd145947223c8eab6a",
+      "rows": 501760
+     },
+     "data/train-00020.parquet": {
+      "bytes": 8034834,
+      "sha256": "7852725e13df97f0f80386387ef93ddb283debbf6024d5351d25a1b3ba3684b7",
+      "rows": 501760
+     },
+     "data/train-00021.parquet": {
+      "bytes": 7869976,
+      "sha256": "c6cfebba24fa0fe3302de281c34ad08ec75500bc3aa6bd342f122024e97b0ad0",
+      "rows": 501760
+     },
+     "data/train-00022.parquet": {
+      "bytes": 7864575,
+      "sha256": "21213bf57764ad746c618ed3e63ba5ff57fe5f38743f1be797154463adfa299a",
+      "rows": 501760
+     },
+     "data/train-00023.parquet": {
+      "bytes": 7881003,
+      "sha256": "11292c8eab6c8d2bb3ec442ab422c1dce77b368f684038834100b191fe655d88",
+      "rows": 501760
+     },
+     "data/train-00024.parquet": {
+      "bytes": 7944352,
+      "sha256": "68eee29eb766156a794b4fe2169c53a1b6ae81588151ec90a983dcf9276d7ef3",
+      "rows": 501760
+     },
+     "data/train-00025.parquet": {
+      "bytes": 7926124,
+      "sha256": "babf026d89155158f87b156cfbe427cc55f6a9e2c4c5ef050f59d92b360e4d2d",
+      "rows": 501760
+     },
+     "data/train-00026.parquet": {
+      "bytes": 7900622,
+      "sha256": "d0729b223c7cb04e1bf3bf176a4187abc130be6509acd34955beff327f7ee08f",
+      "rows": 501760
+     },
+     "data/train-00027.parquet": {
+      "bytes": 7870863,
+      "sha256": "c07a38e37ce3afd0ce543ff2a626990cee2bf8ebf81f1be959d75e3fe7999831",
+      "rows": 501760
+     },
+     "data/train-00028.parquet": {
+      "bytes": 7915706,
+      "sha256": "9065d47ef72b6cc6fb1265b80a0c0f7996189c0c211138f87b62b815b61c52e9",
+      "rows": 501760
+     },
+     "data/train-00029.parquet": {
+      "bytes": 8205377,
+      "sha256": "ff104677682e154f4243144291ae60ebcde8a9ffb6b6d2ecc4c77140bcbbe150",
+      "rows": 501760
+     },
+     "data/train-00030.parquet": {
+      "bytes": 7937896,
+      "sha256": "9158e1fd62fa1a02a7a34e585e3dd26843726588736c7ef3084bc989995fde68",
+      "rows": 501760
+     },
+     "data/train-00031.parquet": {
+      "bytes": 8416195,
+      "sha256": "430f0bda06a774bc747bd48453b43405f0e1be4e65f38865348bf56671d05c37",
+      "rows": 501760
+     },
+     "data/train-00032.parquet": {
+      "bytes": 8168011,
+      "sha256": "174e8e48ccc41f736af587b0614a31860c747876765876e8c4128cac36390e2b",
+      "rows": 501760
+     },
+     "data/train-00033.parquet": {
+      "bytes": 8128441,
+      "sha256": "28c9dc1ff1f085914ce69f153565fc8dfc8ebdc38696c29a1c60f8bec3fabe82",
+      "rows": 501760
+     },
+     "data/train-00034.parquet": {
+      "bytes": 8291855,
+      "sha256": "2c7ae4576d71fdd084b1ebdb7ec4bd56a7a0292034c5afe241b79d0b0f595942",
+      "rows": 501760
+     },
+     "data/train-00035.parquet": {
+      "bytes": 7864055,
+      "sha256": "6ba003bbf054602e4bf7c4852b9d073e0d31f71209bbd9aabb42e8a618255238",
+      "rows": 501760
+     },
+     "data/train-00036.parquet": {
+      "bytes": 8180304,
+      "sha256": "da6da33838d7349b289ac65dc40d7eb33bedaa8a5bdc586ae206e9fd1720ad7a",
+      "rows": 501760
+     },
+     "data/train-00037.parquet": {
+      "bytes": 8663407,
+      "sha256": "7fa839d11cd8d661679cd11c11fd083f26850e8df25a2f2800ab96ce47376fda",
+      "rows": 501760
+     },
+     "data/train-00038.parquet": {
+      "bytes": 8177650,
+      "sha256": "dee2a0dc22e2cfa280cba92c6645bc35457bdcb58de5e4a93c83e99b5100b7ce",
+      "rows": 501760
+     },
+     "data/train-00039.parquet": {
+      "bytes": 8019254,
+      "sha256": "1e1864bb56e4adaab8653351edce3ea523a829e987d043a27b01abd7118fce18",
+      "rows": 501760
+     },
+     "data/train-00040.parquet": {
+      "bytes": 7891549,
+      "sha256": "9d537d0b9d4d595a68de8d923d4c0630c34482185cdefe98c0b0f94f82dd93e0",
+      "rows": 501760
+     },
+     "data/train-00041.parquet": {
+      "bytes": 8096887,
+      "sha256": "02be72c5b68eca970c15002e18ce93d2457d014188d66dada18c834f1e2735af",
+      "rows": 501760
+     },
+     "data/train-00042.parquet": {
+      "bytes": 8109861,
+      "sha256": "810e9ab24eb6e87a219730bfd2efcba607c6e918acd9d5b162786b3410b860f5",
+      "rows": 501760
+     },
+     "data/train-00043.parquet": {
+      "bytes": 7916094,
+      "sha256": "c05c9d940ba5c988ba43afd493cdb04acdeb1a63932b9801838a6c408f404ae8",
+      "rows": 501760
+     },
+     "data/train-00044.parquet": {
+      "bytes": 8080628,
+      "sha256": "06c1d4f17091fe95396e373dad5c23b5df204b4869b3b590b9db8cd4393ad703",
+      "rows": 501760
+     },
+     "data/train-00045.parquet": {
+      "bytes": 7875159,
+      "sha256": "c4c1cb4309b7a173c7cb8d66c700fbeb484ec8d4d3cb618d9d6bf307dc0a7ccc",
+      "rows": 501760
+     },
+     "data/train-00046.parquet": {
+      "bytes": 8095427,
+      "sha256": "2b16924c3210f362c4c8558040d82b15bcbf09b3ddd5101a37e8225fb99d0eb9",
+      "rows": 501760
+     },
+     "data/train-00047.parquet": {
+      "bytes": 8146579,
+      "sha256": "cf0c284f41702447d3a9dae0cd7467c824162fbfe639c02add62c2c3bfcfd4b1",
+      "rows": 501760
+     },
+     "data/train-00048.parquet": {
+      "bytes": 7947835,
+      "sha256": "92c37ab44346cc1550fb7bcef1d3f61e70aadfa23fa4a3e99dae3e9427251532",
+      "rows": 501760
+     },
+     "data/train-00049.parquet": {
+      "bytes": 7871375,
+      "sha256": "06c73703977ff9746ff7b0772352dd0a4d386f8424aac46fa8db59651546bfca",
+      "rows": 501760
+     },
+     "data/train-00050.parquet": {
+      "bytes": 7886164,
+      "sha256": "94a72c24a1f6b85b18f09db98565d3cc1941fee708cee194a92c090d6916e883",
+      "rows": 501760
+     },
+     "data/train-00051.parquet": {
+      "bytes": 8054488,
+      "sha256": "f2c6ecc655f2408320a8cec071c116cf821648c163410be5797626fc02fefdb6",
+      "rows": 501760
+     },
+     "data/train-00052.parquet": {
+      "bytes": 8137550,
+      "sha256": "5ea998ef1fdf1a4088503f9eafa8428bc5380ed7fde96515ff31593e060b370e",
+      "rows": 501760
+     },
+     "data/train-00053.parquet": {
+      "bytes": 8024435,
+      "sha256": "27748ecfffd487ba20fae159c15aeca94e1e62af2284c7ebb634b5bff38cf1d1",
+      "rows": 501760
+     },
+     "data/train-00054.parquet": {
+      "bytes": 7893673,
+      "sha256": "3bb6cb84408b96c153d0305b7ea5374e9dbfb275c7f8043e1a892ff6dfa5b534",
+      "rows": 501760
+     },
+     "data/train-00055.parquet": {
+      "bytes": 7723428,
+      "sha256": "0e771a45e07cf881ef6b84ad2a24fc0e43878444d2a356101f3ef2856a585b46",
+      "rows": 501760
+     },
+     "data/train-00056.parquet": {
+      "bytes": 7848640,
+      "sha256": "683622f0c325f3670afce7b1830ed7136a3b5e10a6064ca8439445fb2f080186",
+      "rows": 501760
+     },
+     "data/train-00057.parquet": {
+      "bytes": 7949558,
+      "sha256": "f70defa6b74614bfaa541eb5b2c68c01cbd7c37ea07daab4386f5aad2d5bd43b",
+      "rows": 501760
+     },
+     "data/train-00058.parquet": {
+      "bytes": 7633368,
+      "sha256": "1898f3879027aa6c50efbbadbfe58c90853f598bff70355f93db6bb7f9be2660",
+      "rows": 501760
+     },
+     "data/train-00059.parquet": {
+      "bytes": 7594885,
+      "sha256": "582192f1ac86c1139c6753f9bbb8a6ae55100834c174131cebaf1ad404852cf9",
+      "rows": 501760
+     },
+     "data/train-00060.parquet": {
+      "bytes": 8097599,
+      "sha256": "e6c42c8d699ffb90e3fbead016849a3b88f91a45e183cf62ffa0196ae5817754",
+      "rows": 501760
+     },
+     "data/train-00061.parquet": {
+      "bytes": 8130142,
+      "sha256": "c8d2372faaf9fe16f7863237c148ab0f8f21e017ae602133d4fd0e94fd572062",
+      "rows": 501760
+     },
+     "data/train-00062.parquet": {
+      "bytes": 7803908,
+      "sha256": "1f7848d634d633650ef3e038fa90491a82eacc4cda662f4b0115f4f05ff96b83",
+      "rows": 501760
+     },
+     "data/train-00063.parquet": {
+      "bytes": 8040266,
+      "sha256": "b0f28f67c89eedcd439a6f7765dd4e8bc8fe255f18fa0eab5842d0f912fa7318",
+      "rows": 501760
+     },
+     "data/train-00064.parquet": {
+      "bytes": 7934255,
+      "sha256": "1a95ddc175fba7ca43e7c835e14dd6fcd352b5d146f6d11072b11054d073e1d3",
+      "rows": 501760
+     },
+     "data/train-00065.parquet": {
+      "bytes": 7917503,
+      "sha256": "ed540c5a2cf872b63c17d189a80e499df4ae397638db8d2711c39e409e6f32ca",
+      "rows": 501760
+     },
+     "data/train-00066.parquet": {
+      "bytes": 7945777,
+      "sha256": "5cdbc23312a383c1fc7b5c58a860d80a676a85e2d585f123791a3e66c2f31e16",
+      "rows": 501760
+     },
+     "data/train-00067.parquet": {
+      "bytes": 7948230,
+      "sha256": "1c58e2981c6fa3ff20b10e71916347690a71276b3ea86e84a22f3649a8686974",
+      "rows": 501760
+     },
+     "data/train-00068.parquet": {
+      "bytes": 7907856,
+      "sha256": "47612884085f1fb9f74e21e97381b8d134b420c538ab0cc982dd23747969f265",
+      "rows": 501760
+     },
+     "data/train-00069.parquet": {
+      "bytes": 7853683,
+      "sha256": "1cc57f426aa00b4ae6bf06ad3c2076a516671bd59d66f0daec23b20542a9fbab",
+      "rows": 501760
+     },
+     "data/train-00070.parquet": {
+      "bytes": 8103756,
+      "sha256": "345f1a29b7bfef03dbfeefa00c2aeef4c6343484346cf0dd72019db9d94c60df",
+      "rows": 501760
+     },
+     "data/train-00071.parquet": {
+      "bytes": 8425464,
+      "sha256": "2d1ecf1b182efb916f5ae79724370bbef746ef7b5970afc04cdf0d731d001380",
+      "rows": 501760
+     },
+     "data/train-00072.parquet": {
+      "bytes": 8032243,
+      "sha256": "ab8006ce89115ebb4e6f766d2845890a416cf51cfc25663907ed5ef4ab376670",
+      "rows": 501760
+     },
+     "data/train-00073.parquet": {
+      "bytes": 8081899,
+      "sha256": "a56bd94faa3e38cf17e6ee6413d2f250cb72d83cad17e061f07a636ab4dc8f8c",
+      "rows": 501760
+     },
+     "data/train-00074.parquet": {
+      "bytes": 8347374,
+      "sha256": "9720b8534962d8625c2f03de80664ec4aeca38db893b8d0e49914859fa2b97fe",
+      "rows": 501760
+     },
+     "data/train-00075.parquet": {
+      "bytes": 8139396,
+      "sha256": "85cb783f2d4b553ab25d0f4614cac9b744af62aaa5a2e7d5878ef65a3f90e853",
+      "rows": 501760
+     },
+     "data/train-00076.parquet": {
+      "bytes": 8105557,
+      "sha256": "093e52b1e37a6c62bd2d01b2d45321a758fe1bea3e5fc244f2ce6ffe08aef594",
+      "rows": 501760
+     },
+     "data/train-00077.parquet": {
+      "bytes": 8061848,
+      "sha256": "79adbfb50e2fd4104d169b60ccd0ce3bd43fc6bcb08a2d7850f4d740dc316bbf",
+      "rows": 501760
+     },
+     "data/train-00078.parquet": {
+      "bytes": 8177614,
+      "sha256": "4cd2c988badb1683b1d8ba79546e9965e362166734c598ab97eb1077a07fcedc",
+      "rows": 501760
+     },
+     "data/train-00079.parquet": {
+      "bytes": 14393273,
+      "sha256": "60ad5888f934fa40842f965bc50412b864081ae7cd6304242650730531338c36",
+      "rows": 501760
+     },
+     "data/train-00080.parquet": {
+      "bytes": 31229359,
+      "sha256": "75a205f98eb34b4f43cfa0ff8680dfbb7317b5cbedd3b83dafc31bc2392b39ae",
+      "rows": 501760
+     },
+     "data/train-00081.parquet": {
+      "bytes": 15939354,
+      "sha256": "e67bb1e68a5918ca5ab00839ce5e0ecc4f3a3829b8840ee258085ef30d177898",
+      "rows": 257192
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-retrieval-triples": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 16152845,
+      "sha256": "dd955c88bc1e564561e99306fdb0d0e7694d7c7fe2d0a0490f2522ada7579369",
+      "rows": 501760
+     },
+     "data/train-00001.parquet": {
+      "bytes": 16030121,
+      "sha256": "2453feef00bad2a65072d90fc90e3ed8344675d85288f0de89e103cc9b33188d",
+      "rows": 501760
+     },
+     "data/train-00002.parquet": {
+      "bytes": 15661471,
+      "sha256": "1cfd5972b147d54e3d2f96967d36e39339b708b4dca42577ef4174e33bb09325",
+      "rows": 501760
+     },
+     "data/train-00003.parquet": {
+      "bytes": 15712027,
+      "sha256": "a28d8f134e6ddf21db6e075a3e7bf4157cba924e1a71dd43a815e6743f79537b",
+      "rows": 501760
+     },
+     "data/train-00004.parquet": {
+      "bytes": 15717971,
+      "sha256": "7043705229cf9f5d66b018eb34f1c13389f71b069c70e04f347b92ab15d00841",
+      "rows": 501760
+     },
+     "data/train-00005.parquet": {
+      "bytes": 15900658,
+      "sha256": "3cdfbd0c30ac729f089fff8cb20c5bcac487d4e4a3375616f9ed41046cd87ab5",
+      "rows": 501760
+     },
+     "data/train-00006.parquet": {
+      "bytes": 16311650,
+      "sha256": "3316b7211d56c72e8850c325fca401733bce5406cdb0b7eb604567829692e57c",
+      "rows": 501760
+     },
+     "data/train-00007.parquet": {
+      "bytes": 16110828,
+      "sha256": "3818cfa25e1616b679f529ad63d9609f765274dc493b5e468f127b5bb38f4569",
+      "rows": 501760
+     },
+     "data/train-00008.parquet": {
+      "bytes": 16153921,
+      "sha256": "827353ca53bad9cd323a19c3f8d9e1b7758582434087768ae5a674c06053d97f",
+      "rows": 501760
+     },
+     "data/train-00009.parquet": {
+      "bytes": 15976075,
+      "sha256": "dde7b5819b9009bc6f72a965a5f31002da5fb31642c91cffab5987a37e7b97b0",
+      "rows": 501760
+     },
+     "data/train-00010.parquet": {
+      "bytes": 15531096,
+      "sha256": "80bd95f6d4599e4107a93ff9a5558470933a266c37af1688b077c43fd2a30f05",
+      "rows": 501760
+     },
+     "data/train-00011.parquet": {
+      "bytes": 15700324,
+      "sha256": "e3f7373b85c538b3a618bbf4c4b66c2a499a6102ae7ac3d49c6ebacadce736b4",
+      "rows": 501760
+     },
+     "data/train-00012.parquet": {
+      "bytes": 15517552,
+      "sha256": "469054bf6676ed388a356d0d3d4348273962f0bf46707e0b93130c39fb9fc94d",
+      "rows": 501760
+     },
+     "data/train-00013.parquet": {
+      "bytes": 16360953,
+      "sha256": "01749a1c850d187b5515dcb51a58c6e323afeea946a05b6a1df558c88d409dbc",
+      "rows": 501760
+     },
+     "data/train-00014.parquet": {
+      "bytes": 14284326,
+      "sha256": "6713477681a8923f2fce0a0073172be90f27d39111ae7375ad2e69fe954edd10",
+      "rows": 441932
+     }
+    }
+   },
+   "opengloss-v2.4-rc2-senses": {
+    "files": {
+     "data/train-00000.parquet": {
+      "bytes": 304533859,
+      "sha256": "fa67fc9a3e74dd3e98fe680965db2851ad60919aee21f1907e234dc586f873a3",
+      "rows": 143360
+     },
+     "data/train-00001.parquet": {
+      "bytes": 301274465,
+      "sha256": "bfdcb0cd5df0bb19b213105ec44000cc1f1ec53f0316d0e5b04786f862d829b5",
+      "rows": 141312
+     },
+     "data/train-00002.parquet": {
+      "bytes": 34140486,
+      "sha256": "cc4471549ce7aa46bf41097e1316191b6b2e089ebe70027f3d7b1d22850f7660",
+      "rows": 16115
+     }
+    }
+   }
+  }
+ },
+ "coverage": {
+  "lexemes": {
+   "total_rows": 165291,
+   "live": 160724,
+   "by_kind": [
+    {
+     "kind": "simplex",
+     "count_all": 64678
+    },
+    {
+     "kind": "compound",
+     "count_all": 56969
+    },
+    {
+     "kind": "proper_noun",
+     "count_all": 33158
+    },
+    {
+     "kind": "phrasal_verb",
+     "count_all": 3078
+    },
+    {
+     "kind": "idiom",
+     "count_all": 1864
+    },
+    {
+     "kind": "function_word",
+     "count_all": 501
+    },
+    {
+     "kind": "abbreviation",
+     "count_all": 462
+    },
+    {
+     "kind": "affix",
+     "count_all": 14
+    }
+   ],
+   "by_entity_type": [
+    {
+     "entity_type": null,
+     "count_all": 127566
+    },
+    {
+     "entity_type": "person",
+     "count_all": 12288
+    },
+    {
+     "entity_type": "place",
+     "count_all": 6368
+    },
+    {
+     "entity_type": "other",
+     "count_all": 4243
+    },
+    {
+     "entity_type": "organization",
+     "count_all": 2679
+    },
+    {
+     "entity_type": "work",
+     "count_all": 2579
+    },
+    {
+     "entity_type": "species",
+     "count_all": 1994
+    },
+    {
+     "entity_type": "event",
+     "count_all": 1515
+    },
+    {
+     "entity_type": "product",
+     "count_all": 1492
+    }
+   ],
+   "by_tier": [
+    {
+     "tier": "tier4",
+     "count_all": 53841
+    },
+    {
+     "tier": "tier5",
+     "count_all": 43227
+    },
+    {
+     "tier": "tier2",
+     "count_all": 30346
+    },
+    {
+     "tier": "tier6",
+     "count_all": 12078
+    },
+    {
+     "tier": "tier3",
+     "count_all": 11452
+    },
+    {
+     "tier": "core",
+     "count_all": 9427
+    },
+    {
+     "tier": "unknown",
+     "count_all": 353
+    }
+   ],
+   "by_source": [
+    {
+     "source": "opengloss-v1.3",
+     "count_all": 120081
+    },
+    {
+     "source": "wordnet-3.0",
+     "count_all": 40643
+    }
+   ],
+   "live_with_zero_live_senses": 0
+  },
+  "senses": {
+   "live": 300787,
+   "by_tier": [
+    {
+     "tier": "tier4",
+     "count_all": 113873
+    },
+    {
+     "tier": "tier2",
+     "count_all": 71957
+    },
+    {
+     "tier": "tier5",
+     "count_all": 46755
+    },
+    {
+     "tier": "core",
+     "count_all": 32193
+    },
+    {
+     "tier": "tier3",
+     "count_all": 23511
+    },
+    {
+     "tier": "tier6",
+     "count_all": 12145
+    },
+    {
+     "tier": "unknown",
+     "count_all": 353
+    }
+   ],
+   "by_domain_root": [
+    {
+     "domain_root": "everyday_life",
+     "count_all": 36471
+    },
+    {
+     "domain_root": "people_society",
+     "count_all": 36437
+    },
+    {
+     "domain_root": "science",
+     "count_all": 26203
+    },
+    {
+     "domain_root": "language",
+     "count_all": 24254
+    },
+    {
+     "domain_root": "nature",
+     "count_all": 23004
+    },
+    {
+     "domain_root": "health",
+     "count_all": 22823
+    },
+    {
+     "domain_root": "business",
+     "count_all": 20947
+    },
+    {
+     "domain_root": "technology",
+     "count_all": 20569
+    },
+    {
+     "domain_root": "law_government",
+     "count_all": 19583
+    },
+    {
+     "domain_root": "arts",
+     "count_all": 18838
+    },
+    {
+     "domain_root": "humanities",
+     "count_all": 14436
+    },
+    {
+     "domain_root": "education",
+     "count_all": 13115
+    },
+    {
+     "domain_root": "history",
+     "count_all": 9519
+    },
+    {
+     "domain_root": "mathematics",
+     "count_all": 8427
+    },
+    {
+     "domain_root": "sports_recreation",
+     "count_all": 6153
+    },
+    {
+     "domain_root": null,
+     "count_all": 8
+    }
+   ],
+   "by_upos": [
+    {
+     "upos": "NOUN",
+     "count_all": 153080
+    },
+    {
+     "upos": "ADJ",
+     "count_all": 56880
+    },
+    {
+     "upos": "PROPN",
+     "count_all": 48420
+    },
+    {
+     "upos": "VERB",
+     "count_all": 34583
+    },
+    {
+     "upos": "ADV",
+     "count_all": 5722
+    },
+    {
+     "upos": "INTJ",
+     "count_all": 1061
+    },
+    {
+     "upos": "ADP",
+     "count_all": 350
+    },
+    {
+     "upos": "DET",
+     "count_all": 294
+    },
+    {
+     "upos": "PRON",
+     "count_all": 260
+    },
+    {
+     "upos": "CCONJ",
+     "count_all": 130
+    },
+    {
+     "upos": "NUM",
+     "count_all": 7
+    }
+   ],
+   "by_source": [
+    {
+     "source": "opengloss-v1.3",
+     "count_all": 257863
+    },
+    {
+     "source": "wordnet-3.0",
+     "count_all": 42924
+    }
+   ]
+  },
+  "per_sense_supervision": {
+   "n_examples": {
+    "mean": 16.423,
+    "p50": 17.0,
+    "p90": 20.0,
+    "p99": 22.0,
+    "max": 33.0,
+    "zero_share": 0.001769,
+    "zero_share_by_tier": {
+     "core": 3.1e-05,
+     "tier2": 0.001279,
+     "tier3": 0.000298,
+     "tier4": 0.003776,
+     "tier5": 4.3e-05,
+     "tier6": 0.0,
+     "unknown": 0.0
+    }
+   },
+   "n_relations": {
+    "mean": 5.708,
+    "p50": 5.0,
+    "p90": 11.0,
+    "p99": 19.0,
+    "max": 84.0,
+    "zero_share": 0.005462,
+    "zero_share_by_tier": {
+     "core": 0.005529,
+     "tier2": 0.005879,
+     "tier3": 0.005912,
+     "tier4": 0.004891,
+     "tier5": 0.007165,
+     "tier6": 0.000906,
+     "unknown": 0.0
+    }
+   },
+   "n_queries": {
+    "mean": 12.806,
+    "p50": 12.0,
+    "p90": 12.0,
+    "p99": 24.0,
+    "max": 24.0,
+    "zero_share": 0.0,
+    "zero_share_by_tier": {
+     "core": 0.0,
+     "tier2": 0.0,
+     "tier3": 0.0,
+     "tier4": 0.0,
+     "tier5": 0.0,
+     "tier6": 0.0,
+     "unknown": 0.0
+    }
+   },
+   "n_qa_pairs": {
+    "mean": 7.66,
+    "p50": 7.0,
+    "p90": 13.0,
+    "p99": 14.0,
+    "max": 15.0,
+    "zero_share": 0.002979,
+    "zero_share_by_tier": {
+     "core": 0.001398,
+     "tier2": 0.003085,
+     "tier3": 0.007103,
+     "tier4": 0.003548,
+     "tier5": 0.001219,
+     "tier6": 8.2e-05,
+     "unknown": 0.0
+    }
+   }
+  },
+  "gloss_rendition_crossing": {
+   "distinct_non_plain_registers_per_sense": {
+    "4": 300787
+   },
+   "distinct_non_neutral_levels_per_sense": {
+    "2": 353,
+    "3": 76,
+    "4": 300358
+   },
+   "share_with_any_register_variant_by_tier": {
+    "core": 1.0,
+    "tier2": 1.0,
+    "tier3": 1.0,
+    "tier4": 1.0,
+    "tier5": 1.0,
+    "tier6": 1.0,
+    "unknown": 1.0
+   },
+   "share_with_any_register_variant_by_domain": {
+    "arts": 1.0,
+    "business": 1.0,
+    "education": 1.0,
+    "everyday_life": 1.0,
+    "health": 1.0,
+    "history": 1.0,
+    "humanities": 1.0,
+    "language": 1.0,
+    "law_government": 1.0,
+    "mathematics": 1.0,
+    "nature": 1.0,
+    "none": 1.0,
+    "people_society": 1.0,
+    "science": 1.0,
+    "sports_recreation": 1.0,
+    "technology": 1.0
+   },
+   "register_variant_vs_tier_mi": {
+    "mi_bits": 0.0,
+    "h_left_bits": 2.272498,
+    "h_right_bits": -0.0,
+    "normalized_by_min_entropy": 0.0
+   },
+   "register_variant_vs_domain_mi": {
+    "mi_bits": 0.0,
+    "h_left_bits": 3.767471,
+    "h_right_bits": -0.0,
+    "normalized_by_min_entropy": 0.0
+   }
+  }
+ },
+ "components": {
+  "resolved_edges_between_live_senses": 1033958,
+  "sense_graph": {
+   "nodes": 300787,
+   "components": 18044,
+   "largest": [
+    281454,
+    13,
+    10,
+    8,
+    8
+   ],
+   "largest_share": 0.935725,
+   "histogram": {
+    "1-1": {
+     "components": 17063,
+     "members": 17063,
+     "member_share": 0.056728
+    },
+    "2-10": {
+     "components": 979,
+     "members": 2257,
+     "member_share": 0.007504
+    },
+    "11-100": {
+     "components": 1,
+     "members": 13,
+     "member_share": 4.3e-05
+    },
+    "101-1000": {
+     "components": 0,
+     "members": 0,
+     "member_share": 0.0
+    },
+    "1001-10000": {
+     "components": 0,
+     "members": 0,
+     "member_share": 0.0
+    },
+    ">=10001": {
+     "components": 1,
+     "members": 281454,
+     "member_share": 0.935725
+    }
+   }
+  },
+  "lexeme_graph_senses_merged": {
+   "nodes": 160724,
+   "components": 3166,
+   "largest": [
+    156771,
+    13,
+    8,
+    8,
+    7
+   ],
+   "largest_share": 0.975405,
+   "histogram": {
+    "1-1": {
+     "components": 2585,
+     "members": 2585,
+     "member_share": 0.016083
+    },
+    "2-10": {
+     "components": 579,
+     "members": 1355,
+     "member_share": 0.008431
+    },
+    "11-100": {
+     "components": 1,
+     "members": 13,
+     "member_share": 8.1e-05
+    },
+    "101-1000": {
+     "components": 0,
+     "members": 0,
+     "member_share": 0.0
+    },
+    "1001-10000": {
+     "components": 0,
+     "members": 0,
+     "member_share": 0.0
+    },
+    ">=10001": {
+     "components": 1,
+     "members": 156771,
+     "member_share": 0.975405
+    }
+   }
+  },
+  "lexeme_graph_taxonomic_edges_only": {
+   "nodes": 160724,
+   "components": 6131,
+   "largest": [
+    153476,
+    18,
+    13,
+    12,
+    11
+   ],
+   "largest_share": 0.954904,
+   "histogram": {
+    "1-1": {
+     "components": 5348,
+     "members": 5348,
+     "member_share": 0.033274
+    },
+    "2-10": {
+     "components": 778,
+     "members": 1846,
+     "member_share": 0.011486
+    },
+    "11-100": {
+     "components": 4,
+     "members": 54,
+     "member_share": 0.000336
+    },
+    "101-1000": {
+     "components": 0,
+     "members": 0,
+     "member_share": 0.0
+    },
+    "1001-10000": {
+     "components": 0,
+     "members": 0,
+     "member_share": 0.0
+    },
+    ">=10001": {
+     "components": 1,
+     "members": 153476,
+     "member_share": 0.954904
+    }
+   }
+  },
+  "note": "Sense graph joins live senses by resolved relation edges. The lexeme graphs merge all senses of a lexeme (the partition unit that keeps a headword's renditions on one side); the taxonomic variant uses only synonym/antonym/hypernym/hyponym/instance_of edges."
+ },
+ "families": {
+  "gloss.canonical": {
+   "dataset": "opengloss-v2.4-rc2-definitions/data",
+   "text_column": "text",
+   "rows": 300787,
+   "unique_normalized_texts": 290580,
+   "exact_normalized_duplicate_rows": 10207,
+   "exact_normalized_duplicate_share": 0.033934,
+   "tokens": 12513991,
+   "unique_text_tokens": 12241172,
+   "tokens_per_row": {
+    "mean": 41.604,
+    "p50": 40.0,
+    "p90": 64.0,
+    "p99": 89.0,
+    "max": 304.0
+   },
+   "length_band_share": {
+    ">64": 0.09534,
+    ">128": 0.000326,
+    ">256": 3e-06,
+    ">512": 0.0,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 12513943,
+    "512": 12513991,
+    "1024": 12513991
+   },
+   "windows": {
+    "256": {
+     "windows": 300788,
+     "unique_windows": 290583,
+     "unique_share": 0.966072
+    },
+    "512": {
+     "windows": 300787,
+     "unique_windows": 290582,
+     "unique_share": 0.966072
+    },
+    "1024": {
+     "windows": 300787,
+     "unique_windows": 290582,
+     "unique_share": 0.966072
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 5127558,
+    "tier2": 3134742,
+    "tier5": 1319333,
+    "core": 1175058,
+    "tier3": 1072576,
+    "tier6": 664889,
+    "unknown": 19835
+   },
+   "tokens_by_domain_root": {
+    "people_society": 1450010,
+    "everyday_life": 1240599,
+    "science": 1138458,
+    "nature": 1096036,
+    "language": 944716,
+    "health": 922178,
+    "technology": 868058,
+    "business": 858156,
+    "law_government": 840205,
+    "arts": 826263,
+    "humanities": 684686,
+    "history": 535105,
+    "education": 509567,
+    "mathematics": 338925,
+    "sports_recreation": 260740,
+    "none": 289
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 36471,
+    "people_society": 36437,
+    "science": 26203,
+    "language": 24254,
+    "nature": 23004,
+    "health": 22823,
+    "business": 20947,
+    "technology": 20569,
+    "law_government": 19583,
+    "arts": 18838,
+    "humanities": 14436,
+    "education": 13115,
+    "history": 9519,
+    "mathematics": 8427,
+    "sports_recreation": 6153,
+    "none": 8
+   },
+   "diversity": {
+    "sample_texts": 11344,
+    "sample_words": 200017,
+    "distinct_n": {
+     "1": 0.097667,
+     "2": 0.544731,
+     "3": 0.858052,
+     "4": 0.957297
+    },
+    "top20_4gram_share": 0.004891,
+    "top_4grams": [
+     [
+      "of or relating to",
+      170
+     ],
+     [
+      "or relating to the",
+      66
+     ],
+     [
+      "the act or process",
+      57
+     ],
+     [
+      "act or process of",
+      52
+     ],
+     [
+      "as a family name",
+      39
+     ],
+     [
+      "used as a family",
+      37
+     ],
+     [
+      "or relating to a",
+      34
+     ],
+     [
+      "as part of a",
+      34
+     ],
+     [
+      "is a genus of",
+      33
+     ],
+     [
+      "a surname of english",
+      32
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 12.9218,
+    "opener_distinct_share": 0.703,
+    "top_openers": [
+     [
+      "of or relating",
+      0.0148
+     ],
+     [
+      "relating to the",
+      0.01465
+     ],
+     [
+      "a person who",
+      0.0132
+     ],
+     [
+      "the act of",
+      0.0096
+     ],
+     [
+      "relating to or",
+      0.00885
+     ],
+     [
+      "the act or",
+      0.00865
+     ],
+     [
+      "relating to a",
+      0.00525
+     ],
+     [
+      "the process of",
+      0.00395
+     ]
+    ]
+   },
+   "headword_present_share": 0.109716,
+   "words": 5255479,
+   "seconds": 10.2
+  },
+  "gloss.reading_level": {
+   "dataset": "opengloss-v2.4-rc2-definitions/data",
+   "text_column": "text",
+   "rows": 1201624,
+   "unique_normalized_texts": 1197057,
+   "exact_normalized_duplicate_rows": 4567,
+   "exact_normalized_duplicate_share": 0.003801,
+   "tokens": 45675340,
+   "unique_text_tokens": 45586663,
+   "tokens_per_row": {
+    "mean": 38.011,
+    "p50": 35.0,
+    "p90": 60.0,
+    "p99": 91.0,
+    "max": 248.0
+   },
+   "length_band_share": {
+    ">64": 0.073054,
+    ">128": 0.000483,
+    ">256": 0.0,
+    ">512": 0.0,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 45675340,
+    "512": 45675340,
+    "1024": 45675340
+   },
+   "windows": {
+    "256": {
+     "windows": 1201624,
+     "unique_windows": 1197064,
+     "unique_share": 0.996205
+    },
+    "512": {
+     "windows": 1201624,
+     "unique_windows": 1197064,
+     "unique_share": 0.996205
+    },
+    "1024": {
+     "windows": 1201624,
+     "unique_windows": 1197064,
+     "unique_share": 0.996205
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 18108247,
+    "tier2": 10562099,
+    "tier5": 6285346,
+    "core": 4209540,
+    "tier3": 3771787,
+    "tier6": 2738321
+   },
+   "tokens_by_domain_root": {
+    "people_society": 5125630,
+    "everyday_life": 4681736,
+    "science": 4218709,
+    "nature": 4074075,
+    "health": 3593033,
+    "language": 3348009,
+    "technology": 3078322,
+    "law_government": 3020339,
+    "arts": 3019376,
+    "business": 3018682,
+    "humanities": 2513168,
+    "history": 1961316,
+    "education": 1846377,
+    "mathematics": 1229384,
+    "sports_recreation": 946203,
+    "none": 981
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 145827,
+    "people_society": 145714,
+    "science": 104765,
+    "language": 97002,
+    "nature": 91910,
+    "health": 91278,
+    "business": 83702,
+    "technology": 82253,
+    "law_government": 78273,
+    "arts": 74764,
+    "humanities": 57579,
+    "education": 52452,
+    "history": 37805,
+    "mathematics": 33702,
+    "sports_recreation": 24566,
+    "none": 32
+   },
+   "diversity": {
+    "sample_texts": 12533,
+    "sample_words": 200006,
+    "distinct_n": {
+     "1": 0.087502,
+     "2": 0.558192,
+     "3": 0.888202,
+     "4": 0.973985
+    },
+    "top20_4gram_share": 0.002315,
+    "top_4grams": [
+     [
+      "in a way that",
+      49
+     ],
+     [
+      "a person or thing",
+      35
+     ],
+     [
+      "is a city in",
+      27
+     ],
+     [
+      "is a family name",
+      26
+     ],
+     [
+      "a person or group",
+      23
+     ],
+     [
+      "it can also mean",
+      20
+     ],
+     [
+      "a masculine given name",
+      20
+     ],
+     [
+      "a family name from",
+      19
+     ],
+     [
+      "is a genus of",
+      18
+     ],
+     [
+      "in the united states",
+      14
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 13.5352,
+    "opener_distinct_share": 0.79835,
+    "top_openers": [
+     [
+      "a person who",
+      0.00995
+     ],
+     [
+      "a group of",
+      0.006
+     ],
+     [
+      "a way to",
+      0.0045
+     ],
+     [
+      "pertaining to the",
+      0.00355
+     ],
+     [
+      "in a way",
+      0.0035
+     ],
+     [
+      "to make a",
+      0.0026
+     ],
+     [
+      "a set of",
+      0.0022
+     ],
+     [
+      "the study of",
+      0.00215
+     ]
+    ]
+   },
+   "headword_present_share": 0.155977,
+   "words": 19182331,
+   "strata": {
+    "columns": [
+     "reading_level"
+    ],
+    "values": {
+     "grade_1": {
+      "rows": 300434,
+      "tokens": 9236270,
+      "mean_tokens": 30.74,
+      "headword_present_share": 0.139941,
+      "diversity": {
+       "sample_words": 50006,
+       "distinct_n": {
+        "1": 0.091549,
+        "2": 0.560999,
+        "3": 0.883551,
+        "4": 0.970463
+       },
+       "opener_entropy_bits": 11.6751,
+       "top_openers": [
+        [
+         "a way to",
+         0.0132
+        ],
+        [
+         "a group of",
+         0.0118
+        ],
+        [
+         "a person who",
+         0.01
+        ]
+       ]
+      }
+     },
+     "grade_5": {
+      "rows": 300434,
+      "tokens": 10756755,
+      "mean_tokens": 35.8,
+      "headword_present_share": 0.15684,
+      "diversity": {
+       "sample_words": 50017,
+       "distinct_n": {
+        "1": 0.125257,
+        "2": 0.644657,
+        "3": 0.925688,
+        "4": 0.984201
+       },
+       "opener_entropy_bits": 11.823,
+       "top_openers": [
+        [
+         "a person who",
+         0.0106
+        ],
+        [
+         "a group of",
+         0.0082
+        ],
+        [
+         "a way to",
+         0.0048
+        ]
+       ]
+      }
+     },
+     "college": {
+      "rows": 300398,
+      "tokens": 13394426,
+      "mean_tokens": 44.59,
+      "headword_present_share": 0.170827,
+      "diversity": {
+       "sample_words": 50013,
+       "distinct_n": {
+        "1": 0.195889,
+        "2": 0.72823,
+        "3": 0.948953,
+        "4": 0.989676
+       },
+       "opener_entropy_bits": 11.794,
+       "top_openers": [
+        [
+         "pertaining to the",
+         0.0142
+        ],
+        [
+         "a person who",
+         0.0074
+        ],
+        [
+         "in a manner",
+         0.0062
+        ]
+       ]
+      }
+     },
+     "grade_10": {
+      "rows": 300358,
+      "tokens": 12287889,
+      "mean_tokens": 40.91,
+      "headword_present_share": 0.156303,
+      "diversity": {
+       "sample_words": 50000,
+       "distinct_n": {
+        "1": 0.16854,
+        "2": 0.698035,
+        "3": 0.939185,
+        "4": 0.986707
+       },
+       "opener_entropy_bits": 11.8171,
+       "top_openers": [
+        [
+         "a person who",
+         0.0118
+        ],
+        [
+         "the process of",
+         0.0052
+        ],
+        [
+         "in a way",
+         0.0048
+        ]
+       ]
+      }
+     }
+    }
+   },
+   "seconds": 38.6
+  },
+  "gloss.register": {
+   "dataset": "opengloss-v2.4-rc2-definitions/data",
+   "text_column": "text",
+   "rows": 2707083,
+   "unique_normalized_texts": 2704774,
+   "exact_normalized_duplicate_rows": 2309,
+   "exact_normalized_duplicate_share": 0.000853,
+   "tokens": 108823934,
+   "unique_text_tokens": 108767558,
+   "tokens_per_row": {
+    "mean": 40.2,
+    "p50": 37.0,
+    "p90": 57.0,
+    "p99": 85.0,
+    "max": 361.0
+   },
+   "length_band_share": {
+    ">64": 0.054098,
+    ">128": 0.000209,
+    ">256": 1e-06,
+    ">512": 0.0,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 108823639,
+    "512": 108823934,
+    "1024": 108823934
+   },
+   "windows": {
+    "256": {
+     "windows": 2707086,
+     "unique_windows": 2704779,
+     "unique_share": 0.999148
+    },
+    "512": {
+     "windows": 2707083,
+     "unique_windows": 2704776,
+     "unique_share": 0.999148
+    },
+    "1024": {
+     "windows": 2707083,
+     "unique_windows": 2704776,
+     "unique_share": 0.999148
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 42661334,
+    "tier2": 26241277,
+    "tier5": 14855279,
+    "core": 10458070,
+    "tier3": 8560369,
+    "tier6": 5883260,
+    "unknown": 164345
+   },
+   "tokens_by_domain_root": {
+    "people_society": 12542912,
+    "everyday_life": 11539982,
+    "science": 9787077,
+    "nature": 9305237,
+    "health": 8272464,
+    "language": 8156348,
+    "business": 7379620,
+    "technology": 7353255,
+    "law_government": 7232602,
+    "arts": 7171374,
+    "humanities": 5852052,
+    "education": 4554937,
+    "history": 4484485,
+    "mathematics": 2921709,
+    "sports_recreation": 2267300,
+    "none": 2580
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 328239,
+    "people_society": 327933,
+    "science": 235827,
+    "language": 218286,
+    "nature": 207036,
+    "health": 205407,
+    "business": 188523,
+    "technology": 185121,
+    "law_government": 176247,
+    "arts": 169542,
+    "humanities": 129924,
+    "education": 118035,
+    "history": 85671,
+    "mathematics": 75843,
+    "sports_recreation": 55377,
+    "none": 72
+   },
+   "diversity": {
+    "sample_texts": 11841,
+    "sample_words": 200013,
+    "distinct_n": {
+     "1": 0.094249,
+     "2": 0.599441,
+     "3": 0.914235,
+     "4": 0.983896
+    },
+    "top20_4gram_share": 0.001781,
+    "top_4grams": [
+     [
+      "in a way that",
+      30
+     ],
+     [
+      "a person or thing",
+      28
+     ],
+     [
+      "think of it as",
+      23
+     ],
+     [
+      "it s one of",
+      17
+     ],
+     [
+      "a person or object",
+      17
+     ],
+     [
+      "it s when a",
+      16
+     ],
+     [
+      "in the united states",
+      15
+     ],
+     [
+      "in a manner that",
+      15
+     ],
+     [
+      "the term denotes the",
+      14
+     ],
+     [
+      "it s a way",
+      14
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 13.1404,
+    "opener_distinct_share": 0.77575,
+    "top_openers": [
+     [
+      "it s a",
+      0.0345
+     ],
+     [
+      "it s the",
+      0.0226
+     ],
+     [
+      "it s when",
+      0.005
+     ],
+     [
+      "pertaining to the",
+      0.00465
+     ],
+     [
+      "it s an",
+      0.0041
+     ],
+     [
+      "it s about",
+      0.0038
+     ],
+     [
+      "it s how",
+      0.0035
+     ],
+     [
+      "think of a",
+      0.0024
+     ]
+    ]
+   },
+   "headword_present_share": 0.131136,
+   "words": 45935935,
+   "strata": {
+    "columns": [
+     "register"
+    ],
+    "values": {
+     "informal": {
+      "rows": 902361,
+      "tokens": 35890131,
+      "mean_tokens": 39.77,
+      "headword_present_share": 0.131669,
+      "diversity": {
+       "sample_words": 50010,
+       "distinct_n": {
+        "1": 0.143591,
+        "2": 0.649715,
+        "3": 0.921205,
+        "4": 0.983426
+       },
+       "opener_entropy_bits": 10.0756,
+       "top_openers": [
+        [
+         "it s a",
+         0.101
+        ],
+        [
+         "it s the",
+         0.0662
+        ],
+        [
+         "it s when",
+         0.0166
+        ]
+       ]
+      }
+     },
+     "formal": {
+      "rows": 902361,
+      "tokens": 35258154,
+      "mean_tokens": 39.07,
+      "headword_present_share": 0.125834,
+      "diversity": {
+       "sample_words": 50009,
+       "distinct_n": {
+        "1": 0.178868,
+        "2": 0.725565,
+        "3": 0.952795,
+        "4": 0.992145
+       },
+       "opener_entropy_bits": 11.8613,
+       "top_openers": [
+        [
+         "pertaining to the",
+         0.01
+        ],
+        [
+         "a person who",
+         0.0042
+        ],
+        [
+         "the term denotes",
+         0.004
+        ]
+       ]
+      }
+     },
+     "technical": {
+      "rows": 601574,
+      "tokens": 26160881,
+      "mean_tokens": 43.49,
+      "headword_present_share": 0.148434,
+      "diversity": {
+       "sample_words": 50009,
+       "distinct_n": {
+        "1": 0.199904,
+        "2": 0.756957,
+        "3": 0.963401,
+        "4": 0.994572
+       },
+       "opener_entropy_bits": 12.0212,
+       "top_openers": [
+        [
+         "pertaining to the",
+         0.0078
+        ],
+        [
+         "in a manner",
+         0.0042
+        ],
+        [
+         "pertaining to a",
+         0.0034
+        ]
+       ]
+      }
+     },
+     "marketing": {
+      "rows": 300787,
+      "tokens": 11514768,
+      "mean_tokens": 38.28,
+      "headword_present_share": 0.110849,
+      "diversity": {
+       "sample_words": 50014,
+       "distinct_n": {
+        "1": 0.154297,
+        "2": 0.701584,
+        "3": 0.946813,
+        "4": 0.990893
+       },
+       "opener_entropy_bits": 11.9597,
+       "top_openers": [
+        [
+         "a way to",
+         0.004
+        ],
+        [
+         "to turn a",
+         0.0028
+        ],
+        [
+         "to give a",
+         0.0028
+        ]
+       ]
+      }
+     }
+    }
+   },
+   "seconds": 82.8
+  },
+  "example.reading_level": {
+   "dataset": "opengloss-v2.4-rc2-examples/data",
+   "text_column": "text",
+   "rows": 2948725,
+   "unique_normalized_texts": 2945315,
+   "exact_normalized_duplicate_rows": 3410,
+   "exact_normalized_duplicate_share": 0.001156,
+   "tokens": 82857885,
+   "unique_text_tokens": 82791152,
+   "tokens_per_row": {
+    "mean": 28.1,
+    "p50": 27.0,
+    "p90": 38.0,
+    "p99": 48.0,
+    "max": 105.0
+   },
+   "length_band_share": {
+    ">64": 0.000163,
+    ">128": 0.0,
+    ">256": 0.0,
+    ">512": 0.0,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 82857885,
+    "512": 82857885,
+    "1024": 82857885
+   },
+   "windows": {
+    "256": {
+     "windows": 2948725,
+     "unique_windows": 2945340,
+     "unique_share": 0.998852
+    },
+    "512": {
+     "windows": 2948725,
+     "unique_windows": 2945340,
+     "unique_share": 0.998852
+    },
+    "1024": {
+     "windows": 2948725,
+     "unique_windows": 2945340,
+     "unique_share": 0.998852
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 32575044,
+    "tier2": 18410004,
+    "tier5": 13215225,
+    "core": 8238843,
+    "tier3": 6638538,
+    "tier6": 3721625,
+    "unknown": 58606
+   },
+   "tokens_by_domain_root": {
+    "people_society": 9834860,
+    "everyday_life": 9588709,
+    "science": 7318725,
+    "health": 6568659,
+    "language": 6524419,
+    "nature": 6457391,
+    "business": 5744378,
+    "technology": 5581085,
+    "law_government": 5399950,
+    "arts": 5248604,
+    "humanities": 4223640,
+    "education": 3558836,
+    "history": 2792173,
+    "mathematics": 2296790,
+    "sports_recreation": 1717737,
+    "none": 1929
+   },
+   "rows_by_domain_root": {
+    "people_society": 359115,
+    "everyday_life": 358108,
+    "science": 257280,
+    "language": 239611,
+    "nature": 225828,
+    "health": 223114,
+    "business": 208376,
+    "technology": 200495,
+    "law_government": 191339,
+    "arts": 182940,
+    "humanities": 141571,
+    "education": 128894,
+    "history": 89700,
+    "mathematics": 82782,
+    "sports_recreation": 59497,
+    "none": 75
+   },
+   "diversity": {
+    "sample_texts": 17192,
+    "sample_words": 200002,
+    "distinct_n": {
+     "1": 0.126479,
+     "2": 0.669362,
+     "3": 0.944348,
+     "4": 0.992636
+    },
+    "top20_4gram_share": 0.000815,
+    "top_4grams": [
+     [
+      "the museum displayed a",
+      16
+     ],
+     [
+      "the end of the",
+      8
+     ],
+     [
+      "our class used a",
+      8
+     ],
+     [
+      "the rest of the",
+      7
+     ],
+     [
+      "the edge of the",
+      7
+     ],
+     [
+      "as part of the",
+      7
+     ],
+     [
+      "the teacher used a",
+      6
+     ],
+     [
+      "at the school fair",
+      6
+     ],
+     [
+      "made it hard to",
+      5
+     ],
+     [
+      "for the school play",
+      5
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 14.0326,
+    "opener_distinct_share": 0.9076,
+    "top_openers": [
+     [
+      "the museum displayed",
+      0.00145
+     ],
+     [
+      "the museum s",
+      0.00115
+     ],
+     [
+      "we saw a",
+      0.0011
+     ],
+     [
+      "our class used",
+      0.0008
+     ],
+     [
+      "after the storm",
+      0.0008
+     ],
+     [
+      "dad used a",
+      0.00065
+     ],
+     [
+      "after months of",
+      0.00065
+     ],
+     [
+      "we used a",
+      0.0006
+     ]
+    ]
+   },
+   "headword_present_share": 0.907121,
+   "words": 34324077,
+   "strata": {
+    "columns": [
+     "reading_level",
+     "source"
+    ],
+    "values": {
+     "neutral|renditions": {
+      "rows": 716698,
+      "tokens": 18451492,
+      "mean_tokens": 25.75,
+      "headword_present_share": 0.824834,
+      "diversity": {
+       "sample_words": 50004,
+       "distinct_n": {
+        "1": 0.240881,
+        "2": 0.800057,
+        "3": 0.974711,
+        "4": 0.996033
+       },
+       "opener_entropy_bits": 12.2104,
+       "top_openers": [
+        [
+         "the museum displayed",
+         0.0014
+        ],
+        [
+         "i bought a",
+         0.0012
+        ],
+        [
+         "scholars debate whether",
+         0.0012
+        ]
+       ]
+      }
+     },
+     "grade_10|renditions": {
+      "rows": 312308,
+      "tokens": 9574955,
+      "mean_tokens": 30.66,
+      "headword_present_share": 0.923633,
+      "diversity": {
+       "sample_words": 50007,
+       "distinct_n": {
+        "1": 0.202452,
+        "2": 0.738692,
+        "3": 0.959771,
+        "4": 0.993311
+       },
+       "opener_entropy_bits": 12.0229,
+       "top_openers": [
+        [
+         "the museum displayed",
+         0.006
+        ],
+        [
+         "the community center",
+         0.0024
+        ],
+        [
+         "after years of",
+         0.0022
+        ]
+       ]
+      }
+     },
+     "grade_5|renditions": {
+      "rows": 309778,
+      "tokens": 8226894,
+      "mean_tokens": 26.56,
+      "headword_present_share": 0.931461,
+      "diversity": {
+       "sample_words": 50004,
+       "distinct_n": {
+        "1": 0.175206,
+        "2": 0.699591,
+        "3": 0.94263,
+        "4": 0.988699
+       },
+       "opener_entropy_bits": 11.9651,
+       "top_openers": [
+        [
+         "our class used",
+         0.0068
+        ],
+        [
+         "our class learned",
+         0.0036
+        ],
+        [
+         "our class read",
+         0.0028
+        ]
+       ]
+      }
+     },
+     "college|renditions": {
+      "rows": 308682,
+      "tokens": 10749946,
+      "mean_tokens": 34.83,
+      "headword_present_share": 0.920335,
+      "diversity": {
+       "sample_words": 50003,
+       "distinct_n": {
+        "1": 0.227746,
+        "2": 0.773901,
+        "3": 0.968809,
+        "4": 0.995761
+       },
+       "opener_entropy_bits": 12.0564,
+       "top_openers": [
+        [
+         "the museum s",
+         0.0062
+        ],
+        [
+         "the museum displayed",
+         0.0032
+        ],
+        [
+         "the research team",
+         0.003
+        ]
+       ]
+      }
+     },
+     "grade_1|renditions": {
+      "rows": 304839,
+      "tokens": 6397801,
+      "mean_tokens": 20.99,
+      "headword_present_share": 0.937088,
+      "diversity": {
+       "sample_words": 50001,
+       "distinct_n": {
+        "1": 0.167357,
+        "2": 0.655618,
+        "3": 0.924821,
+        "4": 0.987417
+       },
+       "opener_entropy_bits": 11.9686,
+       "top_openers": [
+        [
+         "dad used a",
+         0.005
+        ],
+        [
+         "we saw a",
+         0.0038
+        ],
+        [
+         "dad put a",
+         0.0032
+        ]
+       ]
+      }
+     },
+     "college|per_sense": {
+      "rows": 271178,
+      "tokens": 9771247,
+      "mean_tokens": 36.03,
+      "headword_present_share": 0.926565,
+      "diversity": {
+       "sample_words": 50011,
+       "distinct_n": {
+        "1": 0.244106,
+        "2": 0.811182,
+        "3": 0.983361,
+        "4": 0.997764
+       },
+       "opener_entropy_bits": 12.2005,
+       "top_openers": [
+        [
+         "the birth certificate",
+         0.0018
+        ],
+        [
+         "the archive preserves",
+         0.0014
+        ],
+        [
+         "for the archive",
+         0.001
+        ]
+       ]
+      }
+     },
+     "grade_10|per_sense": {
+      "rows": 265160,
+      "tokens": 8993133,
+      "mean_tokens": 33.92,
+      "headword_present_share": 0.931162,
+      "diversity": {
+       "sample_words": 50009,
+       "distinct_n": {
+        "1": 0.213882,
+        "2": 0.769796,
+        "3": 0.973723,
+        "4": 0.996736
+       },
+       "opener_entropy_bits": 12.0288,
+       "top_openers": [
+        [
+         "after the storm",
+         0.004
+        ],
+        [
+         "after checking the",
+         0.0028
+        ],
+        [
+         "after the flood",
+         0.0022
+        ]
+       ]
+      }
+     },
+     "grade_5|per_sense": {
+      "rows": 252707,
+      "tokens": 6889369,
+      "mean_tokens": 27.26,
+      "headword_present_share": 0.941604,
+      "diversity": {
+       "sample_words": 50001,
+       "distinct_n": {
+        "1": 0.183756,
+        "2": 0.71859,
+        "3": 0.955574,
+        "4": 0.994145
+       },
+       "opener_entropy_bits": 11.9127,
+       "top_openers": [
+        [
+         "at the fair",
+         0.0034
+        ],
+        [
+         "at the school",
+         0.0032
+        ],
+        [
+         "our class used",
+         0.0032
+        ]
+       ]
+      }
+     },
+     "grade_1|per_sense": {
+      "rows": 207375,
+      "tokens": 3803048,
+      "mean_tokens": 18.34,
+      "headword_present_share": 0.968366,
+      "diversity": {
+       "sample_words": 50001,
+       "distinct_n": {
+        "1": 0.179336,
+        "2": 0.71075,
+        "3": 0.950347,
+        "4": 0.994267
+       },
+       "opener_entropy_bits": 12.1354,
+       "top_openers": [
+        [
+         "we saw a",
+         0.0036
+        ],
+        [
+         "we saw the",
+         0.0032
+        ],
+        [
+         "dad used the",
+         0.0022
+        ]
+       ]
+      }
+     }
+    }
+   },
+   "seconds": 72.2
+  },
+  "example.register": {
+   "dataset": "opengloss-v2.4-rc2-examples/data",
+   "text_column": "text",
+   "rows": 1991162,
+   "unique_normalized_texts": 1990666,
+   "exact_normalized_duplicate_rows": 496,
+   "exact_normalized_duplicate_share": 0.000249,
+   "tokens": 61761915,
+   "unique_text_tokens": 61748942,
+   "tokens_per_row": {
+    "mean": 31.018,
+    "p50": 30.0,
+    "p90": 39.0,
+    "p99": 48.0,
+    "max": 94.0
+   },
+   "length_band_share": {
+    ">64": 9.4e-05,
+    ">128": 0.0,
+    ">256": 0.0,
+    ">512": 0.0,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 61761915,
+    "512": 61761915,
+    "1024": 61761915
+   },
+   "windows": {
+    "256": {
+     "windows": 1991162,
+     "unique_windows": 1990670,
+     "unique_share": 0.999753
+    },
+    "512": {
+     "windows": 1991162,
+     "unique_windows": 1990670,
+     "unique_share": 0.999753
+    },
+    "1024": {
+     "windows": 1991162,
+     "unique_windows": 1990670,
+     "unique_share": 0.999753
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 26175053,
+    "tier5": 11433297,
+    "tier2": 8157552,
+    "core": 7031714,
+    "tier3": 5593979,
+    "tier6": 3278124,
+    "unknown": 92196
+   },
+   "tokens_by_domain_root": {
+    "everyday_life": 7035083,
+    "people_society": 6618550,
+    "science": 5708851,
+    "health": 5055718,
+    "nature": 4806111,
+    "language": 4758322,
+    "business": 4348460,
+    "technology": 4250667,
+    "law_government": 4090701,
+    "arts": 3971502,
+    "humanities": 3148326,
+    "education": 2806613,
+    "history": 2132205,
+    "mathematics": 1741544,
+    "sports_recreation": 1288056,
+    "none": 1206
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 240575,
+    "people_society": 220907,
+    "science": 181005,
+    "health": 158166,
+    "language": 157152,
+    "nature": 156251,
+    "business": 140171,
+    "technology": 137279,
+    "law_government": 128841,
+    "arts": 126118,
+    "humanities": 95225,
+    "education": 89468,
+    "history": 62390,
+    "mathematics": 56236,
+    "sports_recreation": 41334,
+    "none": 44
+   },
+   "diversity": {
+    "sample_texts": 15462,
+    "sample_words": 200005,
+    "distinct_n": {
+     "1": 0.127747,
+     "2": 0.660865,
+     "3": 0.933381,
+     "4": 0.988862
+    },
+    "top20_4gram_share": 0.001081,
+    "top_4grams": [
+     [
+      "you can see the",
+      16
+     ],
+     [
+      "all over the place",
+      14
+     ],
+     [
+      "you can spot the",
+      14
+     ],
+     [
+      "you ve got to",
+      10
+     ],
+     [
+      "as the applicant s",
+      9
+     ],
+     [
+      "from turning into a",
+      9
+     ],
+     [
+      "a member of the",
+      8
+     ],
+     [
+      "of the patient s",
+      8
+     ],
+     [
+      "was incorporated into the",
+      7
+     ],
+     [
+      "as a member of",
+      7
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 13.9192,
+    "opener_distinct_share": 0.8811,
+    "top_openers": [
+     [
+      "you can spot",
+      0.0028
+     ],
+     [
+      "you can see",
+      0.0021
+     ],
+     [
+      "i picked up",
+      0.00145
+     ],
+     [
+      "you can hear",
+      0.00145
+     ],
+     [
+      "if you re",
+      0.0013
+     ],
+     [
+      "the museum s",
+      0.0012
+     ],
+     [
+      "i grabbed a",
+      0.00115
+     ],
+     [
+      "we checked the",
+      0.00115
+     ]
+    ]
+   },
+   "headword_present_share": 0.926957,
+   "words": 25734204,
+   "strata": {
+    "columns": [
+     "register"
+    ],
+    "values": {
+     "informal": {
+      "rows": 510206,
+      "tokens": 15627655,
+      "mean_tokens": 30.63,
+      "headword_present_share": 0.938301,
+      "diversity": {
+       "sample_words": 50009,
+       "distinct_n": {
+        "1": 0.180707,
+        "2": 0.684967,
+        "3": 0.935776,
+        "4": 0.988896
+       },
+       "opener_entropy_bits": 11.5104,
+       "top_openers": [
+        [
+         "you can spot",
+         0.0112
+        ],
+        [
+         "you can see",
+         0.0084
+        ],
+        [
+         "i picked up",
+         0.0054
+        ]
+       ]
+      }
+     },
+     "formal": {
+      "rows": 495842,
+      "tokens": 14934659,
+      "mean_tokens": 30.12,
+      "headword_present_share": 0.93119,
+      "diversity": {
+       "sample_words": 50013,
+       "distinct_n": {
+        "1": 0.212305,
+        "2": 0.733083,
+        "3": 0.95061,
+        "4": 0.990045
+       },
+       "opener_entropy_bits": 12.0385,
+       "top_openers": [
+        [
+         "the museum s",
+         0.004
+        ],
+        [
+         "according to the",
+         0.0022
+        ],
+        [
+         "the patient reported",
+         0.0018
+        ]
+       ]
+      }
+     },
+     "slang": {
+      "rows": 493697,
+      "tokens": 14921240,
+      "mean_tokens": 30.22,
+      "headword_present_share": 0.920741,
+      "diversity": {
+       "sample_words": 50002,
+       "distinct_n": {
+        "1": 0.184893,
+        "2": 0.698187,
+        "3": 0.940743,
+        "4": 0.989326
+       },
+       "opener_entropy_bits": 12.1842,
+       "top_openers": [
+        [
+         "we got into",
+         0.0018
+        ],
+        [
+         "we rolled into",
+         0.0018
+        ],
+        [
+         "that beat up",
+         0.0012
+        ]
+       ]
+      }
+     },
+     "technical": {
+      "rows": 491417,
+      "tokens": 16278361,
+      "mean_tokens": 33.13,
+      "headword_present_share": 0.917154,
+      "diversity": {
+       "sample_words": 50007,
+       "distinct_n": {
+        "1": 0.246126,
+        "2": 0.811126,
+        "3": 0.978024,
+        "4": 0.997587
+       },
+       "opener_entropy_bits": 12.1867,
+       "top_openers": [
+        [
+         "the survey recorded",
+         0.0026
+        ],
+        [
+         "the database indexes",
+         0.002
+        ],
+        [
+         "the sensor recorded",
+         0.0014
+        ]
+       ]
+      }
+     }
+    }
+   },
+   "seconds": 48.3
+  },
+  "encyclopedia": {
+   "dataset": "opengloss-v2.4-rc2-encyclopedia/data/encyclopedia",
+   "text_column": "text",
+   "rows": 802914,
+   "unique_normalized_texts": 802914,
+   "exact_normalized_duplicate_rows": 0,
+   "exact_normalized_duplicate_share": 0.0,
+   "tokens": 582954342,
+   "unique_text_tokens": 582954342,
+   "tokens_per_row": {
+    "mean": 726.048,
+    "p50": 745.0,
+    "p90": 958.0,
+    "p99": 1152.0,
+    "max": 1920.0
+   },
+   "length_band_share": {
+    ">64": 0.999996,
+    ">128": 0.999706,
+    ">256": 0.992098,
+    ">512": 0.854707,
+    ">1024": 0.04928,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 205230559,
+    "512": 399500179,
+    "1024": 579768880
+   },
+   "windows": {
+    "256": {
+     "windows": 2680052,
+     "unique_windows": 2671412,
+     "unique_share": 0.996776
+    },
+    "512": {
+     "windows": 1528763,
+     "unique_windows": 1526012,
+     "unique_share": 0.998201
+    },
+    "1024": {
+     "windows": 842482,
+     "unique_windows": 841719,
+     "unique_share": 0.999094
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 190051251,
+    "tier5": 146800047,
+    "tier2": 118507269,
+    "tier6": 47796001,
+    "tier3": 45598255,
+    "core": 33374194,
+    "unknown": 827325
+   },
+   "tokens_by_domain_root": {
+    "everyday_life": 75628622,
+    "people_society": 66193290,
+    "health": 57583397,
+    "science": 55081055,
+    "nature": 52243838,
+    "arts": 38012789,
+    "language": 37596262,
+    "law_government": 36815134,
+    "business": 34734378,
+    "technology": 33366011,
+    "humanities": 27694314,
+    "history": 22924590,
+    "education": 18527138,
+    "mathematics": 13969482,
+    "sports_recreation": 12584042
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 106889,
+    "people_society": 92496,
+    "health": 78489,
+    "science": 75500,
+    "nature": 69685,
+    "language": 53884,
+    "arts": 51089,
+    "law_government": 50052,
+    "business": 49038,
+    "technology": 46227,
+    "humanities": 36765,
+    "history": 29251,
+    "education": 25786,
+    "mathematics": 20193,
+    "sports_recreation": 17570
+   },
+   "diversity": {
+    "sample_texts": 697,
+    "sample_words": 200020,
+    "distinct_n": {
+     "1": 0.082637,
+     "2": 0.620811,
+     "3": 0.919517,
+     "4": 0.98212
+    },
+    "top20_4gram_share": 0.002026,
+    "top_4grams": [
+     [
+      "nineteenth and twentieth centuries",
+      36
+     ],
+     [
+      "the nineteenth and twentieth",
+      35
+     ],
+     [
+      "in academic and professional",
+      28
+     ],
+     [
+      "during the nineteenth and",
+      25
+     ],
+     [
+      "contemporary usage and relevance",
+      24
+     ],
+     [
+      "within broader frameworks of",
+      22
+     ],
+     [
+      "during the twentieth century",
+      21
+     ],
+     [
+      "and the study of",
+      18
+     ],
+     [
+      "the name comes from",
+      18
+     ],
+     [
+      "it can also mean",
+      18
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 14.1807,
+    "opener_distinct_share": 0.96345,
+    "top_openers": [
+     [
+      "at its core",
+      0.00295
+     ],
+     [
+      "introduction",
+      0.00135
+     ],
+     [
+      "overview",
+      0.00135
+     ],
+     [
+      "definition and significance",
+      0.00125
+     ],
+     [
+      "core concept",
+      0.00095
+     ],
+     [
+      "concept and significance",
+      0.0007
+     ],
+     [
+      "the university of",
+      0.0006
+     ],
+     [
+      "definition and core",
+      0.0006
+     ]
+    ]
+   },
+   "headword_present_share": 0.967535,
+   "words": 228500781,
+   "strata": {
+    "columns": [
+     "reading_level"
+    ],
+    "values": {
+     "neutral": {
+      "rows": 160724,
+      "tokens": 132886986,
+      "mean_tokens": 826.8,
+      "headword_present_share": 0.990835,
+      "diversity": {
+       "sample_words": 50108,
+       "distinct_n": {
+        "1": 0.172008,
+        "2": 0.740271,
+        "3": 0.942987,
+        "4": 0.984952
+       },
+       "opener_entropy_bits": 12.059,
+       "top_openers": [
+        [
+         "at its core",
+         0.0124
+        ],
+        [
+         "overview",
+         0.0068
+        ],
+        [
+         "introduction",
+         0.0058
+        ]
+       ]
+      }
+     },
+     "grade_1": {
+      "rows": 160724,
+      "tokens": 92438923,
+      "mean_tokens": 575.14,
+      "headword_present_share": 0.909335,
+      "diversity": {
+       "sample_words": 50152,
+       "distinct_n": {
+        "1": 0.092399,
+        "2": 0.614523,
+        "3": 0.912721,
+        "4": 0.981089
+       },
+       "opener_entropy_bits": 12.2735,
+       "top_openers": [
+        [
+         "this way of",
+         0.0008
+        ],
+        [
+         "long ago people",
+         0.0006
+        ],
+        [
+         "the battle of",
+         0.0006
+        ]
+       ]
+      }
+     },
+     "grade_10": {
+      "rows": 160724,
+      "tokens": 125485797,
+      "mean_tokens": 780.75,
+      "headword_present_share": 0.973545,
+      "diversity": {
+       "sample_words": 50133,
+       "distinct_n": {
+        "1": 0.154469,
+        "2": 0.741692,
+        "3": 0.955183,
+        "4": 0.989753
+       },
+       "opener_entropy_bits": 12.2652,
+       "top_openers": [
+        [
+         "in academic writing",
+         0.0022
+        ],
+        [
+         "in education a",
+         0.0008
+        ],
+        [
+         "the university of",
+         0.0008
+        ]
+       ]
+      }
+     },
+     "grade_5": {
+      "rows": 160371,
+      "tokens": 106367708,
+      "mean_tokens": 663.26,
+      "headword_present_share": 0.97865,
+      "diversity": {
+       "sample_words": 50065,
+       "distinct_n": {
+        "1": 0.122001,
+        "2": 0.6945,
+        "3": 0.941397,
+        "4": 0.987691
+       },
+       "opener_entropy_bits": 12.2807,
+       "top_openers": [
+        [
+         "the united states",
+         0.001
+        ],
+        [
+         "the book of",
+         0.0006
+        ],
+        [
+         "a point of",
+         0.0006
+        ]
+       ]
+      }
+     },
+     "college": {
+      "rows": 160371,
+      "tokens": 125774928,
+      "mean_tokens": 784.27,
+      "headword_present_share": 0.985371,
+      "diversity": {
+       "sample_words": 50373,
+       "distinct_n": {
+        "1": 0.169674,
+        "2": 0.757738,
+        "3": 0.95752,
+        "4": 0.991059
+       },
+       "opener_entropy_bits": 12.2667,
+       "top_openers": [
+        [
+         "at its core",
+         0.0022
+        ],
+        [
+         "in academic usage",
+         0.0014
+        ],
+        [
+         "in academic and",
+         0.001
+        ]
+       ]
+      }
+     }
+    }
+   },
+   "near_duplicates": {
+    "docs": 802914,
+    "docs_in_near_dup_cluster": 0,
+    "docs_in_near_dup_cluster_share": 0.0,
+    "near_dup_excess_share": 0.0,
+    "exact_normalized_excess_share": 0.0,
+    "method": "MinHash over student-token 8-gram shingles, 64 hashes, 16x4 LSH, signature agreement >= 0.8 to the bucket's first member; excess = docs removable by keeping one per cluster"
+   },
+   "seconds": 400.9
+  },
+  "lexical_explanation": {
+   "dataset": "opengloss-v2.4-rc2-encyclopedia/data/explanation",
+   "text_column": "text",
+   "rows": 482172,
+   "unique_normalized_texts": 482159,
+   "exact_normalized_duplicate_rows": 13,
+   "exact_normalized_duplicate_share": 2.7e-05,
+   "tokens": 103498545,
+   "unique_text_tokens": 103497344,
+   "tokens_per_row": {
+    "mean": 214.651,
+    "p50": 123.0,
+    "p90": 398.0,
+    "p99": 436.0,
+    "max": 633.0
+   },
+   "length_band_share": {
+    ">64": 0.966954,
+    ">128": 0.484495,
+    ">256": 0.450972,
+    ">512": 0.000446,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 81348656,
+    "512": 103491669,
+    "1024": 103498545
+   },
+   "windows": {
+    "256": {
+     "windows": 699833,
+     "unique_windows": 699423,
+     "unique_share": 0.999414
+    },
+    "512": {
+     "windows": 482387,
+     "unique_windows": 482371,
+     "unique_share": 0.999967
+    },
+    "1024": {
+     "windows": 482172,
+     "unique_windows": 482159,
+     "unique_share": 0.999973
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 43485713,
+    "tier2": 24655909,
+    "tier5": 14530011,
+    "tier3": 9250447,
+    "core": 7586345,
+    "tier6": 3879787,
+    "unknown": 110333
+   },
+   "tokens_by_domain_root": {
+    "people_society": 13785137,
+    "everyday_life": 12388786,
+    "science": 9985450,
+    "nature": 9383823,
+    "health": 8687714,
+    "language": 7481767,
+    "law_government": 6653981,
+    "business": 6600674,
+    "technology": 5961221,
+    "arts": 5715360,
+    "humanities": 4900426,
+    "education": 3801869,
+    "history": 3544379,
+    "mathematics": 2701731,
+    "sports_recreation": 1906227
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 64137,
+    "people_society": 55506,
+    "health": 47097,
+    "science": 45312,
+    "nature": 41841,
+    "language": 32334,
+    "arts": 30825,
+    "law_government": 30048,
+    "business": 29448,
+    "technology": 27741,
+    "humanities": 22107,
+    "history": 17631,
+    "education": 15474,
+    "mathematics": 12117,
+    "sports_recreation": 10554
+   },
+   "diversity": {
+    "sample_texts": 2371,
+    "sample_words": 200038,
+    "distinct_n": {
+     "1": 0.089643,
+     "2": 0.572523,
+     "3": 0.855727,
+     "4": 0.946855
+    },
+    "top20_4gram_share": 0.005567,
+    "top_4grams": [
+     [
+      "as a broader term",
+      137
+     ],
+     [
+      "as a broader category",
+      78
+     ],
+     [
+      "narrower terms or hyponyms",
+      61
+     ],
+     [
+      "terms or hyponyms include",
+      58
+     ],
+     [
+      "when referring to the",
+      55
+     ],
+     [
+      "more specific forms include",
+      54
+     ],
+     [
+      "it can also mean",
+      52
+     ],
+     [
+      "to the category of",
+      50
+     ],
+     [
+      "as a broader concept",
+      49
+     ],
+     [
+      "belongs to the category",
+      48
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 14.0495,
+    "opener_distinct_share": 0.93775,
+    "top_openers": [
+     [
+      "as a noun",
+      0.00655
+     ],
+     [
+      "use this name",
+      0.0041
+     ],
+     [
+      "as an adjective",
+      0.0036
+     ],
+     [
+      "use this term",
+      0.0035
+     ],
+     [
+      "it is a",
+      0.00155
+     ],
+     [
+      "it describes something",
+      0.0009
+     ],
+     [
+      "it means a",
+      0.0009
+     ],
+     [
+      "it describes a",
+      0.00085
+     ]
+    ]
+   },
+   "headword_present_share": 0.953469,
+   "words": 40838631,
+   "near_duplicates": {
+    "docs": 482172,
+    "docs_in_near_dup_cluster": 132,
+    "docs_in_near_dup_cluster_share": 0.000274,
+    "near_dup_excess_share": 0.000137,
+    "exact_normalized_excess_share": 2.7e-05,
+    "method": "MinHash over student-token 8-gram shingles, 64 hashes, 16x4 LSH, signature agreement >= 0.8 to the bucket's first member; excess = docs removable by keeping one per cluster"
+   },
+   "seconds": 80.2
+  },
+  "contrast": {
+   "dataset": "opengloss-v2.4-rc2-contrasts/data",
+   "text_column": "text",
+   "rows": 812184,
+   "unique_normalized_texts": 812174,
+   "exact_normalized_duplicate_rows": 10,
+   "exact_normalized_duplicate_share": 1.2e-05,
+   "tokens": 161344830,
+   "unique_text_tokens": 161342683,
+   "tokens_per_row": {
+    "mean": 198.656,
+    "p50": 208.0,
+    "p90": 240.0,
+    "p99": 262.0,
+    "max": 383.0
+   },
+   "length_band_share": {
+    ">64": 0.999869,
+    ">128": 0.940421,
+    ">256": 0.01874,
+    ">512": 0.0,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 161207861,
+    "512": 161344830,
+    "1024": 161344830
+   },
+   "windows": {
+    "256": {
+     "windows": 827404,
+     "unique_windows": 823807,
+     "unique_share": 0.995653
+    },
+    "512": {
+     "windows": 812184,
+     "unique_windows": 812174,
+     "unique_share": 0.999988
+    },
+    "1024": {
+     "windows": 812184,
+     "unique_windows": 812174,
+     "unique_share": 0.999988
+    }
+   },
+   "tokens_by_tier": {
+    "tier2": 51091507,
+    "tier4": 49881845,
+    "core": 32780570,
+    "tier5": 15819563,
+    "tier3": 11081540,
+    "tier6": 665733,
+    "unknown": 24072
+   },
+   "tokens_by_domain_root": {
+    "people_society": 26566197,
+    "everyday_life": 25887941,
+    "language": 17554833,
+    "business": 11728854,
+    "science": 11644228,
+    "health": 11506338,
+    "law_government": 11131507,
+    "technology": 8558033,
+    "nature": 7651946,
+    "arts": 7424649,
+    "humanities": 6863865,
+    "education": 5931135,
+    "mathematics": 4295623,
+    "history": 2598296,
+    "sports_recreation": 1996692,
+    "none": 4693
+   },
+   "rows_by_domain_root": {
+    "people_society": 132039,
+    "everyday_life": 130752,
+    "language": 87810,
+    "science": 59379,
+    "health": 58764,
+    "business": 58743,
+    "law_government": 55536,
+    "technology": 43344,
+    "nature": 38868,
+    "arts": 37656,
+    "humanities": 34200,
+    "education": 30186,
+    "mathematics": 22071,
+    "history": 12708,
+    "sports_recreation": 10104,
+    "none": 24
+   },
+   "diversity": {
+    "sample_texts": 2441,
+    "sample_words": 200050,
+    "distinct_n": {
+     "1": 0.065934,
+     "2": 0.528685,
+     "3": 0.847977,
+     "4": 0.948103
+    },
+    "top20_4gram_share": 0.006574,
+    "top_4grams": [
+     [
+      "but they are not",
+      207
+     ],
+     [
+      "but they do not",
+      116
+     ],
+     [
+      "they are not interchangeable",
+      85
+     ],
+     [
+      "but they differ in",
+      76
+     ],
+     [
+      "mean the same thing",
+      75
+     ],
+     [
+      "are related but they",
+      73
+     ],
+     [
+      "the terms are related",
+      65
+     ],
+     [
+      "do not mean the",
+      59
+     ],
+     [
+      "not mean the same",
+      58
+     ],
+     [
+      "they do not mean",
+      56
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 14.1727,
+    "opener_distinct_share": 0.9568,
+    "top_openers": [
+     [
+      "both words can",
+      0.00245
+     ],
+     [
+      "in this sense",
+      0.00115
+     ],
+     [
+      "the contrast is",
+      0.00085
+     ],
+     [
+      "the opposition is",
+      0.0008
+     ],
+     [
+      "in the supplied",
+      0.0006
+     ],
+     [
+      "in the sense",
+      0.0006
+     ],
+     [
+      "in ordinary use",
+      0.00055
+     ],
+     [
+      "both terms can",
+      0.00055
+     ]
+    ]
+   },
+   "headword_present_share": 0.999594,
+   "words": 66683239,
+   "strata": {
+    "columns": [
+     "relation_type",
+     "verdict"
+    ],
+    "values": {
+     "synonym|related_as_typed": {
+      "rows": 372309,
+      "tokens": 73929481,
+      "mean_tokens": 198.57,
+      "headword_present_share": 0.999715,
+      "diversity": {
+       "sample_words": 50061,
+       "distinct_n": {
+        "1": 0.128883,
+        "2": 0.646154,
+        "3": 0.898085,
+        "4": 0.96765
+       },
+       "opener_entropy_bits": 12.2073,
+       "top_openers": [
+        [
+         "both words can",
+         0.0046
+        ],
+        [
+         "in ordinary use",
+         0.0018
+        ],
+        [
+         "in the supplied",
+         0.0014
+        ]
+       ]
+      }
+     },
+     "synonym|related_differently": {
+      "rows": 239292,
+      "tokens": 47169884,
+      "mean_tokens": 197.12,
+      "headword_present_share": 0.99957,
+      "diversity": {
+       "sample_words": 50016,
+       "distinct_n": {
+        "1": 0.120122,
+        "2": 0.630123,
+        "3": 0.89069,
+        "4": 0.96081
+       },
+       "opener_entropy_bits": 12.2504,
+       "top_openers": [
+        [
+         "the key difference",
+         0.001
+        ],
+        [
+         "in these senses",
+         0.001
+        ],
+        [
+         "in the supplied",
+         0.0008
+        ]
+       ]
+      }
+     },
+     "antonym|related_as_typed": {
+      "rows": 124389,
+      "tokens": 25095605,
+      "mean_tokens": 201.75,
+      "headword_present_share": 0.999461,
+      "diversity": {
+       "sample_words": 50049,
+       "distinct_n": {
+        "1": 0.118264,
+        "2": 0.639691,
+        "3": 0.890103,
+        "4": 0.955883
+       },
+       "opener_entropy_bits": 12.1526,
+       "top_openers": [
+        [
+         "the opposition is",
+         0.0042
+        ],
+        [
+         "the contrast is",
+         0.0042
+        ],
+        [
+         "on the axis",
+         0.0032
+        ]
+       ]
+      }
+     },
+     "antonym|related_differently": {
+      "rows": 66096,
+      "tokens": 13130237,
+      "mean_tokens": 198.65,
+      "headword_present_share": 0.999244,
+      "diversity": {
+       "sample_words": 50013,
+       "distinct_n": {
+        "1": 0.11553,
+        "2": 0.623224,
+        "3": 0.879526,
+        "4": 0.948767
+       },
+       "opener_entropy_bits": 12.1271,
+       "top_openers": [
+        [
+         "the contrast is",
+         0.0048
+        ],
+        [
+         "these terms contrast",
+         0.003
+        ],
+        [
+         "the opposition is",
+         0.0014
+        ]
+       ]
+      }
+     },
+     "antonym|unrelated": {
+      "rows": 3642,
+      "tokens": 696795,
+      "mean_tokens": 191.32,
+      "headword_present_share": 0.999725,
+      "diversity": {
+       "sample_words": 50014,
+       "distinct_n": {
+        "1": 0.10573,
+        "2": 0.546765,
+        "3": 0.804721,
+        "4": 0.897916
+       },
+       "opener_entropy_bits": 11.0081,
+       "top_openers": [
+        [
+         "in the senses",
+         0.01071
+        ],
+        [
+         "in these senses",
+         0.00824
+        ],
+        [
+         "in the supplied",
+         0.00769
+        ]
+       ]
+      }
+     },
+     "synonym|unrelated": {
+      "rows": 3351,
+      "tokens": 639446,
+      "mean_tokens": 190.82,
+      "headword_present_share": 1.0,
+      "diversity": {
+       "sample_words": 50027,
+       "distinct_n": {
+        "1": 0.105103,
+        "2": 0.558019,
+        "3": 0.821218,
+        "4": 0.914125
+       },
+       "opener_entropy_bits": 10.875,
+       "top_openers": [
+        [
+         "in the senses",
+         0.0197
+        ],
+        [
+         "in these senses",
+         0.00895
+        ],
+        [
+         "in the supplied",
+         0.00507
+        ]
+       ]
+      }
+     },
+     "confusable_with|related_as_typed": {
+      "rows": 2421,
+      "tokens": 535362,
+      "mean_tokens": 221.13,
+      "headword_present_share": 0.998761,
+      "diversity": {
+       "sample_words": 50021,
+       "distinct_n": {
+        "1": 0.107415,
+        "2": 0.528715,
+        "3": 0.789125,
+        "4": 0.89464
+       },
+       "opener_entropy_bits": 9.3779,
+       "top_openers": [
+        [
+         "the shared name",
+         0.04833
+        ],
+        [
+         "the names are",
+         0.03717
+        ],
+        [
+         "the confusion comes",
+         0.01694
+        ]
+       ]
+      }
+     },
+     "confusable_with|related_differently": {
+      "rows": 660,
+      "tokens": 143092,
+      "mean_tokens": 216.81,
+      "headword_present_share": 1.0,
+      "diversity": {
+       "sample_words": 50068,
+       "distinct_n": {
+        "1": 0.074838,
+        "2": 0.431312,
+        "3": 0.697905,
+        "4": 0.825931
+       },
+       "opener_entropy_bits": 8.0036,
+       "top_openers": [
+        [
+         "the shared name",
+         0.05606
+        ],
+        [
+         "the shared word",
+         0.03788
+        ],
+        [
+         "the names are",
+         0.02424
+        ]
+       ]
+      }
+     },
+     "confusable_with|unrelated": {
+      "rows": 24,
+      "tokens": 4928,
+      "mean_tokens": 205.33,
+      "headword_present_share": 1.0
+     }
+    }
+   },
+   "near_duplicates": {
+    "docs": 812184,
+    "docs_in_near_dup_cluster": 35,
+    "docs_in_near_dup_cluster_share": 4.3e-05,
+    "near_dup_excess_share": 2.2e-05,
+    "exact_normalized_excess_share": 1.2e-05,
+    "method": "MinHash over student-token 8-gram shingles, 64 hashes, 16x4 LSH, signature agreement >= 0.8 to the bucket's first member; excess = docs removable by keeping one per cluster"
+   },
+   "seconds": 125.7
+  },
+  "etymology": {
+   "dataset": "opengloss-v2.4-rc2-etymology/data",
+   "text_column": "summary",
+   "rows": 160688,
+   "unique_normalized_texts": 160485,
+   "exact_normalized_duplicate_rows": 203,
+   "exact_normalized_duplicate_share": 0.001263,
+   "tokens": 30595498,
+   "unique_text_tokens": 30592945,
+   "tokens_per_row": {
+    "mean": 190.403,
+    "p50": 172.0,
+    "p90": 302.0,
+    "p99": 433.0,
+    "max": 3557.0
+   },
+   "length_band_share": {
+    ">64": 0.996011,
+    ">128": 0.737367,
+    ">256": 0.189964,
+    ">512": 0.003224,
+    ">1024": 0.00061,
+    ">2048": 5e-05
+   },
+   "truncated_attended_tokens": {
+    "256": 28501638,
+    "512": 30455792,
+    "1024": 30553821
+   },
+   "windows": {
+    "256": {
+     "windows": 192110,
+     "unique_windows": 191031,
+     "unique_share": 0.994383
+    },
+    "512": {
+     "windows": 161347,
+     "unique_windows": 161139,
+     "unique_share": 0.998711
+    },
+    "1024": {
+     "windows": 160796,
+     "unique_windows": 160593,
+     "unique_share": 0.998738
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 11160181,
+    "tier2": 7183082,
+    "tier5": 5631789,
+    "tier3": 2877497,
+    "core": 2037974,
+    "tier6": 1656745,
+    "unknown": 48230
+   },
+   "tokens_by_domain_root": {
+    "people_society": 4075479,
+    "everyday_life": 3834096,
+    "nature": 2849393,
+    "science": 2813388,
+    "health": 2667388,
+    "language": 2083578,
+    "law_government": 1913782,
+    "business": 1872996,
+    "arts": 1817097,
+    "technology": 1691834,
+    "humanities": 1509910,
+    "history": 1125030,
+    "education": 980591,
+    "mathematics": 747817,
+    "sports_recreation": 613119
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 21379,
+    "people_society": 18501,
+    "health": 15699,
+    "science": 15102,
+    "nature": 13931,
+    "language": 10770,
+    "arts": 10273,
+    "law_government": 10016,
+    "business": 9816,
+    "technology": 9246,
+    "humanities": 7365,
+    "history": 5875,
+    "education": 5158,
+    "mathematics": 4039,
+    "sports_recreation": 3518
+   },
+   "diversity": {
+    "sample_texts": 2791,
+    "sample_words": 200045,
+    "distinct_n": {
+     "1": 0.082152,
+     "2": 0.436544,
+     "3": 0.721783,
+     "4": 0.877869
+    },
+    "top20_4gram_share": 0.009381,
+    "top_4grams": [
+     [
+      "is a modern english",
+      275
+     ],
+     [
+      "etymology trail for the",
+      236
+     ],
+     [
+      "an etymology trail for",
+      146
+     ],
+     [
+      "a modern english compound",
+      125
+     ],
+     [
+      "in early modern english",
+      88
+     ],
+     [
+      "old french into english",
+      80
+     ],
+     [
+      "in the 19th century",
+      78
+     ],
+     [
+      "is a transparent english",
+      78
+     ],
+     [
+      "the early modern period",
+      78
+     ],
+     [
+      "trail for the phrase",
+      73
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 12.0038,
+    "opener_distinct_share": 0.6896,
+    "top_openers": [
+     [
+      "an etymology trail",
+      0.05345
+     ],
+     [
+      "an encyclopedic etymology",
+      0.0331
+     ],
+     [
+      "this etymology trail",
+      0.0206
+     ],
+     [
+      "the english noun",
+      0.019
+     ],
+     [
+      "an ordered etymology",
+      0.0145
+     ],
+     [
+      "the etymology of",
+      0.01335
+     ],
+     [
+      "the english word",
+      0.01215
+     ],
+     [
+      "etymology trail for",
+      0.009
+     ]
+    ]
+   },
+   "headword_present_share": 0.975331,
+   "words": 11418788,
+   "near_duplicates": {
+    "docs": 160688,
+    "docs_in_near_dup_cluster": 249,
+    "docs_in_near_dup_cluster_share": 0.00155,
+    "near_dup_excess_share": 0.001282,
+    "exact_normalized_excess_share": 0.001263,
+    "method": "MinHash over student-token 8-gram shingles, 64 hashes, 16x4 LSH, signature agreement >= 0.8 to the bucket's first member; excess = docs removable by keeping one per cluster"
+   },
+   "seconds": 24.2
+  },
+  "query": {
+   "dataset": "opengloss-v2.4-rc2-queries/data",
+   "text_column": "text",
+   "rows": 3851978,
+   "unique_normalized_texts": 3843857,
+   "exact_normalized_duplicate_rows": 8121,
+   "exact_normalized_duplicate_share": 0.002108,
+   "tokens": 107954675,
+   "unique_text_tokens": 107832352,
+   "tokens_per_row": {
+    "mean": 28.026,
+    "p50": 28.0,
+    "p90": 41.0,
+    "p99": 52.0,
+    "max": 90.0
+   },
+   "length_band_share": {
+    ">64": 0.000269,
+    ">128": 0.0,
+    ">256": 0.0,
+    ">512": 0.0,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 107954675,
+    "512": 107954675,
+    "1024": 107954675
+   },
+   "windows": {
+    "256": {
+     "windows": 3851978,
+     "unique_windows": 3844042,
+     "unique_share": 0.99794
+    },
+    "512": {
+     "windows": 3851978,
+     "unique_windows": 3844042,
+     "unique_share": 0.99794
+    },
+    "1024": {
+     "windows": 3851978,
+     "unique_windows": 3844042,
+     "unique_share": 0.99794
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 40348875,
+    "tier2": 26639287,
+    "tier5": 16009372,
+    "core": 11760978,
+    "tier3": 8342425,
+    "tier6": 4715914,
+    "unknown": 137824
+   },
+   "tokens_by_domain_root": {
+    "everyday_life": 12801971,
+    "people_society": 12581653,
+    "science": 9344167,
+    "language": 8597741,
+    "nature": 8357746,
+    "health": 8155279,
+    "business": 7455691,
+    "technology": 7454306,
+    "law_government": 7101028,
+    "arts": 7048016,
+    "humanities": 5376186,
+    "education": 4578240,
+    "history": 3657175,
+    "mathematics": 3114386,
+    "sports_recreation": 2328625,
+    "none": 2465
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 475345,
+    "people_society": 460892,
+    "science": 333202,
+    "language": 311527,
+    "health": 291720,
+    "nature": 290308,
+    "technology": 268548,
+    "business": 268174,
+    "law_government": 249487,
+    "arts": 245332,
+    "humanities": 183003,
+    "education": 161937,
+    "history": 117777,
+    "mathematics": 112239,
+    "sports_recreation": 82391,
+    "none": 96
+   },
+   "diversity": {
+    "sample_texts": 16031,
+    "sample_words": 200001,
+    "distinct_n": {
+     "1": 0.089255,
+     "2": 0.548698,
+     "3": 0.82393,
+     "4": 0.920913
+    },
+    "top20_4gram_share": 0.019946,
+    "top_4grams": [
+     [
+      "give me a sentence",
+      594
+     ],
+     [
+      "me a sentence using",
+      490
+     ],
+     [
+      "what do you call",
+      313
+     ],
+     [
+      "walk me through how",
+      236
+     ],
+     [
+      "write a sentence using",
+      161
+     ],
+     [
+      "an example of a",
+      135
+     ],
+     [
+      "i'm looking for the",
+      134
+     ],
+     [
+      "explain the difference between",
+      99
+     ],
+     [
+      "give me an example",
+      93
+     ],
+     [
+      "me through how a",
+      82
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 11.577,
+    "opener_distinct_share": 0.56235,
+    "top_openers": [
+     [
+      "give me a",
+      0.0442
+     ],
+     [
+      "walk me through",
+      0.02595
+     ],
+     [
+      "how do i",
+      0.0244
+     ],
+     [
+      "what do you",
+      0.01485
+     ],
+     [
+      "write a sentence",
+      0.01355
+     ],
+     [
+      "i'm looking for",
+      0.0129
+     ],
+     [
+      "how can i",
+      0.0099
+     ],
+     [
+      "i'm trying to",
+      0.00965
+     ]
+    ]
+   },
+   "headword_present_share": 0.143014,
+   "words": 48131228,
+   "strata": {
+    "columns": [
+     "style",
+     "headword_free"
+    ],
+    "values": {
+     "keyword|True": {
+      "rows": 618324,
+      "tokens": 8095329,
+      "mean_tokens": 13.09,
+      "headword_present_share": 2.7e-05,
+      "diversity": {
+       "sample_words": 50007,
+       "distinct_n": {
+        "1": 0.228708,
+        "2": 0.853227,
+        "3": 0.981056,
+        "4": 0.997748
+       },
+       "opener_entropy_bits": 12.2205,
+       "top_openers": [
+        [
+         "term for a",
+         0.0036
+        ],
+        [
+         "word for a",
+         0.0036
+        ],
+        [
+         "name for the",
+         0.0024
+        ]
+       ]
+      }
+     },
+     "question|True": {
+      "rows": 610899,
+      "tokens": 17968342,
+      "mean_tokens": 29.41,
+      "headword_present_share": 1.8e-05,
+      "diversity": {
+       "sample_words": 50011,
+       "distinct_n": {
+        "1": 0.169203,
+        "2": 0.670522,
+        "3": 0.895595,
+        "4": 0.95686
+       },
+       "opener_entropy_bits": 9.7714,
+       "top_openers": [
+        [
+         "what do you",
+         0.0912
+        ],
+        [
+         "is there a",
+         0.029
+        ],
+        [
+         "what kind of",
+         0.0264
+        ]
+       ]
+      }
+     },
+     "conversational|True": {
+      "rows": 563461,
+      "tokens": 23101270,
+      "mean_tokens": 41.0,
+      "headword_present_share": 2.3e-05,
+      "diversity": {
+       "sample_words": 50020,
+       "distinct_n": {
+        "1": 0.138265,
+        "2": 0.580857,
+        "3": 0.818282,
+        "4": 0.911091
+       },
+       "opener_entropy_bits": 8.2695,
+       "top_openers": [
+        [
+         "i'm looking for",
+         0.0808
+        ],
+        [
+         "i'm trying to",
+         0.0644
+        ],
+        [
+         "i need a",
+         0.053
+        ]
+       ]
+      }
+     },
+     "directive|True": {
+      "rows": 376417,
+      "tokens": 10068654,
+      "mean_tokens": 26.75,
+      "headword_present_share": 0.00012,
+      "diversity": {
+       "sample_words": 50009,
+       "distinct_n": {
+        "1": 0.176268,
+        "2": 0.673063,
+        "3": 0.911874,
+        "4": 0.971266
+       },
+       "opener_entropy_bits": 10.5769,
+       "top_openers": [
+        [
+         "explain the difference",
+         0.0468
+        ],
+        [
+         "explain how a",
+         0.033
+        ],
+        [
+         "explain how to",
+         0.03
+        ]
+       ]
+      }
+     },
+     "constraint|True": {
+      "rows": 358975,
+      "tokens": 9156901,
+      "mean_tokens": 25.51,
+      "headword_present_share": 8e-06,
+      "diversity": {
+       "sample_words": 50012,
+       "distinct_n": {
+        "1": 0.1671,
+        "2": 0.662832,
+        "3": 0.903804,
+        "4": 0.97517
+       },
+       "opener_entropy_bits": 11.5549,
+       "top_openers": [
+        [
+         "term for a",
+         0.0202
+        ],
+        [
+         "find a term",
+         0.01
+        ],
+        [
+         "a term for",
+         0.0094
+        ]
+       ]
+      }
+     },
+     "example_based|False": {
+      "rows": 334343,
+      "tokens": 9383673,
+      "mean_tokens": 28.07,
+      "headword_present_share": 0.969597,
+      "diversity": {
+       "sample_words": 50007,
+       "distinct_n": {
+        "1": 0.174656,
+        "2": 0.496447,
+        "3": 0.698551,
+        "4": 0.816284
+       },
+       "opener_entropy_bits": 4.5061,
+       "top_openers": [
+        [
+         "give me a",
+         0.423
+        ],
+        [
+         "write a sentence",
+         0.1568
+        ],
+        [
+         "give an example",
+         0.0448
+        ]
+       ]
+      }
+     },
+     "role|True": {
+      "rows": 329011,
+      "tokens": 10398170,
+      "mean_tokens": 31.6,
+      "headword_present_share": 1.5e-05,
+      "diversity": {
+       "sample_words": 50005,
+       "distinct_n": {
+        "1": 0.151045,
+        "2": 0.533138,
+        "3": 0.741528,
+        "4": 0.854919
+       },
+       "opener_entropy_bits": 8.6216,
+       "top_openers": [
+        [
+         "for a student",
+         0.0654
+        ],
+        [
+         "for a beginner",
+         0.0348
+        ],
+        [
+         "as a new",
+         0.03
+        ]
+       ]
+      }
+     },
+     "step_by_step|True": {
+      "rows": 305509,
+      "tokens": 9879431,
+      "mean_tokens": 32.34,
+      "headword_present_share": 2.3e-05,
+      "diversity": {
+       "sample_words": 50006,
+       "distinct_n": {
+        "1": 0.147462,
+        "2": 0.541999,
+        "3": 0.762377,
+        "4": 0.88219
+       },
+       "opener_entropy_bits": 4.49,
+       "top_openers": [
+        [
+         "walk me through",
+         0.3234
+        ],
+        [
+         "how do i",
+         0.2302
+        ],
+        [
+         "how can i",
+         0.0706
+        ]
+       ]
+      }
+     },
+     "directive|False": {
+      "rows": 114747,
+      "tokens": 2902887,
+      "mean_tokens": 25.3,
+      "headword_present_share": 0.914516,
+      "diversity": {
+       "sample_words": 50000,
+       "distinct_n": {
+        "1": 0.20916,
+        "2": 0.663033,
+        "3": 0.890447,
+        "4": 0.960429
+       },
+       "opener_entropy_bits": 10.8422,
+       "top_openers": [
+        [
+         "explain the difference",
+         0.0456
+        ],
+        [
+         "explain how to",
+         0.0444
+        ],
+        [
+         "explain how a",
+         0.0262
+        ]
+       ]
+      }
+     },
+     "example_based|True": {
+      "rows": 111557,
+      "tokens": 3290937,
+      "mean_tokens": 29.5,
+      "headword_present_share": 0.000708,
+      "diversity": {
+       "sample_words": 50016,
+       "distinct_n": {
+        "1": 0.150532,
+        "2": 0.522738,
+        "3": 0.707299,
+        "4": 0.798514
+       },
+       "opener_entropy_bits": 4.966,
+       "top_openers": [
+        [
+         "give me a",
+         0.2672
+        ],
+        [
+         "give an example",
+         0.1448
+        ],
+        [
+         "give me an",
+         0.0938
+        ]
+       ]
+      }
+     },
+     "question|False": {
+      "rows": 42485,
+      "tokens": 1283945,
+      "mean_tokens": 30.22,
+      "headword_present_share": 0.952054,
+      "diversity": {
+       "sample_words": 50010,
+       "distinct_n": {
+        "1": 0.205099,
+        "2": 0.656589,
+        "3": 0.878266,
+        "4": 0.951676
+       },
+       "opener_entropy_bits": 11.7315,
+       "top_openers": [
+        [
+         "what do you",
+         0.0082
+        ],
+        [
+         "what does a",
+         0.0062
+        ],
+        [
+         "is there a",
+         0.0054
+        ]
+       ]
+      }
+     },
+     "conversational|False": {
+      "rows": 26054,
+      "tokens": 1035138,
+      "mean_tokens": 39.73,
+      "headword_present_share": 0.947724,
+      "diversity": {
+       "sample_words": 50008,
+       "distinct_n": {
+        "1": 0.155215,
+        "2": 0.523086,
+        "3": 0.767351,
+        "4": 0.882253
+       },
+       "opener_entropy_bits": 9.3963,
+       "top_openers": [
+        [
+         "i'm trying to",
+         0.035
+        ],
+        [
+         "i need the",
+         0.0344
+        ],
+        [
+         "i saw a",
+         0.034
+        ]
+       ]
+      }
+     },
+     "keyword|False": {
+      "rows": 23362,
+      "tokens": 319642,
+      "mean_tokens": 13.68,
+      "headword_present_share": 0.965714,
+      "diversity": {
+       "sample_words": 50004,
+       "distinct_n": {
+        "1": 0.286377,
+        "2": 0.81944,
+        "3": 0.963798,
+        "4": 0.99187
+       },
+       "opener_entropy_bits": 12.2621,
+       "top_openers": [
+        [
+         "english family name",
+         0.0014
+        ],
+        [
+         "language spoken by",
+         0.001
+        ],
+        [
+         "person from the",
+         0.0008
+        ]
+       ]
+      }
+     },
+     "step_by_step|False": {
+      "rows": 19223,
+      "tokens": 576539,
+      "mean_tokens": 29.99,
+      "headword_present_share": 0.907975,
+      "diversity": {
+       "sample_words": 50003,
+       "distinct_n": {
+        "1": 0.17413,
+        "2": 0.500811,
+        "3": 0.706357,
+        "4": 0.839526
+       },
+       "opener_entropy_bits": 4.4562,
+       "top_openers": [
+        [
+         "walk me through",
+         0.3338
+        ],
+        [
+         "how do i",
+         0.253
+        ],
+        [
+         "show how to",
+         0.0808
+        ]
+       ]
+      }
+     },
+     "constraint|False": {
+      "rows": 9110,
+      "tokens": 240596,
+      "mean_tokens": 26.41,
+      "headword_present_share": 0.941712,
+      "diversity": {
+       "sample_words": 50000,
+       "distinct_n": {
+        "1": 0.18608,
+        "2": 0.641447,
+        "3": 0.88317,
+        "4": 0.961041
+       },
+       "opener_entropy_bits": 11.8169,
+       "top_openers": [
+        [
+         "i need a",
+         0.0106
+        ],
+        [
+         "term for a",
+         0.0072
+        ],
+        [
+         "i need the",
+         0.0064
+        ]
+       ]
+      }
+     },
+     "role|False": {
+      "rows": 8501,
+      "tokens": 253221,
+      "mean_tokens": 29.79,
+      "headword_present_share": 0.924127,
+      "diversity": {
+       "sample_words": 50016,
+       "distinct_n": {
+        "1": 0.176004,
+        "2": 0.510292,
+        "3": 0.721253,
+        "4": 0.844296
+       },
+       "opener_entropy_bits": 9.2022,
+       "top_openers": [
+        [
+         "for a student",
+         0.056
+        ],
+        [
+         "for a geography",
+         0.0296
+        ],
+        [
+         "for a beginner",
+         0.0292
+        ]
+       ]
+      }
+     }
+    }
+   },
+   "seconds": 95.7
+  },
+  "qa.question": {
+   "dataset": "opengloss-v2.4-rc2-qa-pairs/data",
+   "text_column": "question",
+   "rows": 2304127,
+   "unique_normalized_texts": 2274125,
+   "exact_normalized_duplicate_rows": 30002,
+   "exact_normalized_duplicate_share": 0.013021,
+   "tokens": 70519409,
+   "unique_text_tokens": 69924393,
+   "tokens_per_row": {
+    "mean": 30.606,
+    "p50": 28.0,
+    "p90": 48.0,
+    "p99": 65.0,
+    "max": 122.0
+   },
+   "length_band_share": {
+    ">64": 0.010965,
+    ">128": 0.0,
+    ">256": 0.0,
+    ">512": 0.0,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 70519409,
+    "512": 70519409,
+    "1024": 70519409
+   },
+   "windows": {
+    "256": {
+     "windows": 2304127,
+     "unique_windows": 2274259,
+     "unique_share": 0.987037
+    },
+    "512": {
+     "windows": 2304127,
+     "unique_windows": 2274259,
+     "unique_share": 0.987037
+    },
+    "1024": {
+     "windows": 2304127,
+     "unique_windows": 2274259,
+     "unique_share": 0.987037
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 25026062,
+    "tier2": 17335340,
+    "tier5": 10846513,
+    "core": 8016694,
+    "tier3": 5043616,
+    "tier6": 4088439,
+    "unknown": 162745
+   },
+   "tokens_by_domain_root": {
+    "everyday_life": 8431216,
+    "people_society": 8275155,
+    "science": 6024484,
+    "language": 5645770,
+    "nature": 5343121,
+    "health": 5177309,
+    "business": 4875808,
+    "technology": 4797279,
+    "arts": 4768405,
+    "law_government": 4644970,
+    "humanities": 3533524,
+    "education": 2956450,
+    "history": 2548345,
+    "mathematics": 1974397,
+    "sports_recreation": 1521005,
+    "none": 2171
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 281517,
+    "people_society": 269484,
+    "science": 199949,
+    "language": 184113,
+    "nature": 173446,
+    "health": 171819,
+    "business": 160830,
+    "technology": 159372,
+    "arts": 152733,
+    "law_government": 151044,
+    "humanities": 111001,
+    "education": 98760,
+    "history": 75926,
+    "mathematics": 64980,
+    "sports_recreation": 49085,
+    "none": 68
+   },
+   "diversity": {
+    "sample_texts": 15208,
+    "sample_words": 200017,
+    "distinct_n": {
+     "1": 0.102571,
+     "2": 0.537274,
+     "3": 0.829689,
+     "4": 0.944201
+    },
+    "top20_4gram_share": 0.011542,
+    "top_4grams": [
+     [
+      "what does it mean",
+      272
+     ],
+     [
+      "does it mean to",
+      168
+     ],
+     [
+      "mean in this sense",
+      148
+     ],
+     [
+      "what can be inferred",
+      130
+     ],
+     [
+      "mean when it describes",
+      130
+     ],
+     [
+      "can be inferred about",
+      123
+     ],
+     [
+      "what does that suggest",
+      92
+     ],
+     [
+      "does that suggest about",
+      87
+     ],
+     [
+      "does it mean for",
+      63
+     ],
+     [
+      "be inferred about the",
+      61
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 11.2878,
+    "opener_distinct_share": 0.52505,
+    "top_openers": [
+     [
+      "how does a",
+      0.03145
+     ],
+     [
+      "how does the",
+      0.0297
+     ],
+     [
+      "what did the",
+      0.0199
+     ],
+     [
+      "what is a",
+      0.019
+     ],
+     [
+      "what does it",
+      0.01755
+     ],
+     [
+      "what kind of",
+      0.01615
+     ],
+     [
+      "what does the",
+      0.01505
+     ],
+     [
+      "how can a",
+      0.01305
+     ]
+    ]
+   },
+   "headword_present_share": 0.675253,
+   "words": 30113692,
+   "strata": {
+    "columns": [
+     "question_type",
+     "difficulty"
+    ],
+    "values": {
+     "factual|easy": {
+      "rows": 325516,
+      "tokens": 7650997,
+      "mean_tokens": 23.5,
+      "headword_present_share": 0.638491,
+      "diversity": {
+       "sample_words": 50006,
+       "distinct_n": {
+        "1": 0.180378,
+        "2": 0.609071,
+        "3": 0.849625,
+        "4": 0.958139
+       },
+       "opener_entropy_bits": 8.724,
+       "top_openers": [
+        [
+         "what did the",
+         0.1374
+        ],
+        [
+         "what kind of",
+         0.0726
+        ],
+        [
+         "what kinds of",
+         0.0388
+        ]
+       ]
+      }
+     },
+     "comparison|medium": {
+      "rows": 296852,
+      "tokens": 9133730,
+      "mean_tokens": 30.77,
+      "headword_present_share": 0.684506,
+      "diversity": {
+       "sample_words": 50003,
+       "distinct_n": {
+        "1": 0.179789,
+        "2": 0.558897,
+        "3": 0.808669,
+        "4": 0.94419
+       },
+       "opener_entropy_bits": 7.8502,
+       "top_openers": [
+        [
+         "how does a",
+         0.1652
+        ],
+        [
+         "how does the",
+         0.1616
+        ],
+        [
+         "how do the",
+         0.0678
+        ]
+       ]
+      }
+     },
+     "reasoning|hard": {
+      "rows": 217741,
+      "tokens": 9880194,
+      "mean_tokens": 45.38,
+      "headword_present_share": 0.567344,
+      "diversity": {
+       "sample_words": 50000,
+       "distinct_n": {
+        "1": 0.16848,
+        "2": 0.645709,
+        "3": 0.875579,
+        "4": 0.946282
+       },
+       "opener_entropy_bits": 10.373,
+       "top_openers": [
+        [
+         "what follows when",
+         0.0502
+        ],
+        [
+         "what follows from",
+         0.0484
+        ],
+        [
+         "how can a",
+         0.0154
+        ]
+       ]
+      }
+     },
+     "definition|easy": {
+      "rows": 217191,
+      "tokens": 4421199,
+      "mean_tokens": 20.36,
+      "headword_present_share": 0.94282,
+      "diversity": {
+       "sample_words": 50004,
+       "distinct_n": {
+        "1": 0.155628,
+        "2": 0.430982,
+        "3": 0.657866,
+        "4": 0.791127
+       },
+       "opener_entropy_bits": 8.5266,
+       "top_openers": [
+        [
+         "what is a",
+         0.1236
+        ],
+        [
+         "what does it",
+         0.119
+        ],
+        [
+         "what kind of",
+         0.0632
+        ]
+       ]
+      }
+     },
+     "causal|medium": {
+      "rows": 191178,
+      "tokens": 5146513,
+      "mean_tokens": 26.92,
+      "headword_present_share": 0.653574,
+      "diversity": {
+       "sample_words": 50011,
+       "distinct_n": {
+        "1": 0.197037,
+        "2": 0.680115,
+        "3": 0.914552,
+        "4": 0.986359
+       },
+       "opener_entropy_bits": 9.6609,
+       "top_openers": [
+        [
+         "why might a",
+         0.0598
+        ],
+        [
+         "why can a",
+         0.0596
+        ],
+        [
+         "why did the",
+         0.0308
+        ]
+       ]
+      }
+     },
+     "procedural|medium": {
+      "rows": 177655,
+      "tokens": 4731522,
+      "mean_tokens": 26.63,
+      "headword_present_share": 0.676879,
+      "diversity": {
+       "sample_words": 50008,
+       "distinct_n": {
+        "1": 0.170673,
+        "2": 0.594537,
+        "3": 0.848032,
+        "4": 0.952702
+       },
+       "opener_entropy_bits": 8.4928,
+       "top_openers": [
+        [
+         "how can a",
+         0.0838
+        ],
+        [
+         "how is a",
+         0.056
+        ],
+        [
+         "how does a",
+         0.0558
+        ]
+       ]
+      }
+     },
+     "hypothetical|medium": {
+      "rows": 149606,
+      "tokens": 6574089,
+      "mean_tokens": 43.94,
+      "headword_present_share": 0.574175,
+      "diversity": {
+       "sample_words": 50011,
+       "distinct_n": {
+        "1": 0.157505,
+        "2": 0.599552,
+        "3": 0.854299,
+        "4": 0.951923
+       },
+       "opener_entropy_bits": 10.9076,
+       "top_openers": [
+        [
+         "if a person",
+         0.0184
+        ],
+        [
+         "if someone wanted",
+         0.01
+        ],
+        [
+         "if a community",
+         0.0072
+        ]
+       ]
+      }
+     },
+     "procedural|easy": {
+      "rows": 139921,
+      "tokens": 3529439,
+      "mean_tokens": 25.22,
+      "headword_present_share": 0.650603,
+      "diversity": {
+       "sample_words": 50005,
+       "distinct_n": {
+        "1": 0.177042,
+        "2": 0.59763,
+        "3": 0.844264,
+        "4": 0.953425
+       },
+       "opener_entropy_bits": 8.4224,
+       "top_openers": [
+        [
+         "how did the",
+         0.0762
+        ],
+        [
+         "how can a",
+         0.0516
+        ],
+        [
+         "how is a",
+         0.0432
+        ]
+       ]
+      }
+     },
+     "hypothetical|hard": {
+      "rows": 120437,
+      "tokens": 5714594,
+      "mean_tokens": 47.45,
+      "headword_present_share": 0.575936,
+      "diversity": {
+       "sample_words": 50021,
+       "distinct_n": {
+        "1": 0.160513,
+        "2": 0.611907,
+        "3": 0.861617,
+        "4": 0.954749
+       },
+       "opener_entropy_bits": 11.041,
+       "top_openers": [
+        [
+         "if a person",
+         0.0172
+        ],
+        [
+         "if a learner",
+         0.009
+        ],
+        [
+         "if a student",
+         0.0076
+        ]
+       ]
+      }
+     },
+     "causal|easy": {
+      "rows": 118406,
+      "tokens": 2899976,
+      "mean_tokens": 24.49,
+      "headword_present_share": 0.587656,
+      "diversity": {
+       "sample_words": 50005,
+       "distinct_n": {
+        "1": 0.20124,
+        "2": 0.666999,
+        "3": 0.895422,
+        "4": 0.978726
+       },
+       "opener_entropy_bits": 9.2475,
+       "top_openers": [
+        [
+         "why did the",
+         0.0856
+        ],
+        [
+         "why might a",
+         0.0436
+        ],
+        [
+         "what effect did",
+         0.027
+        ]
+       ]
+      }
+     },
+     "definition|medium": {
+      "rows": 111296,
+      "tokens": 2156303,
+      "mean_tokens": 19.37,
+      "headword_present_share": 0.953574,
+      "diversity": {
+       "sample_words": 50003,
+       "distinct_n": {
+        "1": 0.148371,
+        "2": 0.414336,
+        "3": 0.64013,
+        "4": 0.780354
+       },
+       "opener_entropy_bits": 8.9316,
+       "top_openers": [
+        [
+         "what is a",
+         0.141
+        ],
+        [
+         "what does it",
+         0.109
+        ],
+        [
+         "what does the",
+         0.0484
+        ]
+       ]
+      }
+     },
+     "reasoning|medium": {
+      "rows": 102058,
+      "tokens": 3978393,
+      "mean_tokens": 38.98,
+      "headword_present_share": 0.596102,
+      "diversity": {
+       "sample_words": 50008,
+       "distinct_n": {
+        "1": 0.167913,
+        "2": 0.629682,
+        "3": 0.868272,
+        "4": 0.944689
+       },
+       "opener_entropy_bits": 10.3762,
+       "top_openers": [
+        [
+         "what follows when",
+         0.0394
+        ],
+        [
+         "how does the",
+         0.023
+        ],
+        [
+         "what follows from",
+         0.022
+        ]
+       ]
+      }
+     },
+     "hypothetical|easy": {
+      "rows": 55663,
+      "tokens": 2296413,
+      "mean_tokens": 41.26,
+      "headword_present_share": 0.584931,
+      "diversity": {
+       "sample_words": 50007,
+       "distinct_n": {
+        "1": 0.157318,
+        "2": 0.598639,
+        "3": 0.853432,
+        "4": 0.953036
+       },
+       "opener_entropy_bits": 10.8102,
+       "top_openers": [
+        [
+         "if a person",
+         0.0198
+        ],
+        [
+         "if someone wanted",
+         0.0116
+        ],
+        [
+         "if a student",
+         0.0096
+        ]
+       ]
+      }
+     },
+     "comparison|easy": {
+      "rows": 26177,
+      "tokens": 776892,
+      "mean_tokens": 29.68,
+      "headword_present_share": 0.64465,
+      "diversity": {
+       "sample_words": 50008,
+       "distinct_n": {
+        "1": 0.175932,
+        "2": 0.544407,
+        "3": 0.80145,
+        "4": 0.940222
+       },
+       "opener_entropy_bits": 7.1985,
+       "top_openers": [
+        [
+         "how does the",
+         0.163
+        ],
+        [
+         "how does a",
+         0.1612
+        ],
+        [
+         "how do the",
+         0.1392
+        ]
+       ]
+      }
+     },
+     "causal|hard": {
+      "rows": 23193,
+      "tokens": 674446,
+      "mean_tokens": 29.08,
+      "headword_present_share": 0.731341,
+      "diversity": {
+       "sample_words": 50008,
+       "distinct_n": {
+        "1": 0.192069,
+        "2": 0.660215,
+        "3": 0.894738,
+        "4": 0.975566
+       },
+       "opener_entropy_bits": 9.3249,
+       "top_openers": [
+        [
+         "why might a",
+         0.0828
+        ],
+        [
+         "why can a",
+         0.0646
+        ],
+        [
+         "why can the",
+         0.0384
+        ]
+       ]
+      }
+     },
+     "procedural|hard": {
+      "rows": 17082,
+      "tokens": 495743,
+      "mean_tokens": 29.02,
+      "headword_present_share": 0.707763,
+      "diversity": {
+       "sample_words": 50015,
+       "distinct_n": {
+        "1": 0.156853,
+        "2": 0.539583,
+        "3": 0.79238,
+        "4": 0.91339
+       },
+       "opener_entropy_bits": 8.0881,
+       "top_openers": [
+        [
+         "how did the",
+         0.0854
+        ],
+        [
+         "how can a",
+         0.063
+        ],
+        [
+         "what steps can",
+         0.0474
+        ]
+       ]
+      }
+     },
+     "comparison|hard": {
+      "rows": 8926,
+      "tokens": 290804,
+      "mean_tokens": 32.58,
+      "headword_present_share": 0.731235,
+      "diversity": {
+       "sample_words": 50011,
+       "distinct_n": {
+        "1": 0.178421,
+        "2": 0.550399,
+        "3": 0.794486,
+        "4": 0.929056
+       },
+       "opener_entropy_bits": 7.9728,
+       "top_openers": [
+        [
+         "how does the",
+         0.1842
+        ],
+        [
+         "how does a",
+         0.1698
+        ],
+        [
+         "how does an",
+         0.037
+        ]
+       ]
+      }
+     },
+     "reasoning|easy": {
+      "rows": 2759,
+      "tokens": 98814,
+      "mean_tokens": 35.82,
+      "headword_present_share": 0.623414,
+      "diversity": {
+       "sample_words": 41756,
+       "distinct_n": {
+        "1": 0.183183,
+        "2": 0.625208,
+        "3": 0.860221,
+        "4": 0.942652
+       },
+       "opener_entropy_bits": 9.0643,
+       "top_openers": [
+        [
+         "what follows when",
+         0.14348
+        ],
+        [
+         "what follows if",
+         0.02506
+        ],
+        [
+         "what follows from",
+         0.01816
+        ]
+       ]
+      }
+     },
+     "factual|medium": {
+      "rows": 2400,
+      "tokens": 67230,
+      "mean_tokens": 28.01,
+      "headword_present_share": 0.705417,
+      "diversity": {
+       "sample_words": 28257,
+       "distinct_n": {
+        "1": 0.211063,
+        "2": 0.642117,
+        "3": 0.865431,
+        "4": 0.956175
+       },
+       "opener_entropy_bits": 8.8512,
+       "top_openers": [
+        [
+         "what kinds of",
+         0.08532
+        ],
+        [
+         "what does the",
+         0.04768
+        ],
+        [
+         "what kind of",
+         0.02091
+        ]
+       ]
+      }
+     },
+     "factual|hard": {
+      "rows": 68,
+      "tokens": 2073,
+      "mean_tokens": 30.49,
+      "headword_present_share": 0.808824
+     },
+     "definition|hard": {
+      "rows": 2,
+      "tokens": 45,
+      "mean_tokens": 22.5,
+      "headword_present_share": 0.0
+     }
+    }
+   },
+   "seconds": 59.2
+  },
+  "qa.answer": {
+   "dataset": "opengloss-v2.4-rc2-qa-pairs/data",
+   "text_column": "answer",
+   "rows": 2304127,
+   "unique_normalized_texts": 2277893,
+   "exact_normalized_duplicate_rows": 26234,
+   "exact_normalized_duplicate_share": 0.011386,
+   "tokens": 95388362,
+   "unique_text_tokens": 94552763,
+   "tokens_per_row": {
+    "mean": 41.399,
+    "p50": 40.0,
+    "p90": 64.0,
+    "p99": 91.0,
+    "max": 190.0
+   },
+   "length_band_share": {
+    ">64": 0.094631,
+    ">128": 0.000238,
+    ">256": 0.0,
+    ">512": 0.0,
+    ">1024": 0.0,
+    ">2048": 0.0
+   },
+   "truncated_attended_tokens": {
+    "256": 95388362,
+    "512": 95388362,
+    "1024": 95388362
+   },
+   "windows": {
+    "256": {
+     "windows": 2304127,
+     "unique_windows": 2277915,
+     "unique_share": 0.988624
+    },
+    "512": {
+     "windows": 2304127,
+     "unique_windows": 2277915,
+     "unique_share": 0.988624
+    },
+    "1024": {
+     "windows": 2304127,
+     "unique_windows": 2277915,
+     "unique_share": 0.988624
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 32612010,
+    "tier2": 25039394,
+    "tier5": 14888230,
+    "core": 10620011,
+    "tier3": 6298531,
+    "tier6": 5694900,
+    "unknown": 235286
+   },
+   "tokens_by_domain_root": {
+    "people_society": 11383207,
+    "everyday_life": 11066128,
+    "science": 8149326,
+    "language": 7366610,
+    "nature": 7362547,
+    "health": 7355889,
+    "business": 6501815,
+    "arts": 6497555,
+    "technology": 6419446,
+    "law_government": 6295185,
+    "humanities": 4830281,
+    "education": 3875580,
+    "history": 3665597,
+    "mathematics": 2549762,
+    "sports_recreation": 2066632,
+    "none": 2802
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 281517,
+    "people_society": 269484,
+    "science": 199949,
+    "language": 184113,
+    "nature": 173446,
+    "health": 171819,
+    "business": 160830,
+    "technology": 159372,
+    "arts": 152733,
+    "law_government": 151044,
+    "humanities": 111001,
+    "education": 98760,
+    "history": 75926,
+    "mathematics": 64980,
+    "sports_recreation": 49085,
+    "none": 68
+   },
+   "diversity": {
+    "sample_texts": 11465,
+    "sample_words": 200012,
+    "distinct_n": {
+     "1": 0.099859,
+     "2": 0.624062,
+     "3": 0.914904,
+     "4": 0.981904
+    },
+    "top20_4gram_share": 0.00218,
+    "top_4grams": [
+     [
+      "is described as a",
+      32
+     ],
+     [
+      "it refers to a",
+      30
+     ],
+     [
+      "it would be a",
+      25
+     ],
+     [
+      "it means that the",
+      22
+     ],
+     [
+      "it refers to the",
+      21
+     ],
+     [
+      "can be used to",
+      18
+     ],
+     [
+      "describes something related to",
+      18
+     ],
+     [
+      "is a person who",
+      17
+     ],
+     [
+      "can serve as a",
+      17
+     ],
+     [
+      "it describes something related",
+      17
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 12.9465,
+    "opener_distinct_share": 0.7382,
+    "top_openers": [
+     [
+      "it is a",
+      0.0312
+     ],
+     [
+      "it is the",
+      0.01235
+     ],
+     [
+      "it would be",
+      0.0088
+     ],
+     [
+      "it is an",
+      0.00715
+     ],
+     [
+      "it refers to",
+      0.00715
+     ],
+     [
+      "it means to",
+      0.0071
+     ],
+     [
+      "it describes something",
+      0.00545
+     ],
+     [
+      "it can be",
+      0.005
+     ]
+    ]
+   },
+   "headword_present_share": 0.286087,
+   "words": 39739215,
+   "strata": {
+    "columns": [
+     "question_type",
+     "difficulty"
+    ],
+    "values": {
+     "factual|easy": {
+      "rows": 325516,
+      "tokens": 7563982,
+      "mean_tokens": 23.24,
+      "headword_present_share": 0.317035,
+      "diversity": {
+       "sample_words": 50012,
+       "distinct_n": {
+        "1": 0.223086,
+        "2": 0.748977,
+        "3": 0.945777,
+        "4": 0.985355
+       },
+       "opener_entropy_bits": 11.9047,
+       "top_openers": [
+        [
+         "it is a",
+         0.0118
+        ],
+        [
+         "it is used",
+         0.0058
+        ],
+        [
+         "he was born",
+         0.0038
+        ]
+       ]
+      }
+     },
+     "comparison|medium": {
+      "rows": 296852,
+      "tokens": 17059983,
+      "mean_tokens": 57.47,
+      "headword_present_share": 0.514223,
+      "diversity": {
+       "sample_words": 50006,
+       "distinct_n": {
+        "1": 0.198756,
+        "2": 0.758074,
+        "3": 0.955546,
+        "4": 0.989175
+       },
+       "opener_entropy_bits": 12.1644,
+       "top_openers": [
+        [
+         "as a surname",
+         0.0038
+        ],
+        [
+         "in both cases",
+         0.0024
+        ],
+        [
+         "as an adjective",
+         0.0024
+        ]
+       ]
+      }
+     },
+     "reasoning|hard": {
+      "rows": 217741,
+      "tokens": 10470544,
+      "mean_tokens": 48.09,
+      "headword_present_share": 0.274441,
+      "diversity": {
+       "sample_words": 50018,
+       "distinct_n": {
+        "1": 0.170679,
+        "2": 0.722714,
+        "3": 0.94712,
+        "4": 0.990796
+       },
+       "opener_entropy_bits": 11.6728,
+       "top_openers": [
+        [
+         "it can be",
+         0.0096
+        ],
+        [
+         "it suggests that",
+         0.0084
+        ],
+        [
+         "in both cases",
+         0.0078
+        ]
+       ]
+      }
+     },
+     "definition|easy": {
+      "rows": 217191,
+      "tokens": 8347884,
+      "mean_tokens": 38.44,
+      "headword_present_share": 0.241156,
+      "diversity": {
+       "sample_words": 50008,
+       "distinct_n": {
+        "1": 0.174372,
+        "2": 0.635132,
+        "3": 0.876596,
+        "4": 0.959784
+       },
+       "opener_entropy_bits": 7.7545,
+       "top_openers": [
+        [
+         "it is a",
+         0.1592
+        ],
+        [
+         "it is the",
+         0.064
+        ],
+        [
+         "it means to",
+         0.0628
+        ]
+       ]
+      }
+     },
+     "causal|medium": {
+      "rows": 191178,
+      "tokens": 8521740,
+      "mean_tokens": 44.57,
+      "headword_present_share": 0.18897,
+      "diversity": {
+       "sample_words": 50016,
+       "distinct_n": {
+        "1": 0.184001,
+        "2": 0.755287,
+        "3": 0.959612,
+        "4": 0.993445
+       },
+       "opener_entropy_bits": 11.9203,
+       "top_openers": [
+        [
+         "because it is",
+         0.0072
+        ],
+        [
+         "it provides a",
+         0.0056
+        ],
+        [
+         "it may be",
+         0.0026
+        ]
+       ]
+      }
+     },
+     "procedural|medium": {
+      "rows": 177655,
+      "tokens": 9006771,
+      "mean_tokens": 50.7,
+      "headword_present_share": 0.16541,
+      "diversity": {
+       "sample_words": 50004,
+       "distinct_n": {
+        "1": 0.193665,
+        "2": 0.750572,
+        "3": 0.954869,
+        "4": 0.990972
+       },
+       "opener_entropy_bits": 11.3755,
+       "top_openers": [
+        [
+         "it can be",
+         0.0234
+        ],
+        [
+         "they can use",
+         0.0176
+        ],
+        [
+         "it can use",
+         0.0094
+        ]
+       ]
+      }
+     },
+     "hypothetical|medium": {
+      "rows": 149606,
+      "tokens": 5732371,
+      "mean_tokens": 38.32,
+      "headword_present_share": 0.316137,
+      "diversity": {
+       "sample_words": 50001,
+       "distinct_n": {
+        "1": 0.182276,
+        "2": 0.694604,
+        "3": 0.916608,
+        "4": 0.975664
+       },
+       "opener_entropy_bits": 10.4863,
+       "top_openers": [
+        [
+         "it would be",
+         0.0646
+        ],
+        [
+         "they would be",
+         0.0154
+        ],
+        [
+         "it could be",
+         0.0152
+        ]
+       ]
+      }
+     },
+     "procedural|easy": {
+      "rows": 139921,
+      "tokens": 4271361,
+      "mean_tokens": 30.53,
+      "headword_present_share": 0.233432,
+      "diversity": {
+       "sample_words": 50006,
+       "distinct_n": {
+        "1": 0.196376,
+        "2": 0.735435,
+        "3": 0.944363,
+        "4": 0.982483
+       },
+       "opener_entropy_bits": 11.5921,
+       "top_openers": [
+        [
+         "it can be",
+         0.0174
+        ],
+        [
+         "they can use",
+         0.0172
+        ],
+        [
+         "it is formed",
+         0.0158
+        ]
+       ]
+      }
+     },
+     "hypothetical|hard": {
+      "rows": 120437,
+      "tokens": 5812577,
+      "mean_tokens": 48.26,
+      "headword_present_share": 0.294486,
+      "diversity": {
+       "sample_words": 50003,
+       "distinct_n": {
+        "1": 0.17485,
+        "2": 0.695562,
+        "3": 0.9187,
+        "4": 0.978094
+       },
+       "opener_entropy_bits": 10.4809,
+       "top_openers": [
+        [
+         "it would be",
+         0.0478
+        ],
+        [
+         "it would lack",
+         0.0152
+        ],
+        [
+         "it could be",
+         0.015
+        ]
+       ]
+      }
+     },
+     "causal|easy": {
+      "rows": 118406,
+      "tokens": 3367680,
+      "mean_tokens": 28.44,
+      "headword_present_share": 0.167922,
+      "diversity": {
+       "sample_words": 50002,
+       "distinct_n": {
+        "1": 0.190732,
+        "2": 0.737613,
+        "3": 0.947028,
+        "4": 0.987159
+       },
+       "opener_entropy_bits": 11.8498,
+       "top_openers": [
+        [
+         "it can help",
+         0.0092
+        ],
+        [
+         "they do so",
+         0.004
+        ],
+        [
+         "they are used",
+         0.0036
+        ]
+       ]
+      }
+     },
+     "definition|medium": {
+      "rows": 111296,
+      "tokens": 4914771,
+      "mean_tokens": 44.16,
+      "headword_present_share": 0.119375,
+      "diversity": {
+       "sample_words": 50018,
+       "distinct_n": {
+        "1": 0.171078,
+        "2": 0.65269,
+        "3": 0.889376,
+        "4": 0.965879
+       },
+       "opener_entropy_bits": 5.8743,
+       "top_openers": [
+        [
+         "it is a",
+         0.2814
+        ],
+        [
+         "it is the",
+         0.1186
+        ],
+        [
+         "it is an",
+         0.0604
+        ]
+       ]
+      }
+     },
+     "reasoning|medium": {
+      "rows": 102058,
+      "tokens": 4083293,
+      "mean_tokens": 40.01,
+      "headword_present_share": 0.280341,
+      "diversity": {
+       "sample_words": 50003,
+       "distinct_n": {
+        "1": 0.17485,
+        "2": 0.714832,
+        "3": 0.942748,
+        "4": 0.987826
+       },
+       "opener_entropy_bits": 11.6195,
+       "top_openers": [
+        [
+         "it indicates that",
+         0.01
+        ],
+        [
+         "it suggests that",
+         0.0088
+        ],
+        [
+         "it can be",
+         0.0082
+        ]
+       ]
+      }
+     },
+     "hypothetical|easy": {
+      "rows": 55663,
+      "tokens": 1713139,
+      "mean_tokens": 30.78,
+      "headword_present_share": 0.340729,
+      "diversity": {
+       "sample_words": 50002,
+       "distinct_n": {
+        "1": 0.184373,
+        "2": 0.670567,
+        "3": 0.902084,
+        "4": 0.968277
+       },
+       "opener_entropy_bits": 10.5399,
+       "top_openers": [
+        [
+         "it would be",
+         0.0654
+        ],
+        [
+         "they would be",
+         0.0186
+        ],
+        [
+         "it could be",
+         0.0146
+        ]
+       ]
+      }
+     },
+     "comparison|easy": {
+      "rows": 26177,
+      "tokens": 1104960,
+      "mean_tokens": 42.21,
+      "headword_present_share": 0.500287,
+      "diversity": {
+       "sample_words": 50007,
+       "distinct_n": {
+        "1": 0.204531,
+        "2": 0.730261,
+        "3": 0.939747,
+        "4": 0.983441
+       },
+       "opener_entropy_bits": 12.165,
+       "top_openers": [
+        [
+         "they differ in",
+         0.0026
+        ],
+        [
+         "in one example",
+         0.0024
+        ],
+        [
+         "the first is",
+         0.0024
+        ]
+       ]
+      }
+     },
+     "causal|hard": {
+      "rows": 23193,
+      "tokens": 1337326,
+      "mean_tokens": 57.66,
+      "headword_present_share": 0.275126,
+      "diversity": {
+       "sample_words": 50019,
+       "distinct_n": {
+        "1": 0.178092,
+        "2": 0.738609,
+        "3": 0.95485,
+        "4": 0.99101
+       },
+       "opener_entropy_bits": 11.8887,
+       "top_openers": [
+        [
+         "because it is",
+         0.0102
+        ],
+        [
+         "it is a",
+         0.0046
+        ],
+        [
+         "because the term",
+         0.0034
+        ]
+       ]
+      }
+     },
+     "procedural|hard": {
+      "rows": 17082,
+      "tokens": 1225384,
+      "mean_tokens": 71.74,
+      "headword_present_share": 0.208582,
+      "diversity": {
+       "sample_words": 50001,
+       "distinct_n": {
+        "1": 0.191776,
+        "2": 0.737754,
+        "3": 0.946462,
+        "4": 0.986822
+       },
+       "opener_entropy_bits": 11.1237,
+       "top_openers": [
+        [
+         "it can be",
+         0.0206
+        ],
+        [
+         "it is used",
+         0.0138
+        ],
+        [
+         "it began as",
+         0.0134
+        ]
+       ]
+      }
+     },
+     "comparison|hard": {
+      "rows": 8926,
+      "tokens": 650020,
+      "mean_tokens": 72.82,
+      "headword_present_share": 0.577302,
+      "diversity": {
+       "sample_words": 50007,
+       "distinct_n": {
+        "1": 0.192153,
+        "2": 0.738559,
+        "3": 0.937499,
+        "4": 0.977914
+       },
+       "opener_entropy_bits": 12.1405,
+       "top_openers": [
+        [
+         "as a surname",
+         0.0034
+        ],
+        [
+         "the definition describes",
+         0.003
+        ],
+        [
+         "the definition emphasizes",
+         0.0024
+        ]
+       ]
+      }
+     },
+     "reasoning|easy": {
+      "rows": 2759,
+      "tokens": 77110,
+      "mean_tokens": 27.95,
+      "headword_present_share": 0.324755,
+      "diversity": {
+       "sample_words": 32395,
+       "distinct_n": {
+        "1": 0.22025,
+        "2": 0.729014,
+        "3": 0.941577,
+        "4": 0.984439
+       },
+       "opener_entropy_bits": 10.8466,
+       "top_openers": [
+        [
+         "it indicates that",
+         0.01895
+        ],
+        [
+         "it can be",
+         0.01093
+        ],
+        [
+         "it would be",
+         0.00984
+        ]
+       ]
+      }
+     },
+     "factual|medium": {
+      "rows": 2400,
+      "tokens": 122960,
+      "mean_tokens": 51.23,
+      "headword_present_share": 0.170833,
+      "diversity": {
+       "sample_words": 49248,
+       "distinct_n": {
+        "1": 0.209349,
+        "2": 0.76066,
+        "3": 0.952618,
+        "4": 0.98845
+       },
+       "opener_entropy_bits": 10.6725,
+       "top_openers": [
+        [
+         "it can describe",
+         0.00753
+        ],
+        [
+         "it can include",
+         0.00711
+        ],
+        [
+         "it can be",
+         0.00628
+        ]
+       ]
+      }
+     },
+     "factual|hard": {
+      "rows": 68,
+      "tokens": 4396,
+      "mean_tokens": 64.65,
+      "headword_present_share": 0.220588
+     },
+     "definition|hard": {
+      "rows": 2,
+      "tokens": 110,
+      "mean_tokens": 55.0,
+      "headword_present_share": 0.0
+     }
+    }
+   },
+   "near_duplicates": {
+    "docs": 2304127,
+    "docs_in_near_dup_cluster": 55928,
+    "docs_in_near_dup_cluster_share": 0.024273,
+    "near_dup_excess_share": 0.012953,
+    "exact_normalized_excess_share": 0.011386,
+    "method": "MinHash over student-token 8-gram shingles, 64 hashes, 16x4 LSH, signature agreement >= 0.8 to the bucket's first member; excess = docs removable by keeping one per cluster"
+   },
+   "seconds": 153.4
+  },
+  "pretrain": {
+   "dataset": "opengloss-v2.4-rc2-pretrain/data",
+   "text_column": "text",
+   "rows": 1910373,
+   "unique_normalized_texts": 1910373,
+   "exact_normalized_duplicate_rows": 0,
+   "exact_normalized_duplicate_share": 0.0,
+   "tokens": 1325283317,
+   "unique_text_tokens": 1325283317,
+   "tokens_per_row": {
+    "mean": 693.73,
+    "p50": 378.0,
+    "p90": 1742.0,
+    "p99": 2360.0,
+    "max": 7626.0
+   },
+   "length_band_share": {
+    ">64": 0.980124,
+    ">128": 0.868794,
+    ">256": 0.630758,
+    ">512": 0.416155,
+    ">1024": 0.288284,
+    ">2048": 0.038228
+   },
+   "truncated_attended_tokens": {
+    "256": 415710465,
+    "512": 662923624,
+    "1024": 995018528
+   },
+   "windows": {
+    "256": {
+     "windows": 6118270,
+     "unique_windows": 6097325,
+     "unique_share": 0.996577
+    },
+    "512": {
+     "windows": 3632370,
+     "unique_windows": 3626382,
+     "unique_share": 0.998351
+    },
+    "1024": {
+     "windows": 2543544,
+     "unique_windows": 2541791,
+     "unique_share": 0.999311
+    }
+   },
+   "tokens_by_tier": {
+    "tier4": 486704678,
+    "tier2": 305077595,
+    "tier5": 237577008,
+    "core": 121082270,
+    "tier3": 103595630,
+    "tier6": 69296607,
+    "unknown": 1949529
+   },
+   "tokens_by_domain_root": {
+    "everyday_life": 174529970,
+    "people_society": 164657544,
+    "science": 122060054,
+    "health": 115185848,
+    "nature": 111607421,
+    "language": 93810805,
+    "law_government": 86788042,
+    "business": 83943519,
+    "arts": 78284430,
+    "technology": 77835404,
+    "humanities": 61664921,
+    "education": 47466824,
+    "history": 46931634,
+    "mathematics": 34103282,
+    "sports_recreation": 26413619
+   },
+   "rows_by_domain_root": {
+    "everyday_life": 255339,
+    "people_society": 221148,
+    "health": 187380,
+    "science": 179855,
+    "nature": 165010,
+    "language": 128747,
+    "arts": 119376,
+    "law_government": 119162,
+    "business": 117107,
+    "technology": 110517,
+    "humanities": 86890,
+    "history": 68391,
+    "education": 61601,
+    "mathematics": 48223,
+    "sports_recreation": 41627
+   },
+   "diversity": {
+    "sample_texts": 832,
+    "sample_words": 200021,
+    "distinct_n": {
+     "1": 0.080322,
+     "2": 0.564795,
+     "3": 0.846494,
+     "4": 0.933021
+    },
+    "top20_4gram_share": 0.012191,
+    "top_4grams": [
+     [
+      "english it appeared as",
+      459
+     ],
+     [
+      "in english it appeared",
+      299
+     ],
+     [
+      "latin it appeared as",
+      191
+     ],
+     [
+      "in latin it appeared",
+      173
+     ],
+     [
+      "noun sense 1 a",
+      168
+     ],
+     [
+      "in formal writing a",
+      123
+     ],
+     [
+      "during the classical latin",
+      117
+     ],
+     [
+      "french it appeared as",
+      102
+     ],
+     [
+      "in technical writing a",
+      95
+     ],
+     [
+      "the classical latin in",
+      77
+     ]
+    ],
+    "opener_sample": 20000,
+    "opener_entropy_bits": 12.644,
+    "opener_distinct_share": 0.75015,
+    "top_openers": [
+     [
+      "informally it s",
+      0.06825
+     ],
+     [
+      "forms comparative more",
+      0.0232
+     ],
+     [
+      "forms derived forms",
+      0.0136
+     ],
+     [
+      "forms past tense",
+      0.0128
+     ],
+     [
+      "informally it's a",
+      0.00605
+     ],
+     [
+      "informally think of",
+      0.00525
+     ],
+     [
+      "informally it means",
+      0.0044
+     ],
+     [
+      "broader terms name",
+      0.00415
+     ]
+    ]
+   },
+   "strata": {
+    "columns": [
+     "template",
+     "level_used"
+    ],
+    "values": {
+     "dictionary|neutral": {
+      "rows": 160724,
+      "tokens": 40359445,
+      "mean_tokens": 251.11,
+      "diversity": {
+       "sample_words": 50015,
+       "distinct_n": {
+        "1": 0.193862,
+        "2": 0.721039,
+        "3": 0.928198,
+        "4": 0.977841
+       },
+       "opener_entropy_bits": 10.3811,
+       "top_openers": [
+        [
+         "forms comparative more",
+         0.096
+        ],
+        [
+         "forms derived forms",
+         0.0566
+        ],
+        [
+         "forms past tense",
+         0.0486
+        ]
+       ]
+      }
+     },
+     "encyclopedia|neutral": {
+      "rows": 160724,
+      "tokens": 279870766,
+      "mean_tokens": 1741.31,
+      "diversity": {
+       "sample_words": 50687,
+       "distinct_n": {
+        "1": 0.146882,
+        "2": 0.648229,
+        "3": 0.863324,
+        "4": 0.930965
+       },
+       "opener_entropy_bits": 12.1156,
+       "top_openers": [
+        [
+         "at its core",
+         0.009
+        ],
+        [
+         "introduction",
+         0.0054
+        ],
+        [
+         "overview",
+         0.005
+        ]
+       ]
+      }
+     },
+     "usage_note|neutral": {
+      "rows": 160724,
+      "tokens": 75132613,
+      "mean_tokens": 467.46,
+      "diversity": {
+       "sample_words": 50171,
+       "distinct_n": {
+        "1": 0.123797,
+        "2": 0.554549,
+        "3": 0.797873,
+        "4": 0.900456
+       },
+       "opener_entropy_bits": 8.9376,
+       "top_openers": [
+        [
+         "informally it s",
+         0.2058
+        ],
+        [
+         "informally someone who",
+         0.0178
+        ],
+        [
+         "informally in a",
+         0.0118
+        ]
+       ]
+      }
+     },
+     "usage_note|college": {
+      "rows": 160723,
+      "tokens": 65362454,
+      "mean_tokens": 406.68,
+      "diversity": {
+       "sample_words": 50404,
+       "distinct_n": {
+        "1": 0.132113,
+        "2": 0.56223,
+        "3": 0.796542,
+        "4": 0.898842
+       },
+       "opener_entropy_bits": 6.4138,
+       "top_openers": [
+        [
+         "informally it s",
+         0.3838
+        ],
+        [
+         "informally think of",
+         0.0554
+        ],
+        [
+         "informally it describes",
+         0.0214
+        ]
+       ]
+      }
+     },
+     "encyclopedia|grade_5": {
+      "rows": 160371,
+      "tokens": 219070363,
+      "mean_tokens": 1366.02,
+      "diversity": {
+       "sample_words": 50558,
+       "distinct_n": {
+        "1": 0.119131,
+        "2": 0.6149,
+        "3": 0.843832,
+        "4": 0.916585
+       },
+       "opener_entropy_bits": 12.2823,
+       "top_openers": [
+        [
+         "introduction",
+         0.0006
+        ],
+        [
+         "the law of",
+         0.0006
+        ],
+        [
+         "the university of",
+         0.0006
+        ]
+       ]
+      }
+     },
+     "encyclopedia|college": {
+      "rows": 160371,
+      "tokens": 263577777,
+      "mean_tokens": 1643.55,
+      "diversity": {
+       "sample_words": 50419,
+       "distinct_n": {
+        "1": 0.148634,
+        "2": 0.668898,
+        "3": 0.880858,
+        "4": 0.941316
+       },
+       "opener_entropy_bits": 12.2786,
+       "top_openers": [
+        [
+         "in mathematics and",
+         0.0006
+        ],
+        [
+         "in academic discourse",
+         0.0006
+        ],
+        [
+         "the gulf of",
+         0.0006
+        ]
+       ]
+      }
+     },
+     "dictionary|college": {
+      "rows": 159860,
+      "tokens": 46322107,
+      "mean_tokens": 289.77,
+      "diversity": {
+       "sample_words": 50007,
+       "distinct_n": {
+        "1": 0.193553,
+        "2": 0.74105,
+        "3": 0.944412,
+        "4": 0.984039
+       },
+       "opener_entropy_bits": 10.3263,
+       "top_openers": [
+        [
+         "forms comparative more",
+         0.09
+        ],
+        [
+         "forms derived forms",
+         0.0552
+        ],
+        [
+         "forms past tense",
+         0.048
+        ]
+       ]
+      }
+     },
+     "dictionary|grade_5": {
+      "rows": 159849,
+      "tokens": 38266147,
+      "mean_tokens": 239.39,
+      "diversity": {
+       "sample_words": 50112,
+       "distinct_n": {
+        "1": 0.136694,
+        "2": 0.669838,
+        "3": 0.921514,
+        "4": 0.978146
+       },
+       "opener_entropy_bits": 10.2281,
+       "top_openers": [
+        [
+         "forms comparative more",
+         0.0982
+        ],
+        [
+         "forms derived forms",
+         0.056
+        ],
+        [
+         "forms past tense",
+         0.046
+        ]
+       ]
+      }
+     },
+     "usage_note|grade_5": {
+      "rows": 158331,
+      "tokens": 39505360,
+      "mean_tokens": 249.51,
+      "diversity": {
+       "sample_words": 50227,
+       "distinct_n": {
+        "1": 0.091047,
+        "2": 0.505011,
+        "3": 0.782836,
+        "4": 0.896027
+       },
+       "opener_entropy_bits": 8.0562,
+       "top_openers": [
+        [
+         "informally it s",
+         0.238
+        ],
+        [
+         "informally it's a",
+         0.044
+        ],
+        [
+         "informally it means",
+         0.0364
+        ]
+       ]
+      }
+     },
+     "thesaurus|neutral": {
+      "rows": 155603,
+      "tokens": 92577884,
+      "mean_tokens": 594.96,
+      "diversity": {
+       "sample_words": 50121,
+       "distinct_n": {
+        "1": 0.118453,
+        "2": 0.617092,
+        "3": 0.875596,
+        "4": 0.95661
+       },
+       "opener_entropy_bits": 12.0361,
+       "top_openers": [
+        [
+         "broader terms name",
+         0.0166
+        ],
+        [
+         "broader terms plant",
+         0.0028
+        ],
+        [
+         "broader terms person",
+         0.0026
+        ]
+       ]
+      }
+     },
+     "thesaurus|grade_5": {
+      "rows": 155329,
+      "tokens": 73402861,
+      "mean_tokens": 472.56,
+      "diversity": {
+       "sample_words": 50070,
+       "distinct_n": {
+        "1": 0.106611,
+        "2": 0.61355,
+        "3": 0.875687,
+        "4": 0.95404
+       },
+       "opener_entropy_bits": 12.0257,
+       "top_openers": [
+        [
+         "broader terms name",
+         0.0166
+        ],
+        [
+         "broader terms city",
+         0.0032
+        ],
+        [
+         "broader terms person",
+         0.003
+        ]
+       ]
+      }
+     },
+     "thesaurus|college": {
+      "rows": 155296,
+      "tokens": 90142672,
+      "mean_tokens": 580.46,
+      "diversity": {
+       "sample_words": 50305,
+       "distinct_n": {
+        "1": 0.12784,
+        "2": 0.640403,
+        "3": 0.887968,
+        "4": 0.96154
+       },
+       "opener_entropy_bits": 12.0149,
+       "top_openers": [
+        [
+         "broader terms name",
+         0.019
+        ],
+        [
+         "broader terms plant",
+         0.003
+        ],
+        [
+         "broader terms personal",
+         0.0026
+        ]
+       ]
+      }
+     },
+     "dictionary|mixed": {
+      "rows": 1670,
+      "tokens": 641197,
+      "mean_tokens": 383.95,
+      "diversity": {
+       "sample_words": 50161,
+       "distinct_n": {
+        "1": 0.14902,
+        "2": 0.66348,
+        "3": 0.88966,
+        "4": 0.944337
+       },
+       "opener_entropy_bits": 8.2419,
+       "top_openers": [
+        [
+         "forms comparative more",
+         0.15509
+        ],
+        [
+         "forms past tense",
+         0.04491
+        ],
+        [
+         "forms derived forms",
+         0.03174
+        ]
+       ]
+      }
+     },
+     "encyclopedia|mixed": {
+      "rows": 706,
+      "tokens": 1000235,
+      "mean_tokens": 1416.76,
+      "diversity": {
+       "sample_words": 50299,
+       "distinct_n": {
+        "1": 0.130003,
+        "2": 0.536535,
+        "3": 0.723017,
+        "4": 0.783823
+       },
+       "opener_entropy_bits": 8.3388,
+       "top_openers": [
+        [
+         "the siege of",
+         0.0255
+        ],
+        [
+         "the battle of",
+         0.017
+        ],
+        [
+         "symphony no 8",
+         0.00283
+        ]
+       ]
+      }
+     },
+     "thesaurus|mixed": {
+      "rows": 92,
+      "tokens": 51436,
+      "mean_tokens": 559.09
+     }
+    }
+   },
+   "near_duplicates": {
+    "docs": 1910373,
+    "docs_in_near_dup_cluster": 2140,
+    "docs_in_near_dup_cluster_share": 0.00112,
+    "near_dup_excess_share": 0.000671,
+    "exact_normalized_excess_share": 0.0,
+    "method": "MinHash over student-token 8-gram shingles, 64 hashes, 16x4 LSH, signature agreement >= 0.8 to the bucket's first member; excess = docs removable by keeping one per cluster"
+   },
+   "seconds": 831.9
+  }
+ },
+ "family_totals": {
+  "rows": 21777944,
+  "tokens": 2789172043,
+  "unique_text_tokens": 2787115626,
+  "source_tokens_excluding_pretrain": 1461832309
+ },
+ "supervision": {
+  "queries": {
+   "rows": 3851978,
+   "by_style_headword_free": [
+    {
+     "style": "keyword",
+     "headword_free": true,
+     "count_all": 618324
+    },
+    {
+     "style": "question",
+     "headword_free": true,
+     "count_all": 610899
+    },
+    {
+     "style": "conversational",
+     "headword_free": true,
+     "count_all": 563461
+    },
+    {
+     "style": "directive",
+     "headword_free": true,
+     "count_all": 376417
+    },
+    {
+     "style": "constraint",
+     "headword_free": true,
+     "count_all": 358975
+    },
+    {
+     "style": "example_based",
+     "headword_free": false,
+     "count_all": 334343
+    },
+    {
+     "style": "role",
+     "headword_free": true,
+     "count_all": 329011
+    },
+    {
+     "style": "step_by_step",
+     "headword_free": true,
+     "count_all": 305509
+    },
+    {
+     "style": "directive",
+     "headword_free": false,
+     "count_all": 114747
+    },
+    {
+     "style": "example_based",
+     "headword_free": true,
+     "count_all": 111557
+    },
+    {
+     "style": "question",
+     "headword_free": false,
+     "count_all": 42485
+    },
+    {
+     "style": "conversational",
+     "headword_free": false,
+     "count_all": 26054
+    },
+    {
+     "style": "keyword",
+     "headword_free": false,
+     "count_all": 23362
+    },
+    {
+     "style": "step_by_step",
+     "headword_free": false,
+     "count_all": 19223
+    },
+    {
+     "style": "constraint",
+     "headword_free": false,
+     "count_all": 9110
+    },
+    {
+     "style": "role",
+     "headword_free": false,
+     "count_all": 8501
+    }
+   ],
+   "per_sense": {
+    "mean": 12.806,
+    "p50": 12.0,
+    "p90": 12.0,
+    "p99": 24.0,
+    "max": 24.0
+   },
+   "distinct_styles_per_sense": {
+    "1": 2,
+    "5": 1,
+    "6": 624,
+    "7": 355,
+    "8": 299805
+   },
+   "headword_free_flag_vs_observed_headword": {
+    "flag=False,present=False": 27119,
+    "flag=False,present=True": 550706,
+    "flag=True,present=False": 3273973,
+    "flag=True,present=True": 180
+   },
+   "headword_free_leak_share": 5.5e-05
+  },
+  "qa_pairs": {
+   "rows": 2304127,
+   "by_type_difficulty": [
+    {
+     "question_type": "factual",
+     "difficulty": "easy",
+     "count_all": 325516
+    },
+    {
+     "question_type": "comparison",
+     "difficulty": "medium",
+     "count_all": 296852
+    },
+    {
+     "question_type": "reasoning",
+     "difficulty": "hard",
+     "count_all": 217741
+    },
+    {
+     "question_type": "definition",
+     "difficulty": "easy",
+     "count_all": 217191
+    },
+    {
+     "question_type": "causal",
+     "difficulty": "medium",
+     "count_all": 191178
+    },
+    {
+     "question_type": "procedural",
+     "difficulty": "medium",
+     "count_all": 177655
+    },
+    {
+     "question_type": "hypothetical",
+     "difficulty": "medium",
+     "count_all": 149606
+    },
+    {
+     "question_type": "procedural",
+     "difficulty": "easy",
+     "count_all": 139921
+    },
+    {
+     "question_type": "hypothetical",
+     "difficulty": "hard",
+     "count_all": 120437
+    },
+    {
+     "question_type": "causal",
+     "difficulty": "easy",
+     "count_all": 118406
+    },
+    {
+     "question_type": "definition",
+     "difficulty": "medium",
+     "count_all": 111296
+    },
+    {
+     "question_type": "reasoning",
+     "difficulty": "medium",
+     "count_all": 102058
+    },
+    {
+     "question_type": "hypothetical",
+     "difficulty": "easy",
+     "count_all": 55663
+    },
+    {
+     "question_type": "comparison",
+     "difficulty": "easy",
+     "count_all": 26177
+    },
+    {
+     "question_type": "causal",
+     "difficulty": "hard",
+     "count_all": 23193
+    },
+    {
+     "question_type": "procedural",
+     "difficulty": "hard",
+     "count_all": 17082
+    },
+    {
+     "question_type": "comparison",
+     "difficulty": "hard",
+     "count_all": 8926
+    },
+    {
+     "question_type": "reasoning",
+     "difficulty": "easy",
+     "count_all": 2759
+    },
+    {
+     "question_type": "factual",
+     "difficulty": "medium",
+     "count_all": 2400
+    },
+    {
+     "question_type": "factual",
+     "difficulty": "hard",
+     "count_all": 68
+    },
+    {
+     "question_type": "definition",
+     "difficulty": "hard",
+     "count_all": 2
+    }
+   ],
+   "grounded_in_per_pair": {
+    "mean": 1.258,
+    "p50": 1.0,
+    "p90": 2.0,
+    "p99": 3.0,
+    "max": 8.0
+   }
+  },
+  "qrels_listwise": {
+   "lists": 3851978,
+   "by_query_source": [
+    {
+     "query_source": "generated",
+     "count_all": 3851978
+    }
+   ],
+   "candidates_per_list": {
+    "mean": 7.828,
+    "p50": 8.0,
+    "p90": 10.0,
+    "p99": 11.0,
+    "max": 11.0
+   },
+   "grade_histogram": {
+    "0": 11555934,
+    "1": 10725609,
+    "2": 2958100,
+    "3": 4913752
+   },
+   "candidate_kind_by_grade": {
+    "encyclopedia/1": 2790204,
+    "encyclopedia/3": 1061774,
+    "sense_gloss/0": 11555934,
+    "sense_gloss/1": 7935405,
+    "sense_gloss/2": 2958100,
+    "sense_gloss/3": 3851978
+   },
+   "list_share": {
+    "all_four_grades": 0.399409,
+    "any_grade1": 0.921357,
+    "any_grade2": 0.43564,
+    "multi_grade3": 0.275644
+   },
+   "grade_set_profiles": {
+    "310": 2010530,
+    "3210": 1538516,
+    "30": 163373,
+    "320": 139559
+   },
+   "note": "grade 0 is not split into hard and easy roles in v2.3"
+  },
+  "retrieval_triples": {
+   "rows": 7466572,
+   "by_negative_kind_query_source": [
+    {
+     "negative_kind": "easy",
+     "query_source": "generated",
+     "count_all": 3851978
+    },
+    {
+     "negative_kind": "other_sense",
+     "query_source": "generated",
+     "count_all": 2658611
+    },
+    {
+     "negative_kind": "co_hyponym",
+     "query_source": "generated",
+     "count_all": 849999
+    },
+    {
+     "negative_kind": "synonym_of_synonym",
+     "query_source": "generated",
+     "count_all": 95100
+    },
+    {
+     "negative_kind": "confusable",
+     "query_source": "generated",
+     "count_all": 10884
+    }
+   ]
+  },
+  "retrieval_pairs": {
+   "rows": 40899752,
+   "by_kind_label": [
+    {
+     "kind": "wic_positive",
+     "label": 1,
+     "count_all": 39354919
+    },
+    {
+     "kind": "wic_easy_negative",
+     "label": 0,
+     "count_all": 900741
+    },
+    {
+     "kind": "example_gloss",
+     "label": 1,
+     "count_all": 300255
+    },
+    {
+     "kind": "wic_hard_negative",
+     "label": 0,
+     "count_all": 256526
+    },
+    {
+     "kind": "example_encyclopedia",
+     "label": 1,
+     "count_all": 87311
+    }
+   ]
+  }
+ },
+ "effective_information": {
+  "training_export_text_reuse": {
+   "text_slots_by_column": {
+    "retrieval-pairs.text_a": 40899752,
+    "retrieval-pairs.text_b": 40899752,
+    "retrieval-triples.query": 7466572,
+    "retrieval-triples.positive": 7466572,
+    "retrieval-triples.negative": 7466572,
+    "qrels.listwise.query": 3851978,
+    "qrels.listwise.candidate": 30153395
+   },
+   "text_slots": 138204593,
+   "unique_texts": 9231261,
+   "slots_per_unique_text": 14.971,
+   "occurrences_per_unique_text": {
+    "mean": 14.971,
+    "p50": 13.0,
+    "p90": 20.0,
+    "p99": 145.0,
+    "max": 12184.0
+   },
+   "slot_share_of_top_1pct_texts": 0.134004,
+   "slot_share_of_texts_used_over_100_times": 0.216109,
+   "char_weighted_slots_per_unique_char": 20.877,
+   "most_repeated": [
+    [
+     "A surname of English origin used as a family name.",
+     12184
+    ],
+    [
+     "a radioactive transuranic element",
+     2661
+    ],
+    [
+     "A surname of Scottish origin used as a family name.",
+     2265
+    ],
+    [
+     "A surname of German origin used as a family name.",
+     1738
+    ],
+    [
+     "a branch of the Tai languages",
+     1542
+    ],
+    [
+     "mild form of diabetes mellitus that develops gradually in adults; can be precipitated by o",
+     1453
+    ],
+    [
+     "have sexual intercourse with",
+     1406
+    ],
+    [
+     "put on special clothes to appear particularly appealing and attractive",
+     1305
+    ],
+    [
+     "the formation of blood cells in the living body (especially in the bone marrow)",
+     1148
+    ],
+    [
+     "(Judaism) a Jewish holy day celebrated on the 22nd or 23rd of Tishri to celebrate the comp",
+     1112
+    ]
+   ]
+  },
+  "per_sense_exposure": {
+   "definition": "rows naming the sense in retrieval-pairs (either side), triples and listwise qrels",
+   "per_live_sense": {
+    "mean": 309.291,
+    "p50": 318.0,
+    "p90": 423.0,
+    "p99": 547.0,
+    "max": 1099.0
+   },
+   "zero_exposure_share": 0.0,
+   "gini": 0.152372,
+   "top_1pct_share": 0.018394,
+   "by_tier": {
+    "core": {
+     "mean": 351.25,
+     "p50": 353.0,
+     "p90": 424.0,
+     "p99": 554.0,
+     "max": 785.0,
+     "senses": 32193
+    },
+    "tier2": {
+     "mean": 234.481,
+     "p50": 227.0,
+     "p90": 287.0,
+     "p99": 506.0,
+     "max": 1099.0,
+     "senses": 71957
+    },
+    "tier3": {
+     "mean": 345.694,
+     "p50": 351.0,
+     "p90": 425.0,
+     "p99": 552.0,
+     "max": 750.0,
+     "senses": 23511
+    },
+    "tier4": {
+     "mean": 336.237,
+     "p50": 350.0,
+     "p90": 428.0,
+     "p99": 552.0,
+     "max": 858.0,
+     "senses": 113873
+    },
+    "tier5": {
+     "mean": 317.931,
+     "p50": 321.0,
+     "p90": 353.0,
+     "p99": 426.0,
+     "max": 746.0,
+     "senses": 46755
+    },
+    "tier6": {
+     "mean": 288.843,
+     "p50": 303.0,
+     "p90": 341.0,
+     "p99": 353.0,
+     "max": 466.0,
+     "senses": 12145
+    },
+    "unknown": {
+     "mean": 174.666,
+     "p50": 187.0,
+     "p90": 214.0,
+     "p99": 227.96000000000004,
+     "max": 255.0,
+     "senses": 353
+    }
+   }
+  },
+  "pretrain_verbatim_reuse": {
+   "char_share_by_template": {
+    "dictionary": {
+     "header": 0.038018,
+     "verbatim": 0.824801,
+     "composed": 0.137181
+    },
+    "encyclopedia": {
+     "header": 0.013643,
+     "verbatim": 0.662001,
+     "composed": 0.324356
+    },
+    "thesaurus": {
+     "header": 0.181548,
+     "verbatim": 1e-05,
+     "composed": 0.818441
+    },
+    "usage_note": {
+     "header": 0.266221,
+     "verbatim": 0.0,
+     "composed": 0.733779
+    },
+    "all": {
+     "header": 0.083865,
+     "verbatim": 0.454874,
+     "composed": 0.461262
+    }
+   },
+   "note": "verbatim = a pretrain line equal (normalized, after list markers/quotes) to a paragraph of a source rendition; composed lines (e.g. thesaurus lists, usage-note joins) are deterministic recombinations of source fields"
+  }
+ },
+ "writers": {
+  "stage_model": [
+   {
+    "stage": "classify_kind",
+    "model": "rule:classify_kind_deterministic",
+    "records": 147213,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "classify_kind",
+    "model": "gpt-5.4-nano",
+    "records": 84128,
+    "cost_usd": 42.78,
+    "output_tokens": 42469448
+   },
+   {
+    "stage": "contrasts",
+    "model": "gpt-6-luna",
+    "records": 85687,
+    "cost_usd": 10.25,
+    "output_tokens": 34314884
+   },
+   {
+    "stage": "contrasts",
+    "model": "gpt-5.6-luna",
+    "records": 24893,
+    "cost_usd": 9.07,
+    "output_tokens": 12673711
+   },
+   {
+    "stage": "contrasts",
+    "model": "claude-haiku-4-5",
+    "records": 52,
+    "cost_usd": 0.35,
+    "output_tokens": 43000
+   },
+   {
+    "stage": "encyclopedia",
+    "model": "gpt-5.6-luna",
+    "records": 50534,
+    "cost_usd": 16.5,
+    "output_tokens": 25335264
+   },
+   {
+    "stage": "etymology",
+    "model": "gpt-5.6-luna",
+    "records": 50657,
+    "cost_usd": 19.47,
+    "output_tokens": 29314944
+   },
+   {
+    "stage": "examples",
+    "model": "gpt-6-luna",
+    "records": 131045,
+    "cost_usd": 27.52,
+    "output_tokens": 98051758
+   },
+   {
+    "stage": "examples",
+    "model": "gpt-5.6-luna",
+    "records": 31883,
+    "cost_usd": 17.65,
+    "output_tokens": 26457588
+   },
+   {
+    "stage": "hygiene",
+    "model": "rule:relation_reconcile",
+    "records": 1358132,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "hygiene",
+    "model": "gpt-5.4-nano",
+    "records": 627504,
+    "cost_usd": 213.02,
+    "output_tokens": 191368219
+   },
+   {
+    "stage": "hygiene",
+    "model": "rule:relation_hygiene",
+    "records": 570914,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "hygiene",
+    "model": "rule:sense_hygiene",
+    "records": 445281,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "hygiene",
+    "model": "rule:reciprocity",
+    "records": 187553,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "hygiene",
+    "model": "gpt-6-luna",
+    "records": 53539,
+    "cost_usd": 8.37,
+    "output_tokens": 26737208
+   },
+   {
+    "stage": "hygiene",
+    "model": "rule:lexeme_hygiene",
+    "records": 22737,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "hygiene",
+    "model": "rule:graph_hygiene",
+    "records": 15012,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "hygiene",
+    "model": "rule:far_side_reconcile",
+    "records": 10719,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "hygiene",
+    "model": "rule:content_hygiene",
+    "records": 10156,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "lexical_explanation",
+    "model": "gpt-5.6-luna",
+    "records": 50532,
+    "cost_usd": 3.33,
+    "output_tokens": 3648494
+   },
+   {
+    "stage": "migrate",
+    "model": "wordnet-3.0",
+    "records": 130367,
+    "cost_usd": 0.0,
+    "output_tokens": 0
+   },
+   {
+    "stage": "qa",
+    "model": "claude-opus-5",
+    "records": 1341,
+    "cost_usd": 50.86,
+    "output_tokens": 1586648
+   },
+   {
+    "stage": "qa_pairs",
+    "model": "gpt-6-luna",
+    "records": 238494,
+    "cost_usd": 54.5,
+    "output_tokens": 170588053
+   },
+   {
+    "stage": "qa_pairs",
+    "model": "gpt-5.6-luna",
+    "records": 110704,
+    "cost_usd": 48.24,
+    "output_tokens": 59936752
+   },
+   {
+    "stage": "qa_pairs",
+    "model": "claude-haiku-4-5",
+    "records": 166,
+    "cost_usd": 1.14,
+    "output_tokens": 114659
+   },
+   {
+    "stage": "queries",
+    "model": "gpt-6-luna",
+    "records": 216942,
+    "cost_usd": 26.01,
+    "output_tokens": 88305357
+   },
+   {
+    "stage": "queries",
+    "model": "gpt-5.6-luna",
+    "records": 110704,
+    "cost_usd": 26.84,
+    "output_tokens": 36388432
+   },
+   {
+    "stage": "queries",
+    "model": "claude-haiku-4-5",
+    "records": 166,
+    "cost_usd": 0.7,
+    "output_tokens": 51720
+   },
+   {
+    "stage": "renditions",
+    "model": "gpt-5.6-luna",
+    "records": 1947754,
+    "cost_usd": 426.52,
+    "output_tokens": 511389457
+   },
+   {
+    "stage": "renditions",
+    "model": "gpt-6-luna",
+    "records": 1841605,
+    "cost_usd": 338.27,
+    "output_tokens": 659440918
+   },
+   {
+    "stage": "renditions",
+    "model": "claude-haiku-4-5",
+    "records": 848,
+    "cost_usd": 3.5,
+    "output_tokens": 204035
+   },
+   {
+    "stage": "resolve",
+    "model": "gpt-5.4-nano",
+    "records": 260474,
+    "cost_usd": 58.35,
+    "output_tokens": 39843001
+   },
+   {
+    "stage": "resolve",
+    "model": "gpt-6-luna",
+    "records": 8747,
+    "cost_usd": 0.31,
+    "output_tokens": 637196
+   },
+   {
+    "stage": "sense_check",
+    "model": "gpt-6-luna",
+    "records": 52340,
+    "cost_usd": 7.38,
+    "output_tokens": 22927041
+   },
+   {
+    "stage": "sense_check",
+    "model": "gpt-5.4-nano",
+    "records": 22548,
+    "cost_usd": 8.02,
+    "output_tokens": 6249660
+   },
+   {
+    "stage": "senses",
+    "model": "gpt-5.6-luna",
+    "records": 14585,
+    "cost_usd": 6.2,
+    "output_tokens": 8624044
+   },
+   {
+    "stage": "senses",
+    "model": "gpt-6-luna",
+    "records": 3736,
+    "cost_usd": 0.41,
+    "output_tokens": 889615
+   },
+   {
+    "stage": "spans",
+    "model": "gpt-5.4-nano",
+    "records": 37383,
+    "cost_usd": 2.49,
+    "output_tokens": 1615667
+   },
+   {
+    "stage": "tag_domain",
+    "model": "gpt-5.6-luna",
+    "records": 171992,
+    "cost_usd": 15.22,
+    "output_tokens": 10209432
+   },
+   {
+    "stage": "tag_domain",
+    "model": "gpt-5.4-nano",
+    "records": 50422,
+    "cost_usd": 6.7,
+    "output_tokens": 3711508
+   }
+  ],
+  "prose_output_token_share_by_model": {
+   "gpt-6-luna": 0.595541,
+   "gpt-5.6-luna": 0.404225,
+   "claude-haiku-4-5": 0.000234
+  },
+  "live_lexemes_by_prose_writer_set": {
+   "gpt-5.6-luna+gpt-6-luna": 160049,
+   "claude-haiku-4-5+gpt-5.6-luna+gpt-6-luna": 675
+  },
+  "live_lexemes_by_prose_writer_set_and_source": {
+   "gpt-5.6-luna+gpt-6-luna": {
+    "opengloss-v1.3": 119406,
+    "wordnet-3.0": 40643
+   },
+   "claude-haiku-4-5+gpt-5.6-luna+gpt-6-luna": {
+    "opengloss-v1.3": 675
+   }
+  },
+  "writer_vs_tier_mi": {
+   "mi_bits": 0.011707,
+   "h_left_bits": 0.039205,
+   "h_right_bits": 2.303718,
+   "normalized_by_min_entropy": 0.298614
+  },
+  "writer_vs_domain_mi": {
+   "mi_bits": 0.000454,
+   "h_left_bits": 0.039205,
+   "h_right_bits": 3.740387,
+   "normalized_by_min_entropy": 0.011589
+  },
+  "note": "no_v2_prose_provenance marks live lexemes whose prose predates v2 generation (text migrated from v1.x or imported from WordNet); their writer is not in v2.3 provenance"
+ }
+}

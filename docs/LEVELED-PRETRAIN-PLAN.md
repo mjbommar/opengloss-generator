@@ -379,3 +379,95 @@ parsing and a longer reply budget):
 
 **Revised estimate from measured unit costs:** 3.1 ≈ $47, 3.2 ≈ $37, 3.3 ≈ $16, plus about
 10% for retries and sweeps, which is **≈ $110** and about 260M output tokens.
+
+### L2 — full generation (started 2026-09-24 12:45 UTC)
+
+- **First launch, flex only** (`chain.sh`, 256 workers × 12). gpt-6-luna flex capacity was
+  near zero at US midday: 12.5K capacity 429s against 343 completions (0.6 calls/s). It was
+  stopped cleanly (no locks left) after $0.35.
+- **Relaunch, with user approval, on `scripts/gpt6-luna-fallback.toml`.** Same model and
+  reasoning; flex first, falling back to `auto` (standard tier) after 20 consecutive
+  capacity rejections per stage process. `chain2.sh` repeats passes over both lists until a
+  pass adds nothing and fails nothing, with 192 workers × 12. Throughput was 53–228 calls/s,
+  and a local internet restart at ~13:20 UTC only paused calls (the stages retried).
+- **Budget stops, reported rather than hidden.** The per-stage caps were sized for flex
+  prices, so at the standard tier 20 of the first 57 stages stopped at their cap (11
+  contrast, 4 explanation, 4 leveled-gloss, 1 college-technical). The next pass resumes the
+  missing work, which costs ~$0 for finished items.
+- **Cost re-projection at 14:20 UTC** (37–49% complete per stage, $146.88 spent):
+
+  | stage | projected |
+  | --- | ---: |
+  | explanation | ≈ $59 |
+  | grade_5/college × {informal, formal} glosses | ≈ $105 |
+  | college technical glosses | ≈ $41 |
+  | contrasts | ≈ $83 |
+  | **total** | **≈ $290** |
+
+  That is versus ≈ $110 on flex. The difference comes from the standard tier (2×) and from
+  longer explanation outputs under the new guidance.
+- **14:45–15:00 UTC: back to flex only, at the user's request because of cost.** The
+  fallback chains were stopped cleanly. Standard-tier (`auto`) spend is frozen at
+  **938,309 calls, $221.14**. The chains were relaunched on `scripts/gpt6-luna.toml`
+  (flex, never downgrades) with 64 workers × 12. L2 total at the switch: 956,876 calls,
+  312.7M output tokens, $223.36. Flex throughput at the time was about 4.5 calls/s. The
+  remaining work (about half of tiers 3–6) is estimated at $50–70, and the converging chain
+  keeps sweeping as capacity returns.
+- **17:36 UTC: L2 complete.** All twelve shards converged, each ending on a pass with zero
+  added and zero failed. **Final L2 ledger:** 1,234,416 calls, 401.0M output tokens,
+  **$250.78**, of which $221.14 was standard tier (before the switch back) and $29.64 was
+  flex. The per-stage summary JSONs undercount renditions, because the flex relaunch reused
+  pass names and overwrote them; the export counts below are authoritative.
+
+### L3 — export, census, verify (2026-09-24)
+
+- **Export.** `export-hf --release v2.4-rc2` to `/data1/opengloss-generator/v2.4-rc2/hf`
+  (local, no push) ran in 32 min with 3.35 GB peak memory and 6.5 GB on disk. The fatal
+  duplicate gate passed, so there are 0 duplicate pretrain documents.
+- **Coverage is exactly the planned targets:**
+
+  | item | before | after | added | target |
+  | --- | ---: | ---: | ---: | ---: |
+  | gloss renditions | 2,705,559 | 4,209,494 | +1,503,935 | 5 × 300,787 |
+  | contrast renditions | 270,728 | 812,184 | +541,456 | 2 × 270,728 |
+  | explanation renditions | 160,724 | 482,172 | +321,448 | 2 × 160,724 |
+
+- **Census** (`reports/census-v2.4-rc2/census.json`). The first attempt was stopped by the
+  host under memory pressure while other jobs were running; the rerun with 3 workers
+  finished in 14 min with 46 GB peak.
+
+**Acceptance (section 6, L3):**
+
+| criterion | v2.3 | v2.4-rc (fill round) | **v2.4-rc2** | pass |
+| --- | ---: | ---: | ---: | --- |
+| pretrain exact duplicate share | 24.96% | 32.90% | **0.00%** | ✅ |
+| pretrain near-duplicate excess (≤ 1%) | 25.03% | 32.95% | **0.07%** | ✅ |
+| unique 256-token windows (≥ 98%) | 85.0% | 75.1% | **99.66%** | ✅ |
+| non-neutral documents fully at level (≥ 95%) | — | — | **99.81%** (2,468 mixed of 1,272,598) | ✅ |
+| encyclopedia documents = live lexemes | 165,291 / level | 165,291 / level | 160,724 neutral; 160,371 per level where a leveled overview exists | ✅ |
+| distinct-4-gram rate: no regression | | | improved in every family that changed | ✅ |
+| opener entropy: no regression | | | **gloss.register 13.52 → 13.14 bits; pretrain 13.30 → 12.64** | ❌ |
+
+- **The one miss, opener entropy.** Leveled *informal* glosses open "It's a / It's the /
+  It's when…" about 18% of the time (the informal stratum's opener entropy is 10.1 bits).
+  The pretrain usage notes inherit it as "Informally: It's…". This is a stylistic habit of
+  one cell; lexical diversity rose everywhere.
+- **Optional fix, not run** because of cost sensitivity: regenerate only the ~160K leveled
+  informal glosses whose text opens with "It's", using an opener-variety instruction and
+  the existing retry machinery. Estimated at about $5–8 on flex.
+
+**Unique content, v2.3 → v2.4-rc2** (student tokenizer, normalized-unique):
+
+| family | unique texts v2.3 | v2.4-rc2 | × | unique tokens v2.3 | v2.4-rc2 | × |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| gloss.register | 415,841 | 2,704,774 | 6.50 | 16.2M | 108.8M | 6.73 |
+| example.register | 254,267 | 1,990,666 | 7.83 | 7.0M | 61.7M | 8.87 |
+| contrast | 81,044 | 812,174 | 10.02 | 19.1M | 161.3M | 8.45 |
+| lexical_explanation | 160,724 | 482,159 | 3.00 | 48.8M | 103.5M | 2.12 |
+| query | 1,246,075 | 3,843,857 | 3.08 | 31.2M | 107.8M | 3.45 |
+| QA question / answer | 697,741 / 702,657 | 2,274,125 / 2,277,893 | 3.26 / 3.24 | 20.8M / 30.5M | 69.9M / 94.6M | 3.36 / 3.10 |
+| encyclopedia | 500,320 | 802,914 | 1.60 | 376.6M | 583.0M | 1.55 |
+| example.reading_level | 2,164,262 | 2,945,315 | 1.36 | 58.9M | 82.8M | 1.41 |
+| canonical / reading-level glosses, etymology | unchanged | | 1.00 | | | 1.00 |
+| **all source text** | **7,871,053** | **19,781,999** | **2.51** | **697.6M** | **1,461.8M** | **2.10** |
+| pretrain (derived; now 0 duplicates) | 1,170,628 | 1,910,373 | 1.63 | 1,014.6M | 1,325.3M | 1.31 |
