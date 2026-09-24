@@ -29,6 +29,10 @@ hf = ["huggingface-hub>=1.2.0"]
 # read into the store, so `import-wordnet` raises rather than degrades. The corpus itself is
 # a further download (`python -m nltk.downloader wordnet`).
 wordnet = ["nltk>=3.9.2"]
+census = [
+    "numpy>=2.3",
+    "tokenizers>=0.22",
+]
 
 [project.scripts]
 opengloss = "opengloss_generator.cli:app"
