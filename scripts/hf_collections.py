@@ -4,8 +4,12 @@
 added idempotently (`exists_ok=True`) — remove superseded items by hand or extend this.
 """
 
+from huggingface_hub import HfApi
+
 OLD = "mjbommar/opengloss-69304505fa0ddaaad8a3ca28"
 RELEASE = "v2.4"
+#: The release this one supersedes; its dataset items are removed from the 2.x collection.
+PREVIOUS = "v2.3"
 REPOS = ["senses", "lexicon", "inflections", "definitions", "examples", "encyclopedia", "etymology",
          "relations", "contrasts", "queries", "qa-pairs", "retrieval-pairs", "retrieval-triples",
          "qrels", "pretrain", "provenance"]
@@ -21,4 +25,8 @@ for r in REPOS:
     api.add_collection_item(new.slug, item_id=f"mjbommar/opengloss-{RELEASE}-{r}", item_type="dataset", exists_ok=True)
     print("  added", r)
 api.add_collection_item(new.slug, item_id="2511.18622", item_type="paper", exists_ok=True); print("  added paper")
+for item in api.get_collection(new.slug).items:
+    if item.item_type == "dataset" and item.item_id.startswith(f"mjbommar/opengloss-{PREVIOUS}-"):
+        api.delete_collection_item(new.slug, item.item_object_id)
+        print("  removed", item.item_id)
 print("done:", f"https://huggingface.co/collections/{new.slug}")

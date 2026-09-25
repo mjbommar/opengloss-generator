@@ -1886,3 +1886,37 @@ wamerican 64.8% as headwords / 98.8% resolvable; `senses_zero_relations` regress
 4,722 (tiers 5–6 are sparse) — a regen pass (~$2) is the fix. (4) The tier-5 judge
 ablation (81.3 on a curated inventory vs 66.7–70.2 on generated ones, with the two
 "what the model invents" checks moving 36 and 42 points) is the paper's strongest result.
+
+## OpenGloss v2.4 published — 2026-09-25 ~02:10 UTC
+
+16 datasets under `mjbommar/opengloss-v2.4-*` (public, CC-BY 4.0 plus the WordNet notice),
+6.5 GB, verified 16/16 through the Hub API: every local file is present and every parquet
+SHA-256 matches. `load_dataset` streaming smoke test passed from the Hub (senses, pretrain,
+contrasts).
+
+- **No new headwords** (160,724 lexemes, 300,787 live senses). What v2.4 adds:
+  - the fill round ([FILL-ROUND-V2.4.md](FILL-ROUND-V2.4.md)): queries, QA, registers,
+    contrasts, grade-1/10 encyclopedia and D-53 examples for tiers 3–6 and core;
+  - the leveled round ([LEVELED-PRETRAIN-PLAN.md](LEVELED-PRETRAIN-PLAN.md)): level ×
+    register glosses and leveled contrasts and explanations;
+  - a no-copy pretrain exporter.
+- **Measured against v2.3:**
+
+  | | v2.3 | v2.4 |
+  | --- | ---: | ---: |
+  | queries | 1.25M | 3.85M |
+  | QA pairs | 0.70M | 2.30M |
+  | definition renditions | 1.92M | 4.21M |
+  | example renditions | 2.42M | 4.94M |
+  | contrasts | 81K | 812K |
+  | unique source-text tokens | 697.6M | 1,461.8M |
+  | pretraining documents | 1.56M (25% duplicates) | 1.91M (0 duplicates) |
+  | pretraining tokens (cl100k_base) | 594.2M | 676.7M |
+
+- **Judge** (QA-DIARY iteration 24): 64.8 / 69.9 / 65.8 / 68.1 / 79.6 / 71.3 for core and
+  tiers 2–6.
+- **Hub housekeeping.** The "OpenGloss 2.x" collection now lists v2.4; the v2.3 items were
+  removed by `scripts/hf_collections.py`. All 16 v2.3 cards carry a "Superseded by v2.4"
+  banner (`scripts/hf_supersede.py`).
+- **Generation spend for v2.4:** fill round about $230 and leveled round $250.78, both on
+  gpt-6-luna; release judge $18.74 on Opus.
