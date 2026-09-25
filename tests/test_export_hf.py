@@ -1396,7 +1396,12 @@ def test_the_v23_card_refuses_to_render_while_its_facts_are_unmeasured(tmp_path,
 def test_the_shipped_v23_facts_are_all_measured():
     for name in hf_cards._V23_PLACEHOLDERS:
         assert getattr(hf_cards.V23, name) is not None, name
-    assert hf_schemas.DEFAULT_RELEASE == "v2.3"
+
+
+def test_the_shipped_v24_facts_are_all_measured():
+    for name in hf_cards._V24_PLACEHOLDERS:
+        assert getattr(hf_cards.V24, name) is not None, name
+    assert hf_schemas.DEFAULT_RELEASE == "v2.4"
 
 
 def test_the_v23_changelog_names_the_three_things_the_release_is(tmp_path, monkeypatch):
@@ -1417,3 +1422,27 @@ def test_the_v23_changelog_names_the_three_things_the_release_is(tmp_path, monke
     assert "12,718" in text
     assert "`alias_of`" in text
     assert "nature.settlements" in text
+
+
+def test_the_v24_card_refuses_to_render_while_its_facts_are_unmeasured(tmp_path, monkeypatch):
+    monkeypatch.setattr(hf_cards.V24, "JUDGE", None)
+    with pytest.raises(ValueError, match=r"hf_cards\.V24 is not filled in"):
+        _export(tmp_path, [_named_entity()], release="v2.4")
+
+
+def test_the_v24_changelog_names_what_the_release_is(tmp_path, monkeypatch):
+    monkeypatch.setattr(hf_cards.V24, "UNIQUE_SOURCE_TOKENS", 1_400_000_000)
+    monkeypatch.setattr(hf_cards.V24, "PRETRAIN_DOCS", 1_900_000)
+    monkeypatch.setattr(hf_cards.V24, "PRETRAIN_WORDS", 480_000_000)
+    monkeypatch.setattr(hf_cards.V24, "PRETRAIN_TOKENS", 650_000_000)
+    monkeypatch.setattr(hf_cards.V24, "JUDGE", "70.0 (test placeholder, not a real score)")
+
+    result = _export(tmp_path, [_named_entity()], release="v2.4")
+    text = (result.out_dir / "opengloss-v2.4-lexicon" / "README.md").read_text(encoding="utf-8")
+
+    assert "## What changed since v2.3" in text
+    assert "## What changed since v2.2" in text
+    assert "## What changed since v2.1" in text
+    assert "sections_at_level" in text
+    assert "1,400,000,000" in text
+    assert "Choosing between them" in text

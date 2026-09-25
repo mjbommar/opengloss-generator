@@ -1048,3 +1048,27 @@ initialisms.
 "lincoln" is now `person`. Cards: both older changelog sections frozen, the
 v2.2 → v2.3 section rendered from measured facts, tier 6 in every tier table, licence
 section present, no placeholders. Pointers: v2.2 → v2.3 (16). Release QA closed.
+
+## Iteration 24 — v2.4 release judge samples (2026-09-25 01:08 UTC)
+
+`opengloss qa --sample 40 --seed 7 --force` on each tier list, with the same seeds and
+therefore the same entries as the v2.3 samples. Opus; $18.74 in total. Reports are in
+`reports/judge-v2.4/`. Every stage stopped as `completed`; 1–4 entries per tier had no
+judgeable sense or failed their call.
+
+| tier | v2.3 | **v2.4** | entries judged |
+| --- | ---: | ---: | ---: |
+| core | 70.2 (core + tier 2 together) | **64.8** | 37 |
+| tier 2 | (above) | **69.9** | 37 |
+| tier 3 | 66.7 | **65.8** | 36 |
+| tier 4 | 67.0 | **68.1** | 39 |
+| tier 5 | 81.3 | **79.6** | 40 |
+| tier 6 | 73.0 | **71.3** | 38 |
+
+**Read.** Scores are flat to slightly down: within about ±2 points except core, where
+5.4 points separate a core-only sample from v2.3's combined core + tier 2 figure. The judge
+now sees far more per entry: queries, QA pairs, register and leveled definitions, leveled
+contrasts and explanations, and examples on every tier. Every added field is another
+place a defect can be found. The leveled-pretrain pilot's own blinded judge
+(`reports/leveled-pilot/`) measured the new leveled text at or above the existing
+content's baseline, except for the dropped grade_5 technical cell.

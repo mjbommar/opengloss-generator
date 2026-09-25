@@ -1,0 +1,85 @@
+{
+  "calls": 39,
+  "cost_usd": 3.034422,
+  "cost_usd_per_entry": 0.077806,
+  "encyclopedia_defects": 4,
+  "encyclopedia_judged": 39,
+  "entries_failed": 0,
+  "entries_judged": 39,
+  "entries_skipped": 1,
+  "flag_histogram": {
+    "audience_inappropriate": 6,
+    "awkward_style": 22,
+    "factual_error": 5,
+    "grammar_error": 4,
+    "hallucination": 9,
+    "missing_content": 8,
+    "other": 1,
+    "scope_mismatch": 10,
+    "terminology_error": 33,
+    "unsupported_addition": 3
+  },
+  "mean_score": 68.05,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0256,
+    "encyclopedia grade_1/plain": 0.359,
+    "example grade_1/plain": 0.0395,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.1184,
+    "gloss neutral/technical": 0.0395
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 39,
+    "encyclopedia grade_1/plain": 39,
+    "example grade_1/plain": 76,
+    "gloss college/plain": 76,
+    "gloss grade_1/plain": 76,
+    "gloss neutral/technical": 76
+  },
+  "score_buckets": {
+    "60-79": 26,
+    "80-89": 6,
+    "90+": 0,
+    "<60": 7
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 12,
+    "domain_fits": 9,
+    "examples_fit_sense": 23,
+    "examples_natural": 31,
+    "gloss_accurate": 20,
+    "relations_valid": 48
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.1579,
+    "domain_fits": 0.1184,
+    "examples_fit_sense": 0.3026,
+    "examples_natural": 0.4079,
+    "gloss_accurate": 0.2632,
+    "relations_valid": 0.6316
+  },
+  "senses_judged": 76,
+  "stopped_reason": null,
+  "top_issues": [
+    "adjective 0 relations: hydro-based, water-generated, energy-producing",
+    "encyclopedia grade_1/plain: 'greenhouse gas' and 'renewed' are unexplained and beyond a grade_1 reader",
+    "notes: 'hydro-based' and 'water-generated' are not established synonyms; 'energy-producing' is not a genuine superordinate of the adjective.",
+    "encyclopedia grade_1/plain: abstractions like keeping sea life 'in balance' and 'fins join in one long edge' exceed a six-year-old",
+    "notes: Several examples read as assembled corpus lines rather than things anyone would say, notably 'Culinary studies compare conger with other eels in flavor.'",
+    "noun 0 relations: lexical sense, referential meaning",
+    "encyclopedia grade_1/plain: names Frege and Saussure and uses denotation/connotation/figurative, all beyond a grade_1 reader",
+    "notes: Two examples (\"The denotation of cat...\", \"The referent of circle...\") never use the headword; the example set is also highly repetitive around the word \"home\".",
+    "adjective 0 relations: autonomic response, independent regulator, driven",
+    "adjective 0 domain: suggested general usage / systems and control",
+    "adjective 0 example grade_1/plain: unchanged from the canonical example; 'parent group' is beyond a grade_1 reader",
+    "notes: Two relation targets ('autonomic response', 'independent regulator') name the opposite or unrelated concepts; several examples are near-duplicates of one another and a few ('Our toy car is externally controlled by Dad.') are built only to host the phrase. The government-structure domain tag is narro",
+    "verb 0 relations: collect data",
+    "noun 0 relations: statistical data, dataset",
+    "notes: Sense 2 inverts direction: statistical data is broader than aggregate data, so it is a hypernym, not a hyponym; \"collect data\" is listed both as synonym and as used_with for sense 1.",
+    "noun 0 relations: in situ, study of nature, site study, outdoor science activity, soil sample log, field note",
+    "encyclopedia grade_1/plain: invents a history narrative (past watching, science class, phones) absent from the canonical text",
+    "notes: Gloss limits the term to natural features outdoors, while the entry's own encyclopedia includes observation of human interactions and processes.",
+    "noun 0 relations: fruiting body, ascocarp",
+    "noun 0 gloss grade_1/plain: Calls the fungi 'molds' and reduces spores to 'tiny new life'; meaning is blurred."
+  ]
+}

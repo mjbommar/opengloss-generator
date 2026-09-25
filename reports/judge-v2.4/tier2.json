@@ -1,0 +1,85 @@
+{
+  "calls": 37,
+  "cost_usd": 3.072105,
+  "cost_usd_per_entry": 0.08303,
+  "encyclopedia_defects": 2,
+  "encyclopedia_judged": 37,
+  "entries_failed": 0,
+  "entries_judged": 37,
+  "entries_skipped": 3,
+  "flag_histogram": {
+    "audience_inappropriate": 9,
+    "awkward_style": 26,
+    "factual_error": 3,
+    "grammar_error": 4,
+    "hallucination": 6,
+    "missing_content": 5,
+    "other": 2,
+    "scope_mismatch": 4,
+    "terminology_error": 30,
+    "unsupported_addition": 2
+  },
+  "mean_score": 69.89,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0278,
+    "encyclopedia grade_1/plain": 0.4324,
+    "example grade_1/plain": 0.0941,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.1176,
+    "gloss neutral/technical": 0.0235
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 36,
+    "encyclopedia grade_1/plain": 37,
+    "example grade_1/plain": 85,
+    "gloss college/plain": 85,
+    "gloss grade_1/plain": 85,
+    "gloss neutral/technical": 85
+  },
+  "score_buckets": {
+    "60-79": 26,
+    "80-89": 5,
+    "90+": 0,
+    "<60": 6
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 12,
+    "domain_fits": 11,
+    "examples_fit_sense": 35,
+    "examples_natural": 37,
+    "gloss_accurate": 8,
+    "relations_valid": 50
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.1412,
+    "domain_fits": 0.1294,
+    "examples_fit_sense": 0.4118,
+    "examples_natural": 0.4353,
+    "gloss_accurate": 0.0941,
+    "relations_valid": 0.5882
+  },
+  "senses_judged": 85,
+  "stopped_reason": null,
+  "top_issues": [
+    "adverb 0 relations: manner adverb, adverb, rapturously, exultantly",
+    "encyclopedia grade_1/plain: abstract talk of genre, register and other languages is beyond a six-year-old reader",
+    "notes: \"rapturously\" and \"exultantly\" are listed as both synonym and hyponym; \"adverb\" and \"manner adverb\" are part-of-speech labels, not hypernyms. Examples \"He was ecstatically stoked\" and the clinical \"displaying intense positive affect\" read unnaturally.",
+    "noun 0 relations: female name, male name",
+    "notes: Several examples are assembled reference-style sentences (\"Bernadette is a forename with documented origins in medieval France\") rather than natural usage, and two birthday-card examples duplicate each other.",
+    "noun 0 relations: service, childcare",
+    "notes: Several sense 2 examples ('We take Mia to daycare...', 'Our daycare takes care of the children...') illustrate the facility sense rather than the sector/system sense, blurring the split. Sense 1 lists 'service' as a hypernym of a facility.",
+    "noun 0 relations: executive recruiter, talent scout, staffing consultant, job seeker",
+    "noun 1 relations: ritual hunter, headhunting practitioner, cultural practitioner",
+    "notes: Sense 1 lists the same three terms as both synonyms and hyponyms, which cannot both hold; sense 2's synonyms are invented paraphrases. The canonical encyclopedia opens with \"An headhunter\". Several sense 2 examples are contrastive sentences written to disambiguate rather than to say something.",
+    "noun 0 gloss: trailing claim that it is a pejorative used in scholarly work on domestication/breed development is invented",
+    "noun 0 relations: mongrel, mutt",
+    "noun 1 relations: cad, rascal, scoundrel",
+    "notes: Both senses list the same terms as synonyms and hyponyms; several examples are metalinguistic mentions or corpus-style sentences rather than natural use.",
+    "noun 2 example grade_1/plain: illustrates a public park, not a residential property or estate",
+    "encyclopedia grade_1/plain: invest, province, and the naming-tradition sentences are beyond a grade_1 reader",
+    "notes: Several sense 3 examples (Fairview Park, Fairview Lake, Fairview Library) name public places or institutions rather than a residential property or estate.",
+    "noun 0 relations: bordello, whorehouse, prostitution venue",
+    "noun 1 relations: cat enclosure",
+    "encyclopedia grade_1/plain: abstract claims about slang, blame and city life are beyond a grade-1 reader despite simple words"
+  ]
+}

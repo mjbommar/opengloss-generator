@@ -5,7 +5,7 @@ added idempotently (`exists_ok=True`) — remove superseded items by hand or ext
 """
 
 OLD = "mjbommar/opengloss-69304505fa0ddaaad8a3ca28"
-RELEASE = "v2.3"
+RELEASE = "v2.4"
 REPOS = ["senses", "lexicon", "inflections", "definitions", "examples", "encyclopedia", "etymology",
          "relations", "contrasts", "queries", "qa-pairs", "retrieval-pairs", "retrieval-triples",
          "qrels", "pretrain", "provenance"]

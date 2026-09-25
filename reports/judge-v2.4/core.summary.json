@@ -1,0 +1,108 @@
+{
+  "cache_hit_rate": 0.3544,
+  "cached_input_tokens": 122157,
+  "calls": 37,
+  "cost_by_model": {
+    "claude-opus-5": 4.671953
+  },
+  "cost_by_stage": {
+    "qa": 4.671953
+  },
+  "cost_usd": 4.671953,
+  "duration_seconds": 145.655,
+  "flex_downgraded": false,
+  "input_tokens": 344692,
+  "items_failed": 0,
+  "items_succeeded": 0,
+  "output_tokens": 139928,
+  "qa": {
+    "calls": 37,
+    "cost_usd": 4.671953,
+    "cost_usd_per_entry": 0.126269,
+    "encyclopedia_defects": 2,
+    "encyclopedia_judged": 37,
+    "entries_failed": 0,
+    "entries_judged": 37,
+    "entries_skipped": 3,
+    "flag_histogram": {
+      "audience_inappropriate": 7,
+      "awkward_style": 21,
+      "factual_error": 5,
+      "grammar_error": 6,
+      "hallucination": 16,
+      "inconsistent_style": 1,
+      "missing_content": 10,
+      "other": 4,
+      "scope_mismatch": 5,
+      "terminology_error": 34
+    },
+    "mean_score": 64.78,
+    "rendition_defect_rates": {
+      "encyclopedia college/plain": 0.0,
+      "encyclopedia grade_1/plain": 0.4324,
+      "example grade_1/plain": 0.1277,
+      "gloss college/plain": 0.0,
+      "gloss grade_1/plain": 0.0851,
+      "gloss neutral/technical": 0.0213
+    },
+    "renditions_judged": {
+      "encyclopedia college/plain": 37,
+      "encyclopedia grade_1/plain": 37,
+      "example grade_1/plain": 141,
+      "gloss college/plain": 141,
+      "gloss grade_1/plain": 141,
+      "gloss neutral/technical": 141
+    },
+    "score_buckets": {
+      "60-79": 30,
+      "80-89": 0,
+      "90+": 0,
+      "<60": 7
+    },
+    "sense_defect_counts": {
+      "distinct_from_other_senses": 11,
+      "domain_fits": 24,
+      "examples_fit_sense": 51,
+      "examples_natural": 36,
+      "gloss_accurate": 12,
+      "relations_valid": 98
+    },
+    "sense_defect_rates": {
+      "distinct_from_other_senses": 0.078,
+      "domain_fits": 0.1702,
+      "examples_fit_sense": 0.3617,
+      "examples_natural": 0.2553,
+      "gloss_accurate": 0.0851,
+      "relations_valid": 0.695
+    },
+    "senses_judged": 141,
+    "stopped_reason": null,
+    "top_issues": [
+      "noun 0 relations: Genesis figure, Abrahamic patriarch, son of Abraham",
+      "noun 1 relations: issac",
+      "notes: Sense 1 includes \"Isaac runs in the yard.\", which illustrates the given-name sense, not the biblical patriarch; sense 2 has several meta or corpus-style examples about the name as a data token.",
+      "noun 0 relations: benefactor, mooch, sponge, toucher",
+      "noun 1 relations: sources, supporters, moneybags, patrons, benefactress, acceptor, parasite",
+      "noun 1 domain: suggested charitable giving and philanthropy",
+      "notes: Several sense 1 examples (library books, community garden, nonprofit funds, team jerseys) illustrate the money-giving sense and belong under sense 2; both relation sets contain plural forms and non-opposites.",
+      "encyclopedia grade_1/plain: sex-work content and Hebrew/Latin etymology talk are beyond a grade_1 reader",
+      "notes: The entry omits the sex-work client sense that its own encyclopedia names as a principal sense. Several sense 1 examples (survey, directory, maintenance-log phrasing) are corpus-stilted and clash with the slang register of the word.",
+      "noun 0 relations: zoe, blankness, absolutely none, is there, nothing, concrete reality, sense of being",
+      "noun 2 gloss: the noun names a state of being, not a philosophical question; this glosses a topic, not a meaning",
+      "noun 2 relations: rien, philosophy concept, metaphysical idea",
+      "notes: Sense 2 frames a discussion topic as a word sense, and most of its examples are ordinary sense-1 uses; the common \"way of living\" sense (a miserable existence) is absent.",
+      "verb 0 relations: constitutive, effect",
+      "noun 0 domain: suggested general actions and processes",
+      "encyclopedia grade_1/plain: philosophy-of-creation and society content is conceptually beyond a grade_1 reader despite simple words",
+      "notes: Most noun-sense examples are progressive verb uses rather than gerund-noun uses, and \"the creating of hypotheses/digital artifacts\" is unidiomatic where \"creation\" is standard.",
+      "verb 0 relations: window framing, shadowboxed",
+      "verb 1 relations: setup",
+      "verb 1 gloss grade_1/plain: drops the crime and the faking of evidence; too vague to identify this sense"
+    ]
+  },
+  "report": "reports/judge-v2.4/core.json",
+  "run_id": "20260925T010810Z-ead6885b",
+  "sample_size": 40,
+  "seed": 7,
+  "stop_reason": "completed"
+}

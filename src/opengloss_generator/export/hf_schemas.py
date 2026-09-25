@@ -45,7 +45,7 @@ __all__ = [
 #: The release label these repos publish under by default. Part of every repo name
 #: (D-72); overridable per export via ``--release`` (D-75) so an older label (``v2.0``)
 #: stays reproducible after the default moves on.
-DEFAULT_RELEASE = "v2.3"
+DEFAULT_RELEASE = "v2.4"
 
 #: The token a repo's own ``blurb``/``snippet`` text is authored with in place of a
 #: literal release, wherever it names *another* member of this same family. Rendering
@@ -582,8 +582,8 @@ _SENSES = RepoSpec(
     "resolved relations, synthetic queries, grounded QA pairs.",
     blurb=(
         "The sense-level view of OpenGloss vX and the repo most consumers want: one "
-        "row per **live** sense, with its canonical gloss, its eight reading-level and "
-        "register renditions, its sense-tagged example sentences with headword character "
+        "row per **live** sense, with its canonical gloss, its reading-level, register and "
+        "level x register renditions, its sense-tagged example sentences with headword character "
         "spans, its typed relations resolved to *sense* ids rather than bare strings, its "
         "synthetic retrieval queries and its grounded question/answer pairs, all inline. "
         "Retired senses are tombstoned in the source store and never appear here. Join to "

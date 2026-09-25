@@ -1,0 +1,86 @@
+{
+  "calls": 38,
+  "cost_usd": 3.028653,
+  "cost_usd_per_entry": 0.079701,
+  "encyclopedia_defects": 3,
+  "encyclopedia_judged": 38,
+  "entries_failed": 0,
+  "entries_judged": 38,
+  "entries_skipped": 2,
+  "flag_histogram": {
+    "audience_inappropriate": 11,
+    "awkward_style": 21,
+    "factual_error": 9,
+    "grammar_error": 2,
+    "hallucination": 6,
+    "missing_content": 8,
+    "off_topic": 1,
+    "other": 1,
+    "scope_mismatch": 5,
+    "terminology_error": 16,
+    "unsupported_addition": 1
+  },
+  "mean_score": 71.34,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0,
+    "encyclopedia grade_1/plain": 0.4737,
+    "example grade_1/plain": 0.0533,
+    "gloss college/plain": 0.0,
+    "gloss grade_1/plain": 0.04,
+    "gloss neutral/technical": 0.0
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 37,
+    "encyclopedia grade_1/plain": 38,
+    "example grade_1/plain": 75,
+    "gloss college/plain": 75,
+    "gloss grade_1/plain": 75,
+    "gloss neutral/technical": 75
+  },
+  "score_buckets": {
+    "60-79": 20,
+    "80-89": 11,
+    "90+": 1,
+    "<60": 6
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 11,
+    "domain_fits": 15,
+    "examples_fit_sense": 24,
+    "examples_natural": 24,
+    "gloss_accurate": 13,
+    "relations_valid": 34
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.1467,
+    "domain_fits": 0.2,
+    "examples_fit_sense": 0.32,
+    "examples_natural": 0.32,
+    "gloss_accurate": 0.1733,
+    "relations_valid": 0.4533
+  },
+  "senses_judged": 75,
+  "stopped_reason": null,
+  "top_issues": [
+    "noun 0 relations: Ganges",
+    "notes: The Ganges is a river flowing through Haridwar, not a whole that contains the city; a holonym such as Uttarakhand would hold, this one does not.",
+    "encyclopedia grade_1/plain: time zones, daylight-saving shifts and century references exceed a six-year-old's grasp despite short sentences",
+    "notes: The entry omits the common figurative sense of a decisive confrontation or showdown (\"a high noon between the two rivals\").",
+    "encyclopedia grade_1/plain: \"rhythm and blues\", \"New Evolution\", and the contrast clause about styling are beyond a grade_1 reader",
+    "notes: Several examples are near-duplicate corpus-style sentences about the group being \"readily identified\", including one framed as a hypothetical survey result.",
+    "notes: Several examples are near-restatements of the gloss rather than natural sentences; \"was the go-to pose for sculptors\" is unidiomatic.",
+    "encyclopedia grade_1/plain: grade_1 text uses 'economy', 'European Union', 'services paid for by the state', 'trades with other countries'",
+    "notes: Gloss's \"forms the Kingdom of Denmark\" glosses over Greenland and the Faroes; the grade_1 renditions handle it better by saying \"main part\".",
+    "encyclopedia grade_1/plain: adds a positive 'calm under pressure' reading ('A player may choose well in cold blood') not in the canonical text",
+    "notes: Several examples read as assembled rather than said: \"He hit the puppy in cold blood\", \"The bad man hurt the dog in cold blood\", \"The robber hurt the shopkeeper in cold blood\".",
+    "encyclopedia grade_1/plain: words such as 'investors', 'coatings' and 'public groups' are beyond a grade-1 reader",
+    "notes: The example set is heavily weighted toward tape in a workshop; a few of the longer examples read as constructed rather than said, but none is wrong.",
+    "noun 0 domain: suggested religion and theology",
+    "noun 1 domain: suggested general figurative usage",
+    "notes: Both senses are correctly glossed and clearly distinct; the only real weakness is the domain tagging, which assigns a time/quantity label to the religious sense and a vocabulary label to the figurative one.",
+    "verb 0 gloss: too broad: \"continue to exist\" omits the core idea of ending only slowly and with resistance",
+    "encyclopedia grade_1/plain: Albuera/57th regiment history and \"clinging to the past\" are beyond a grade-1 reader",
+    "notes: Several examples force the idiom into continuative frames (\"continued to die hard\", \"continues to die hard\") that native speakers do not use.",
+    "noun 0 domain: suggested general everyday usage"
+  ]
+}

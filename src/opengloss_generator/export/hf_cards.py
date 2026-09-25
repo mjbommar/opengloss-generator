@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from opengloss_generator.export.hf_rows import Stats
     from opengloss_generator.export.hf_schemas import RepoSpec
 
-__all__ = ["V13", "V20", "V21", "V22", "V23", "render_card"]
+__all__ = ["V13", "V20", "V21", "V22", "V23", "V24", "render_card"]
 
 
 # --------------------------------------------------------------------------------------
@@ -396,6 +396,86 @@ class V23:
     )
 
 
+class V24:
+    """v2.4's release-time facts (docs/FILL-ROUND-V2.4.md, docs/LEVELED-PRETRAIN-PLAN.md).
+
+    The same contract :class:`V23` states, one release on. The ``V23_*`` constants are
+    measured facts about the published v2.3 export (``reports/census-v2.3``), used as the
+    "previous release" column; everything marked ``# fill at release`` is a measurement of
+    the finished v2.4 export and must never be filled by guessing.
+    :func:`_changelog_v23_v24` refuses to render while any of them is ``None``.
+    """
+
+    #: Row counts of the published v2.3 export (its HF export summary, 2026-09-09).
+    V23_LEXEMES = 160_724
+    V23_LIVE_SENSES = 300_787
+    V23_QUERIES = 1_249_683
+    V23_QA_PAIRS = 704_950
+    V23_CONTRASTS = 81_046
+    V23_GLOSS_RENDITIONS = 1_919_007
+    V23_EXAMPLE_RENDITIONS = 2_421_809
+    V23_ENCYCLOPEDIA_RENDITIONS = 500_320
+    V23_EXPLANATION_RENDITIONS = 160_724
+    #: Normalized-unique source-text tokens under the embedding students' 16K tokenizer
+    #: (``family_totals.source_tokens_excluding_pretrain``, reports/census-v2.3).
+    V23_UNIQUE_SOURCE_TOKENS = 697_553_973
+    #: Share of v2.3 pretraining documents that are exact normalized duplicates.
+    V23_PRETRAIN_DUPLICATE_SHARE = "25.0%"
+
+    UNIQUE_SOURCE_TOKENS: int | None = 1_461_832_309  # fill at release (census of the v2.4 export)
+    PRETRAIN_DOCS: int | None = 1_910_373  # fill at release
+    PRETRAIN_WORDS: int | None = 483_649_976  # fill at release
+    PRETRAIN_TOKENS: int | None = 676_733_509  # fill at release, cl100k_base
+    JUDGE: str | None = (
+        "64.8 (core), 69.9 (tier 2), 65.8 (tier 3), 68.1 (tier 4), 79.6 (tier 5), "
+        "71.3 (tier 6)"
+    )  # fill at release: Opus, 40-entry seed-7 sample per tier (reports/judge-v2.4)
+
+
+#: :class:`V24` attributes that must be measured against the finished release before a
+#: `v2.4` card can render.
+_V24_PLACEHOLDERS: tuple[str, ...] = (
+    "UNIQUE_SOURCE_TOKENS",
+    "PRETRAIN_DOCS",
+    "PRETRAIN_WORDS",
+    "PRETRAIN_TOKENS",
+    "JUDGE",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _V24Facts:
+    """:class:`V24`'s release-time facts, typed without the ``| None`` they carry."""
+
+    unique_source_tokens: int
+    pretrain_docs: int
+    pretrain_words: int
+    pretrain_tokens: int
+    judge: str
+
+
+def _require_v24_filled() -> _V24Facts:
+    """Return :class:`V24`'s release-time facts, once every one of them is filled.
+
+    Returns:
+        The facts, narrowed to their non-optional types.
+
+    Raises:
+        ValueError: Naming every :class:`V24` attribute that is still ``None``.
+    """
+    values = [getattr(V24, name) for name in _V24_PLACEHOLDERS]
+    missing = [name for name, value in zip(_V24_PLACEHOLDERS, values, strict=True) if value is None]
+    if missing:
+        raise ValueError(
+            "hf_cards.V24 is not filled in: "
+            + ", ".join(missing)
+            + " must be measured against the finished v2.4 release before its cards can "
+            "render (see each attribute's '# fill at release' comment)."
+        )
+    unique_tokens, docs, words, tokens, judge = values
+    return _V24Facts(unique_tokens, docs, words, tokens, judge)
+
+
 #: :class:`V23` attributes that must be measured against the finished release before a
 #: `v2.3` card can render (D-81) — see :class:`V23`'s own docstring for why. The same
 #: shape as :data:`_V22_PLACEHOLDERS`, deliberately, so one reader understands both.
@@ -684,6 +764,103 @@ schema changes come with it:
 """
 
 
+def _changelog_v23_v24(stats: Stats) -> str:
+    """Return the "what changed since v2.3" section: the fill round and leveled pretraining.
+
+    Args:
+        stats: The export's statistics (the current release's live counts).
+    """
+    facts = _require_v24_filled()
+    prev = _require_v23_filled()
+    size = _table(
+        ("", "v2.3 (2026-09-09)", "v2.4"),
+        [
+            ("Lexemes", _n(V24.V23_LEXEMES), _n(stats.lexemes)),
+            ("Live senses", _n(V24.V23_LIVE_SENSES), _n(stats.live_senses)),
+            ("Search queries", _n(V24.V23_QUERIES), _n(stats.queries)),
+            ("QA pairs", _n(V24.V23_QA_PAIRS), _n(stats.qa_pairs)),
+            ("Definition renditions", _n(V24.V23_GLOSS_RENDITIONS), _n(stats.gloss_renditions)),
+            ("Example renditions", _n(V24.V23_EXAMPLE_RENDITIONS), _n(stats.example_renditions)),
+            (
+                "Encyclopedia renditions",
+                _n(V24.V23_ENCYCLOPEDIA_RENDITIONS),
+                _n(stats.encyclopedia_renditions),
+            ),
+            (
+                "Lexical-explanation renditions",
+                _n(V24.V23_EXPLANATION_RENDITIONS),
+                _n(stats.explanation_renditions),
+            ),
+            ("Contrast paragraphs (all levels)", _n(V24.V23_CONTRASTS), _n(stats.contrasts)),
+            (
+                "Unique source-text tokens (16K student tokenizer)",
+                _n(V24.V23_UNIQUE_SOURCE_TOKENS),
+                _n(facts.unique_source_tokens),
+            ),
+            ("Pretraining documents", _n(prev.pretrain_docs), _n(facts.pretrain_docs)),
+            ("Pretraining words", _n(prev.pretrain_words), _n(facts.pretrain_words)),
+            (
+                "Pretraining tokens (cl100k_base)",
+                _n(prev.pretrain_tokens),
+                _n(facts.pretrain_tokens),
+            ),
+            (
+                "Exact-duplicate pretraining documents",
+                V24.V23_PRETRAIN_DUPLICATE_SHARE,
+                "0 (the export fails on any duplicate)",
+            ),
+            ("Judge score, Opus, 40-entry samples", prev.judge, facts.judge),
+        ],
+    )
+    return f"""## What changed since v2.3
+
+v2.3 (2026-09-09) added tier 6, named entities. v2.4 adds no new headwords: it fills in
+the supervision the lower tiers never received and makes every reading level of the
+pretraining corpus carry text of its own.
+
+- **Retrieval supervision for every sense.** Tiers 3-6 (about two thirds of all senses)
+  had no search queries, QA pairs, register variants or contrast paragraphs in v2.3; those
+  existed only for core and tier 2. Every live sense now has search queries in eight
+  styles (twelve per sense; 85% of all queries never name the headword), 99.7% have
+  grounded QA pairs, and every tier has register variants, register-crossed examples and
+  contrasts.
+- **Verified word-in-context examples everywhere.** The sense-disambiguated example stage
+  (eight checked sentences per sense) ran only on tier 2 in v2.3; it now covers core and
+  tiers 3-6 as well.
+- **Leveled register text.** Every sense gains five definitions crossing reading level and
+  register (grade 5 informal and formal; college informal, formal and technical); every
+  contrast paragraph gains a grade-5 and a college version; every lexical explanation
+  gains a grade-5 and a college version.
+- **A pretraining corpus with no copies.** v2.3's thesaurus and usage-note documents at
+  `grade_5` and `college` were byte-identical to `neutral` (25% of all pretraining
+  documents). A non-neutral document is now emitted only when it carries text written at
+  its level and differs from the neutral one, and the export fails if any two documents
+  share text. The thesaurus template gains a "Choosing between them" section of leveled
+  contrast notes (moved from the usage note), and the usage note lists the register
+  variants written at the document's level.
+- **Graph repair.** Relations were regenerated for senses that had none (senses without
+  a relation fell from 4,722 to about 1,600), re-resolved, re-judged, and hypernym cycles
+  broken back to zero.
+- **Writer.** New v2.4 text was written by `gpt-6-luna` (low reasoning); v2.3's by
+  `gpt-5.6-luna`. The `provenance` repo records the model of every call.
+
+{size}
+
+**Schema.** No column was removed or retyped. `pretrain` gains `sections_at_level`;
+`level_used` gains the value `mixed` (some leveled sections fell back to neutral text);
+non-neutral pretraining documents with no text of their own at their level are no longer
+emitted, and retired lexemes (no live sense) emit no pretraining document. `contrasts`
+now carries `grade_5` and `college` rows beside `neutral`.
+
+**Known issues.** Leveled *informal* definitions open with "It's a / It's the / It's
+when" about 18% of the time. About 1.1% of QA answers are exact duplicates of another QA
+answer (mostly short answers). Listwise qrels lists that
+contain all four grades fell as a share, because tier 3-6 senses joined with fewer
+grade-2 neighbours.
+
+"""
+
+
 def _changelog(stats: Stats, release: str) -> str:
     """Return every "what changed" section this release carries, newest first.
 
@@ -695,9 +872,11 @@ def _changelog(stats: Stats, release: str) -> str:
             extend to dropping history from the card).
     """
     sections = []
-    if release == "v2.3":
+    if release == "v2.4":
+        sections.append(_changelog_v23_v24(stats))
+    if release in {"v2.3", "v2.4"}:
         sections.append(_changelog_v22_v23(stats))
-    if release in {"v2.2", "v2.3"}:
+    if release in {"v2.2", "v2.3", "v2.4"}:
         sections.append(_changelog_v21_v22(stats))
     sections.append(_changelog_v20_v21(stats))
     return "".join(sections)

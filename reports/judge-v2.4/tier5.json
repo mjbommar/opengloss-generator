@@ -1,0 +1,83 @@
+{
+  "calls": 40,
+  "cost_usd": 1.996305,
+  "cost_usd_per_entry": 0.049908,
+  "encyclopedia_defects": 1,
+  "encyclopedia_judged": 40,
+  "entries_failed": 0,
+  "entries_judged": 40,
+  "entries_skipped": 0,
+  "flag_histogram": {
+    "audience_inappropriate": 2,
+    "awkward_style": 20,
+    "factual_error": 3,
+    "inconsistent_style": 1,
+    "missing_content": 2,
+    "off_topic": 1,
+    "scope_mismatch": 5,
+    "terminology_error": 11
+  },
+  "mean_score": 79.58,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0,
+    "encyclopedia grade_1/plain": 0.175,
+    "example grade_1/plain": 0.0488,
+    "gloss college/plain": 0.0244,
+    "gloss grade_1/plain": 0.0976,
+    "gloss neutral/technical": 0.0
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 40,
+    "encyclopedia grade_1/plain": 40,
+    "example grade_1/plain": 41,
+    "gloss college/plain": 41,
+    "gloss grade_1/plain": 41,
+    "gloss neutral/technical": 41
+  },
+  "score_buckets": {
+    "60-79": 12,
+    "80-89": 25,
+    "90+": 1,
+    "<60": 2
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 1,
+    "domain_fits": 6,
+    "examples_fit_sense": 6,
+    "examples_natural": 16,
+    "gloss_accurate": 5,
+    "relations_valid": 10
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.0244,
+    "domain_fits": 0.1463,
+    "examples_fit_sense": 0.1463,
+    "examples_natural": 0.3902,
+    "gloss_accurate": 0.122,
+    "relations_valid": 0.2439
+  },
+  "senses_judged": 41,
+  "stopped_reason": null,
+  "top_issues": [
+    "noun 0 relations: blower",
+    "notes: \"blower\" is tagged hyponym but is the broader category; the relation is inverted.",
+    "notes: A couple of the later examples ('using a thematic selection framework', 'according to a stated selection criterion') read as constructed rather than said, but the example set as a whole is natural.",
+    "noun 0 relations: checkbook",
+    "notes: A checkbook is the book of blank checks, not a synonym for the register that records them. Several examples are near-duplicate assembled sentences rather than things anyone would say.",
+    "encyclopedia grade_1/plain: uses words like 'brewery', 'caf\u00e9', 'pretzels', 'local events' beyond a grade_1 reader",
+    "notes: A few examples are assembled rather than said, notably the appositive definition in 'The group reserved seating in the beer garden, an outdoor hospitality area serving beer.' and the redundant 'We drank beer in the beer garden outside.'",
+    "notes: The college gloss ends with the pronoun \"them\", which has no antecedent inside the definition; cosmetic only.",
+    "noun 0 domain: suggested military aviation",
+    "notes: Domain tag limits the term to the world wars, but the sense and encyclopedia cover modern bombers too; example set is heavily templated but acceptable.",
+    "notes: A few examples pair the rare literary adjective with slangy phrasing (\"straight-up easy on the ears\", \"That euphonical song sounds soft to me\"), which reads as assembled rather than natural.",
+    "adjective 0 gloss grade_1/plain: names the segment itself rather than the adjectival 'of or relating to' meaning",
+    "encyclopedia grade_1/plain: 'citrus', 'medicine', 'suggest ... energy' and the abstract writers'-use sentence exceed grade 1",
+    "notes: \"The kitchen smelled ginger-scented\" is unidiomatic, and the bakery-breeze example pairs the word oddly with fresh loaves.",
+    "noun 0 relations: access time",
+    "noun 0 domain: suggested computing / computer hardware performance",
+    "notes: The meronym relation is inverted: this interval is a part of access time, not the reverse. Several examples read as slots built to contain the phrase rather than natural sentences.",
+    "encyclopedia grade_1/plain: metalinguistic lines ('You can also say what happened after blab out') are opaque at grade 1",
+    "notes: Two examples ('Staff must not blab out clients' private account information...', 'The witness threatened to blab out...') pair an informal verb with formal framing, but remain usable.",
+    "noun 0 gloss: Central Dravidian is a branch/subgroup of the Dravidian family, not a single language"
+  ]
+}

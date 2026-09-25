@@ -1,0 +1,88 @@
+{
+  "calls": 36,
+  "cost_usd": 2.940196,
+  "cost_usd_per_entry": 0.081672,
+  "encyclopedia_defects": 2,
+  "encyclopedia_judged": 36,
+  "entries_failed": 0,
+  "entries_judged": 36,
+  "entries_skipped": 4,
+  "flag_histogram": {
+    "audience_inappropriate": 5,
+    "awkward_style": 30,
+    "factual_error": 6,
+    "grammar_error": 3,
+    "hallucination": 7,
+    "inconsistent_style": 1,
+    "missing_content": 8,
+    "off_topic": 1,
+    "other": 2,
+    "scope_mismatch": 7,
+    "spelling_error": 2,
+    "terminology_error": 29,
+    "unsupported_addition": 4
+  },
+  "mean_score": 65.78,
+  "rendition_defect_rates": {
+    "encyclopedia college/plain": 0.0,
+    "encyclopedia grade_1/plain": 0.3889,
+    "example grade_1/plain": 0.0278,
+    "gloss college/plain": 0.0417,
+    "gloss grade_1/plain": 0.1111,
+    "gloss neutral/technical": 0.0
+  },
+  "renditions_judged": {
+    "encyclopedia college/plain": 36,
+    "encyclopedia grade_1/plain": 36,
+    "example grade_1/plain": 72,
+    "gloss college/plain": 72,
+    "gloss grade_1/plain": 72,
+    "gloss neutral/technical": 72
+  },
+  "score_buckets": {
+    "60-79": 26,
+    "80-89": 1,
+    "90+": 1,
+    "<60": 8
+  },
+  "sense_defect_counts": {
+    "distinct_from_other_senses": 10,
+    "domain_fits": 10,
+    "examples_fit_sense": 23,
+    "examples_natural": 42,
+    "gloss_accurate": 21,
+    "relations_valid": 39
+  },
+  "sense_defect_rates": {
+    "distinct_from_other_senses": 0.1389,
+    "domain_fits": 0.1389,
+    "examples_fit_sense": 0.3194,
+    "examples_natural": 0.5833,
+    "gloss_accurate": 0.2917,
+    "relations_valid": 0.5417
+  },
+  "senses_judged": 72,
+  "stopped_reason": null,
+  "top_issues": [
+    "noun 0 relations: procedural caution, conservative interpretation, conservative policy",
+    "notes: Several examples use the abstract noun as an agentive subject ('Cautiousness helps Maya check her tent'), which reads as assembled rather than natural; 'procedural caution' is not a broader category, and the two 'conservative ...' hyponyms are not kinds of cautiousness.",
+    "noun 0 relations: forename",
+    "encyclopedia grade_1/plain: Sentences are short but Hebrew origins, Spanish colonial rule, and Latin America exceed grade_1 knowledge",
+    "notes: Relation direction is inverted: Efren is a kind of forename, so forename is a hypernym, not a hyponym. Several examples are assembled metalinguistic filler (\"In the roster schema, Efren occupies the given_name field\").",
+    "notes: Several examples are corpus-artifact sentences built only to contain the name (\"The Latonya cohort was analyzed for naming patterns\", \"Latonya appears as a named entity in the participant roster\").",
+    "adjective 0 gloss: Defines the base 'courtly'; omits the superlative degree ('most courtly') the headword carries.",
+    "adjective 0 relations: genteel, urbane, gallant",
+    "adjective 0 gloss grade_1/plain: 'a nice place' replaces the formal/elite setting, losing the core restriction",
+    "notes: Several examples ('Archives document courtliest ceremonial protocol', 'Scholars analyze courtliest forms of gift exchange', 'courtliest rhetoric signals professional decorum') use a bare superlative without a determiner and read as assembled rather than said. Genteel and urbane are listed as both sy",
+    "adjective 0 relations: random, stochastic",
+    "adjective 0 domain: suggested risk and probability / general language",
+    "encyclopedia grade_1/plain: abstract wording such as 'investment', 'exact odds', 'evaluative' framing is past a grade_1 reader",
+    "notes: Several examples ('widest confidence interval', 'high variance in the chanciest region') read as assembled corpus lines rather than natural sentences; 'stochastic' and 'random' are not synonyms of chancy, which means risky/uncertain.",
+    "noun 0 relations: screen induced fatigue, blue light fatigue, digital strain, screen fatigue, visual disturbance",
+    "noun 0 domain: suggested medicine (ophthalmology)",
+    "verb 0 gloss: 'eyestrain' is a noun only; no verb sense exists in English",
+    "verb 0 domain: suggested medicine (ophthalmology)",
+    "verb 0 gloss grade_1/plain: states a condition rather than the causing/experiencing action the gloss claims",
+    "notes: The verb sense is invented: several of its examples are ungrammatical ('Staring at the screen for hours eyestrain me') and many others simply use the noun. Two noun examples never use the headword at all."
+  ]
+}
